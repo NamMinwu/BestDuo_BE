@@ -4,7 +4,6 @@ import com.bestduo_BE.application.port.RiotApiClient;
 import com.bestduo_BE.infra.riot.dto.RiotMatchDto;
 import java.util.Arrays;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -12,17 +11,18 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class RiotApiClientImpl implements RiotApiClient {
 
-  // 플랫폼 엔드포인트용 (소환사, 리그 정보 등)
-  @Qualifier("riotPlatformRestTemplate")
-  private final RestTemplate platformRestTemplate;
-
   // 리저널 엔드포인트용 (match-v5 같은 거)
-  @Qualifier("riotRegionalRestTemplate")
   private final RestTemplate regionalRestTemplate;
+
+  public RiotApiClientImpl(
+      @Qualifier("riotPlatformRestTemplate") RestTemplate platformRestTemplate,
+      @Qualifier("riotRegionalRestTemplate") RestTemplate regionalRestTemplate) {
+    // 플랫폼 엔드포인트용 (소환사, 리그 정보 등)
+    this.regionalRestTemplate = regionalRestTemplate;
+  }
 
   @Override
   public List<String> loadMatchIdsByPuuid(String puuid, int count) {
