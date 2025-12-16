@@ -30,6 +30,11 @@ public class InMemoryBottomDuoStatRepository implements BottomDuoStatRepository 
   }
 
   @Override
+  public BottomDuoStat findOne(String adId, String supId, Tier tier) {
+    return null;
+  }
+
+  @Override
   public void save(List<BottomDuoStat> stats) {
     if (stats == null || stats.isEmpty()) {
       return;
@@ -64,7 +69,7 @@ public class InMemoryBottomDuoStatRepository implements BottomDuoStatRepository 
       }
     }
 
-    Tier tierRange = criteria.getTierRange();
+    Tier tierRange = criteria.getTier();
     if (tierRange != null && tierRange != Tier.ALL_TIERS && stat.getTier() != tierRange) {
       return false;
     }

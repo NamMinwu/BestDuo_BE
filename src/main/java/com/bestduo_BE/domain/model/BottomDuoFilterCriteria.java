@@ -6,6 +6,6 @@ import lombok.Data;
 public class BottomDuoFilterCriteria {
   private final String adCampionId;        // nullable
   private final String supCampionId;       // nullable
-  private final Tier tierRange;  // nullable
+  private final Tier tier;  // nullable
   private final SortOption sortOption; // WIN_RATE, PICK_RATE, GAMES, ...
 }
