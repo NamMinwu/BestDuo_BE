@@ -7,5 +7,5 @@ public class BottomDuoMatch {
   private final String adChampionId;
   private final String supChampionId;
   private final Tier tier;
-  private final boolean win;
+  private final boolean wins;
 }
