@@ -312,6 +312,11 @@ class ViewBottomDuoDetailStatisticsTest {
     public void save(List<BottomDuoStat> stats) {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void upsertAll(List<BottomDuoStat> stats) {
+
+    }
   }
 
   private static class RecordingBottomDuoMatchupRepository
@@ -328,6 +333,16 @@ class ViewBottomDuoDetailStatisticsTest {
     public List<BottomDuoMatchupStat> findBy(BottomDuoFilterCriteria criteria) {
       this.lastRequestedCriteria = criteria;
       return matchups;
+    }
+
+    @Override
+    public void save(List<BottomDuoMatchupStat> stats) {
+      this.matchups = stats;
+    }
+
+    @Override
+    public void upsertAll(List<BottomDuoMatchupStat> stats) {
+
     }
   }
 

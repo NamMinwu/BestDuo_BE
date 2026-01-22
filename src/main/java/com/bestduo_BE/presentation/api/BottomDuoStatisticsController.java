@@ -26,11 +26,10 @@ public class BottomDuoStatisticsController {
       @RequestParam(defaultValue = "ALL_TIERS") Tier tier,
       @RequestParam(defaultValue = "WIN_RATE") SortOption sortOption
   ) {
-    // 컨트롤러용 Request DTO로 묶어주기
     BottomDuoStatisticsRequest request = new BottomDuoStatisticsRequest();
-    // 유즈케이스 호출
+
     BottomDuoStatisticsResponse response = viewBottomDuoStatistics.handle(request);
-    // 그대로 응답
+
     return ResponseEntity.ok(response);
   }
 }

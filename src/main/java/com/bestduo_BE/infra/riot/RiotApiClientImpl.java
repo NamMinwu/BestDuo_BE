@@ -14,13 +14,15 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 public class RiotApiClientImpl implements RiotApiClient {
 
+  // 플랫폼 엔드포인트 (소환사, 리그 등)
+  private final RestTemplate platformRestTemplate;
   // 리저널 엔드포인트용 (match-v5 같은 거)
   private final RestTemplate regionalRestTemplate;
 
   public RiotApiClientImpl(
       @Qualifier("riotPlatformRestTemplate") RestTemplate platformRestTemplate,
       @Qualifier("riotRegionalRestTemplate") RestTemplate regionalRestTemplate) {
-    // 플랫폼 엔드포인트용 (소환사, 리그 정보 등)
+    this.platformRestTemplate = platformRestTemplate;
     this.regionalRestTemplate = regionalRestTemplate;
   }
 
@@ -51,12 +53,6 @@ public class RiotApiClientImpl implements RiotApiClient {
     } catch (RestClientException e) {
       log.error("Failed to load match. matchId={}", matchId, e);
       throw new RiotApiException("Failed to load match from Riot API", e);
-    }
-  }
-
-  private class RiotApiException extends RuntimeException {
-    public RiotApiException(String message, Throwable cause) {
-      super(message, cause);
     }
   }
 }

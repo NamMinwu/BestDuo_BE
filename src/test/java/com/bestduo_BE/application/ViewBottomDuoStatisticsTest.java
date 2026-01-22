@@ -10,7 +10,7 @@ import com.bestduo_BE.domain.model.ChampionMeta;
 import com.bestduo_BE.domain.model.SortOption;
 import com.bestduo_BE.domain.model.Tier;
 import com.bestduo_BE.domain.repository.BottomDuoStatRepository;
-import com.bestduo_BE.infra.repository.InMemoryBottomDuoStatRepository;
+import com.bestduo_BE.infra.persistence.repository.in_memory.InMemoryBottomDuoStatRepository;
 import com.bestduo_BE.presentation.api.dto.BottomDuoStatisticsRequest;
 import com.bestduo_BE.presentation.api.dto.BottomDuoStatisticsResponse;
 import java.util.ArrayList;
@@ -344,6 +344,13 @@ class ViewBottomDuoStatisticsTest {
     public void save(List<BottomDuoStat> stats) {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void upsertAll(List<BottomDuoStat> stats) {
+
+    }
+
+
   }
 
   private static class FakeChampionMetaClient implements ChampionMetaClient {

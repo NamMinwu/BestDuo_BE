@@ -1,4 +1,4 @@
-package com.bestduo_BE.infra.repository;
+package com.bestduo_BE.infra.persistence.repository.in_memory;
 
 import com.bestduo_BE.domain.model.BottomDuoFilterCriteria;
 import com.bestduo_BE.domain.model.BottomDuoMatchupStat;
@@ -26,11 +26,17 @@ public class InMemoryBottomDuoMatchupStatRepository implements BottomDuoMatchupS
         .collect(Collectors.toList());
   }
 
+  @Override
   public void save(List<BottomDuoMatchupStat> stats) {
     if (stats == null || stats.isEmpty()) {
       return;
     }
     storage.addAll(stats);
+  }
+
+  @Override
+  public void upsertAll(List<BottomDuoMatchupStat> stats) {
+
   }
 
   private boolean matches(BottomDuoMatchupStat stat, BottomDuoFilterCriteria criteria) {
@@ -51,11 +57,7 @@ public class InMemoryBottomDuoMatchupStatRepository implements BottomDuoMatchupS
     }
 
     Tier tier = criteria.getTier();
-    if (tier != null && tier != Tier.ALL_TIERS && stat.getTier() != tier) {
-      return false;
-    }
-
-    return true;
+    return tier == null || tier == Tier.ALL_TIERS || stat.getTier() == tier;
   }
 
   private Comparator<BottomDuoMatchupStat> resolveComparator(BottomDuoFilterCriteria criteria) {
