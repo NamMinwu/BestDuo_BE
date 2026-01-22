@@ -6,8 +6,8 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
-public class BottomDuoStatCalculator {
-  public List<BottomDuoStat> calculate(List<BottomDuoMatch> matches) {
+public class BottomDuoStatAggregator {
+  public List<BottomDuoStat> calculate(List<BottomDuoMatch> match) {
     return null;
   }
 }

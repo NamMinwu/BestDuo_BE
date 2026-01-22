@@ -7,4 +7,6 @@ import java.util.List;
 public interface BottomDuoMatchupStatRepository {
   // 최소 개임 수 필터링 + 정렬까지
   List<BottomDuoMatchupStat> findBy(BottomDuoFilterCriteria criteria);
+  void save(List<BottomDuoMatchupStat> stats);
+  void upsertAll(List<BottomDuoMatchupStat> stats);
 }

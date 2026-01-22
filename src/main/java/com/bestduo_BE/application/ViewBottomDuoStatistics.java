@@ -1,12 +1,12 @@
 package com.bestduo_BE.application;
 
+import com.bestduo_BE.application.filter.BottomDuoFilterParser;
 import com.bestduo_BE.application.port.ChampionMetaClient;
 import com.bestduo_BE.domain.model.BottomDuoFilterCriteria;
 import com.bestduo_BE.domain.model.BottomDuoStat;
 import com.bestduo_BE.domain.repository.BottomDuoStatRepository;
 import com.bestduo_BE.presentation.api.dto.BottomDuoStatisticsRequest;
 import com.bestduo_BE.presentation.api.dto.BottomDuoStatisticsResponse;
-import com.bestduo_BE.application.filter.BottomDuoFilterParser;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

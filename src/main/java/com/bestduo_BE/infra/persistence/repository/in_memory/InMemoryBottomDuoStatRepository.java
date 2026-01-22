@@ -1,4 +1,4 @@
-package com.bestduo_BE.infra.repository;
+package com.bestduo_BE.infra.persistence.repository.in_memory;
 
 import com.bestduo_BE.domain.model.BottomDuoFilterCriteria;
 import com.bestduo_BE.domain.model.BottomDuoStat;
@@ -40,6 +40,11 @@ public class InMemoryBottomDuoStatRepository implements BottomDuoStatRepository 
       return;
     }
     stats.forEach(stat -> storage.put(buildKey(stat), stat));
+  }
+
+  @Override
+  public void upsertAll(List<BottomDuoStat> stats) {
+
   }
 
   private Comparator<BottomDuoStat> resolveComparator(BottomDuoFilterCriteria criteria) {

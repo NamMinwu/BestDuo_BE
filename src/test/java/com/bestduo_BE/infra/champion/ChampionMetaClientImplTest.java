@@ -1,7 +1,6 @@
 package com.bestduo_BE.infra.champion;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.bestduo_BE.application.port.ChampionMetaClient;
 import com.bestduo_BE.domain.model.ChampionMeta;

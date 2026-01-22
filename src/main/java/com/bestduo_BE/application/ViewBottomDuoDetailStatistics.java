@@ -27,7 +27,6 @@ public class ViewBottomDuoDetailStatistics {
   private static final int COUNTER_COUNT = 4;
 
   public BottomDuoDetailStatisticsResponse handle(BottomDuoDetailStatisticsRequest request) {
-    // 1) 키/필터/정렬 조건 파싱
     BottomDuoFilterCriteria criteria = bottomDuoDetailFilterParser.parse(request);
 
     BottomDuoStat baseStat = bottomDuoStatRepository.findOne(criteria.getAdCampionId(),
@@ -57,8 +56,8 @@ public class ViewBottomDuoDetailStatistics {
 
   private int calculateTotalGames(BottomDuoFilterCriteria criteria) {
     BottomDuoFilterCriteria totalCriteria = new BottomDuoFilterCriteria(
-        null,
-        null,
+        criteria.getAdCampionId(),
+        criteria.getSupCampionId(),
         criteria.getTier(),
         criteria.getSortOption()
     );

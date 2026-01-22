@@ -6,6 +6,8 @@ import lombok.Data;
 public class BottomDuoMatch {
   private final String adChampionId;
   private final String supChampionId;
+  private final String opponentAdChampionId;
+  private final String opponentSupChampionId;
   private final Tier tier;
   private final boolean wins;
 }
