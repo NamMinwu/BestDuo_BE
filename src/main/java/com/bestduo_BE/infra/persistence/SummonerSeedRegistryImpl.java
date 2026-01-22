@@ -26,19 +26,19 @@ public class SummonerSeedRegistryImpl implements SummonerSeedRegistry {
 
   @Override
   @Transactional
-  public void markRunning(String puuid) {
-    repository.findById(puuid).ifPresent(Summoner::markRunning);
+  public void markSeedRunning(String puuid) {
+    repository.findById(puuid).ifPresent(Summoner::markSeedRunning);
   }
 
   @Override
   @Transactional
-  public void markDone(String puuid) {
-    repository.findById(puuid).ifPresent(Summoner::markDone);
+  public void markSeedDone(String puuid) {
+    repository.findById(puuid).ifPresent(Summoner::markSeedDone);
   }
 
   @Override
   @Transactional
-  public void markError(String puuid) {
-    repository.findById(puuid).ifPresent(Summoner::markError);
+  public void markSeedError(String puuid) {
+    repository.findById(puuid).ifPresent(Summoner::markSeedError);
   }
 }

@@ -57,11 +57,11 @@ public class SeedBootstrapRun {
 
         puuidRegistered++;
 
-        summonerSeedRegistry.markRunning(puuid);
+        summonerSeedRegistry.markSeedRunning(puuid);
         try {
           List<String> matchIds = matchIdsFinder.findRecentMatchIds(puuid, cmd.matchesPerPuuid());
           if (matchIds == null || matchIds.isEmpty()) {
-            summonerSeedRegistry.markDone(puuid);
+            summonerSeedRegistry.markSeedDone(puuid);
             continue;
           }
 
@@ -72,10 +72,10 @@ public class SeedBootstrapRun {
             rawCreated += collectMatchDetailAndSaveRaw.execute(matchId, cmd.seedTier());
           }
 
-          summonerSeedRegistry.markDone(puuid);
+          summonerSeedRegistry.markSeedDone(puuid);
 
         } catch (Exception ex) {
-          summonerSeedRegistry.markError(puuid);
+          summonerSeedRegistry.markSeedError(puuid);
           // Phase2A는 계속 진행(운영상 보통 유리)
         }
       }
