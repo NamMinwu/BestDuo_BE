@@ -1,11 +1,8 @@
 package com.bestduo_BE.application;
 
-import com.bestduo_BE.application.filter.BottomDuoFilterParser;
+import com.bestduo_BE.application.port.BottomDuoStatFinder;
 import com.bestduo_BE.application.port.ChampionMetaClient;
-import com.bestduo_BE.domain.model.BottomDuoFilterCriteria;
-import com.bestduo_BE.domain.model.BottomDuoStat;
-import com.bestduo_BE.domain.repository.BottomDuoStatRepository;
-import com.bestduo_BE.presentation.api.dto.BottomDuoStatisticsRequest;
+import com.bestduo_BE.domain.model.Tier;
 import com.bestduo_BE.presentation.api.dto.BottomDuoStatisticsResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -14,35 +11,55 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class ViewBottomDuoStatistics {
-  private final BottomDuoStatRepository bottomDuoStatRepository;
-  private final BottomDuoFilterParser bottomDuoFilterParser;
+
+  private static final int MAX_ROWS = 100;
+
+  private final BottomDuoStatFinder statFinder;
   private final ChampionMetaClient championMetaClient;
 
-  public BottomDuoStatisticsResponse handle(BottomDuoStatisticsRequest request) {
-    BottomDuoFilterCriteria criteria = bottomDuoFilterParser.parse(request);
-    List<BottomDuoStat> stats = bottomDuoStatRepository.findBy(criteria);
-    int totalGames = stats.stream().mapToInt(BottomDuoStat::getGames).sum();
-    List<BottomDuoStatisticsResponse.BottomDuoStatView> views = stats.stream()
-        .map(stat -> toView(stat, totalGames))
-        .toList();
+  public BottomDuoStatisticsResponse execute(
+      Tier tier,
+      String adcChampionIdOrNull,
+      String supChampionIdOrNull,
+      BottomDuoStatFinder.SortKey sortKey
+  ) {
+    int totalGames = statFinder.findTierTotalGames(tier);
 
-    return new BottomDuoStatisticsResponse(totalGames, views);
+    List<BottomDuoStatisticsResponse.Item> items =
+        statFinder.findStats(
+                tier,
+                blankToNull(adcChampionIdOrNull),
+                blankToNull(supChampionIdOrNull),
+                sortKey,
+                totalGames,
+                MAX_ROWS
+            ).stream()
+            .map(row -> toItem(row, totalGames))
+            .toList();
+
+    return new BottomDuoStatisticsResponse(tier.name(), totalGames, items);
   }
 
-  private BottomDuoStatisticsResponse.BottomDuoStatView toView(BottomDuoStat stat, int totalGames) {
-    var adMeta = championMetaClient.findById(stat.getAdChampionId());
-    var supMeta = championMetaClient.findById(stat.getSupChampionId());
+  private BottomDuoStatisticsResponse.Item toItem(BottomDuoStatFinder.StatRow row, int totalGames) {
+    var adc = championMetaClient.findById(row.adcChampionId());
+    var sup = championMetaClient.findById(row.supChampionId());
 
-    double pickRate = totalGames == 0 ? 0 : (double) stat.getGames() / totalGames;
+    double pickRate = totalGames == 0 ? 0 : (double) row.games() / totalGames;
 
-    return new BottomDuoStatisticsResponse.BottomDuoStatView(
-        adMeta.getName(),
-        adMeta.getImageUrl(),
-        supMeta.getName(),
-        supMeta.getImageUrl(),
-        stat.getWinRate(),
-        stat.getGames(),
-        pickRate
+    return new BottomDuoStatisticsResponse.Item(
+        adc.name(),
+        adc.imageUrl(),
+        sup.name(),
+        sup.imageUrl(),
+        row.winRate(),
+        pickRate,
+        row.games()
     );
+  }
+
+  private String blankToNull(String v) {
+    if (v == null) return null;
+    String t = v.trim();
+    return t.isEmpty() ? null : t;
   }
 }
