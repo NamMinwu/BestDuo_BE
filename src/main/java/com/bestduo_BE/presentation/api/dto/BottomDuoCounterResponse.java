@@ -2,11 +2,12 @@ package com.bestduo_BE.presentation.api.dto;
 
 import java.util.List;
 
-public record BottomDuoDetailStatisticsResponse(
+public record BottomDuoCounterResponse(
     String tier,
     int totalGames,
     DuoMeta myDuo,
-    List<Item> items
+    int counterSize,
+    List<Item> counters
 ) {
   public record DuoMeta(
       String adcName,
