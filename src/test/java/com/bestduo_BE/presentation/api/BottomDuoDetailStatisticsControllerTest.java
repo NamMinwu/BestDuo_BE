@@ -1,0 +1,105 @@
+package com.bestduo_BE.presentation.api;
+
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.bestduo_BE.application.ViewBottomDuoCounters;
+import com.bestduo_BE.application.ViewBottomDuoDetailStatistics;
+import com.bestduo_BE.application.port.BottomDuoMatchupFinder;
+import com.bestduo_BE.domain.model.Tier;
+import com.bestduo_BE.presentation.api.dto.BottomDuoCounterResponse;
+import com.bestduo_BE.presentation.api.dto.BottomDuoDetailStatisticsResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+@WebMvcTest(BottomDuoDetailStatisticsController.class)
+class BottomDuoDetailStatisticsControllerTest {
+
+  @Autowired
+  private MockMvc mockMvc;
+
+  @MockitoBean
+  private ViewBottomDuoDetailStatistics viewBottomDuoDetailStatistics;
+
+  @MockitoBean
+  private ViewBottomDuoCounters viewBottomDuoCounters;
+
+  private final ObjectMapper objectMapper = new ObjectMapper();
+
+  @Test
+  void listReturnsUseCaseResponse() throws Exception {
+    BottomDuoDetailStatisticsResponse response = new BottomDuoDetailStatisticsResponse(
+        "GOLD",
+        200,
+        new BottomDuoDetailStatisticsResponse.DuoMeta("Ashe", "a.png", "Lux", "l.png"),
+        List.of(new BottomDuoDetailStatisticsResponse.Item(
+            "Jinx",
+            "j.png",
+            "Morgana",
+            "m.png",
+            0.45,
+            0.2,
+            40
+        ))
+    );
+
+    when(viewBottomDuoDetailStatistics.execute(
+        Tier.GOLD,
+        "ashe",
+        "lux",
+        "jinx",
+        "morgana",
+        BottomDuoMatchupFinder.SortKey.PICKRATE_ASC
+    )).thenReturn(response);
+
+    mockMvc.perform(get("/bottom-duo/matchups")
+            .param("tier", "GOLD")
+            .param("adcChampionId", "ashe")
+            .param("supChampionId", "lux")
+            .param("oppAdcChampionId", "jinx")
+            .param("oppSupChampionId", "morgana")
+            .param("sort", "PICKRATE_ASC"))
+        .andExpect(status().isOk())
+        .andExpect(content().json(objectMapper.writeValueAsString(response)));
+
+    verify(viewBottomDuoDetailStatistics).execute(
+        Tier.GOLD,
+        "ashe",
+        "lux",
+        "jinx",
+        "morgana",
+        BottomDuoMatchupFinder.SortKey.PICKRATE_ASC
+    );
+  }
+
+  @Test
+  void countersReturnsCounterUseCaseResponse() throws Exception {
+    BottomDuoCounterResponse response = new BottomDuoCounterResponse(
+        "DIAMOND",
+        500,
+        new BottomDuoCounterResponse.DuoMeta("Ashe", "a.png", "Lux", "l.png"),
+        5,
+        List.of()
+    );
+
+    when(viewBottomDuoCounters.execute(Tier.DIAMOND, "ashe", "lux", 5)).thenReturn(response);
+
+    mockMvc.perform(get("/bottom-duo/counters")
+            .param("tier", "DIAMOND")
+            .param("adcChampionId", "ashe")
+            .param("supChampionId", "lux")
+            .param("size", "5"))
+        .andExpect(status().isOk())
+        .andExpect(content().json(objectMapper.writeValueAsString(response)));
+
+    verify(viewBottomDuoCounters).execute(Tier.DIAMOND, "ashe", "lux", 5);
+  }
+}
