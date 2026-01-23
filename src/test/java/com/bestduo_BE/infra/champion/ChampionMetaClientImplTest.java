@@ -8,21 +8,23 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
 @SpringBootTest
 class ChampionMetaClientImplTest {
 
-  @Autowired ChampionMetaClient championMetaClient;
+  @Autowired
+  ChampionMetaClient championMetaClient;
 
   @Test
-  @DisplayName("잘 찾나 확인")
-  void findByIdReturnsChampion() {
-    ChampionMeta meta = championMetaClient.findById("Lucian");
+  @DisplayName("챔피언 아이디와 키 모두로 메타 정보를 조회한다")
+  void findByIdReturnsChampionByNameAndKey() {
+    ChampionMeta byName = championMetaClient.findById("236");
 
-    assertEquals("Lucian", meta.getId());
-    assertEquals("루시안", meta.getName());
+
+    assertEquals("Lucian", byName.id());
+    assertEquals("루시안", byName.name());
     assertEquals(
         "https://ddragon.leagueoflegends.com/cdn/15.23.1/img/champion/Lucian.png",
-        meta.getImageUrl());
+        byName.imageUrl());
   }
-
 }

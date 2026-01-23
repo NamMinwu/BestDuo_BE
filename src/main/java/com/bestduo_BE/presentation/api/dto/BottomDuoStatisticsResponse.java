@@ -3,16 +3,17 @@ package com.bestduo_BE.presentation.api.dto;
 import java.util.List;
 
 public record BottomDuoStatisticsResponse(
+    String tier,
     int totalGames,
-    List<BottomDuoStatView> views
+    List<Item> items
 ) {
-  public record BottomDuoStatView(
-      String adName,
-      String adImage,
+  public record Item(
+      String adcName,
+      String adcImage,
       String supName,
       String supImage,
       double winRate,
-      int games,
-      double pickRate
+      double pickRate,
+      int games
   ) {}
 }

@@ -28,19 +28,25 @@ public class DataDragonChampionDataSource implements ChampionDataSource {
   @PostConstruct
   public void loadChampions() {
     ChampionListDto dto = restTemplate.getForObject(JSON_URL, ChampionListDto.class);
+
     if (dto == null || dto.getData() == null) {
       throw new IllegalStateException("Failed to load Data Dragon champion.json");
     }
 
+    int championCount = dto.getData().size();
+
     for (ChampionDto champion : dto.getData().values()) {
       String id = champion.getId();
+      String key = champion.getKey();
       String name = champion.getName();
       String image = IMAGE_URL + champion.getImage().getFull();
 
-      metaStore.put(id, new ChampionMeta(id, name, image));
+      ChampionMeta meta = new ChampionMeta(id, name, image);
+
+      metaStore.put(key, meta);
     }
 
-    System.out.println("Champion metadata loaded: " + metaStore.size() + " champions");
+    System.out.println("Champion metadata loaded: " + championCount + " champions");
   }
 
   @Override
@@ -48,4 +54,3 @@ public class DataDragonChampionDataSource implements ChampionDataSource {
     return metaStore.get(championId);
   }
 }
-
