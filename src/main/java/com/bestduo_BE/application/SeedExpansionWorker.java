@@ -44,7 +44,7 @@ public class SeedExpansionWorker {
           if (matchId == null || matchId.isBlank()) continue;
 
 //           1) Phase1: match 저장 + raw 저장
-          rawCreated += collectMatchDetailAndSaveRaw.execute(matchId, collectionTier);
+          rawCreated += collectMatchDetailAndSaveRaw.execute(matchId, collectionTier).rawCreated();
 
 //           2) Phase2B: 저장된 match_json에서 participants(10puuid) 뽑아서 seed 추가
           seedsExpanded += expandSeedsFromMatch.execute(matchId);

@@ -75,4 +75,40 @@ class MatchIdsFinderImplTest {
     assertThrows(RiotApiException.class,
         () -> finder.findRecentMatchIds("puuid-789", 5));
   }
+
+  @Test
+  void findMatchIdsSince_returnsIdsFromRegionalEndpoint() {
+    given(regionalRestTemplate.getForObject(
+        "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&count={count}",
+        String[].class,
+        "puuid-abc",
+        1700000000L,
+        30
+    )).willReturn(new String[]{"KR_10", "KR_11"});
+
+    List<String> result = finder.findMatchIdsSince("puuid-abc", 1700000000L, 30);
+
+    assertEquals(List.of("KR_10", "KR_11"), result);
+    then(regionalRestTemplate).should().getForObject(
+        eq("/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&count={count}"),
+        eq(String[].class),
+        eq("puuid-abc"),
+        eq(1700000000L),
+        eq(30)
+    );
+  }
+
+  @Test
+  void findMatchIdsSince_wrapsRestExceptionsInRiotApiException() {
+    given(regionalRestTemplate.getForObject(
+        "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&count={count}",
+        String[].class,
+        "puuid-def",
+        1600000000L,
+        15
+    )).willThrow(new RestClientException("oops"));
+
+    assertThrows(RiotApiException.class,
+        () -> finder.findMatchIdsSince("puuid-def", 1600000000L, 15));
+  }
 }

@@ -19,4 +19,15 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
       ON CONFLICT (puuid) DO NOTHING
       """, nativeQuery = true)
   int insertReadyIfAbsent(@Param("puuid") String puuid, @Param("now") OffsetDateTime now);
+
+  // 최소 구현: refresh 대상 일부 뽑기 (나중에 READY/ERROR 우선 정렬로 개선 가능)
+  @Query(value = """
+      select s.*
+      from summoner s
+      where s.refresh_status in ('READY','ERROR','DONE')
+      order by s.updated_at asc
+      limit :limit
+      """, nativeQuery = true)
+  List<Summoner> findRefreshTargets(int limit);
+
 }

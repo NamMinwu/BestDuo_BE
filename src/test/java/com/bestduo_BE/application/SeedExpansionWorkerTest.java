@@ -6,6 +6,7 @@ import static org.mockito.Mockito.inOrder;
 
 import com.bestduo_BE.application.port.MatchIdsFinder;
 import com.bestduo_BE.application.port.SummonerExpandQueue;
+import com.bestduo_BE.domain.model.CollectResult;
 import com.bestduo_BE.domain.model.Tier;
 import java.util.Collections;
 import java.util.List;
@@ -62,8 +63,10 @@ class SeedExpansionWorkerTest {
     given(summonerExpandQueue.findReadyPuuds(1)).willReturn(List.of("puuid-42"));
     given(matchIdsFinder.findRecentMatchIds("puuid-42", 3))
         .willReturn(List.of("m-1", "m-2"));
-    given(collectMatchDetailAndSaveRaw.execute("m-1", Tier.CHALLENGER)).willReturn(2);
-    given(collectMatchDetailAndSaveRaw.execute("m-2", Tier.CHALLENGER)).willReturn(3);
+    given(collectMatchDetailAndSaveRaw.execute("m-1", Tier.CHALLENGER))
+        .willReturn(new CollectResult(2, 1L));
+    given(collectMatchDetailAndSaveRaw.execute("m-2", Tier.CHALLENGER))
+        .willReturn(new CollectResult(3, 2L));
     given(expandSeedsFromMatch.execute("m-1")).willReturn(4);
     given(expandSeedsFromMatch.execute("m-2")).willReturn(5);
 
