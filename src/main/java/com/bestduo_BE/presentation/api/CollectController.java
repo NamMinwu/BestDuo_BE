@@ -22,7 +22,7 @@ public class CollectController {
       @PathVariable String matchId,
       @RequestParam(name = "tier", defaultValue = "EMERALD") Tier tier
   ) {
-    int created = useCase.execute(matchId, tier);
+    int created = useCase.execute(matchId, tier).rawCreated();
     return "OK raw_created=" + created;
   }
 }

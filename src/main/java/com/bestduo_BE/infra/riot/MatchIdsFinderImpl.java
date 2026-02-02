@@ -38,4 +38,25 @@ public class MatchIdsFinderImpl implements MatchIdsFinder {
       throw new RiotApiException("Failed to load match ids from Riot API", e);
     }
   }
+
+  @Override
+  public List<String> findMatchIdsSince(String puuid, long startTimeSeconds, int count) {
+    try {
+      // startTime은 epoch seconds
+      String[] matchIds = regionalRestTemplate.getForObject(
+          "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&count={count}",
+          String[].class,
+          puuid,
+          startTimeSeconds,
+          count
+      );
+      return matchIds == null ? List.of() : Arrays.asList(matchIds);
+    } catch (RestClientException e) {
+      log.error(
+          "Failed to load match ids since. puuid={}, startTimeSeconds={}, count={}",
+          puuid, startTimeSeconds, count, e
+      );
+      throw new RiotApiException("Failed to load match ids since startTime from Riot API", e);
+    }
+  }
 }

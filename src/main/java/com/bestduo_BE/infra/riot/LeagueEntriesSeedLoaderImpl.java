@@ -1,6 +1,6 @@
 package com.bestduo_BE.infra.riot;
 
-import com.bestduo_BE.application.port.LeagueEntriesLoader;
+import com.bestduo_BE.application.port.LeagueEntriesSeedLoader;
 import com.bestduo_BE.infra.riot.dto.LeagueEntry;
 import java.util.Arrays;
 import java.util.List;
@@ -12,11 +12,11 @@ import org.springframework.web.client.RestTemplate;
 
 @Component
 @Slf4j
-public class LeagueEntriesLoaderImpl implements LeagueEntriesLoader {
+public class LeagueEntriesSeedLoaderImpl implements LeagueEntriesSeedLoader {
 
   private final RestTemplate platformRestTemplate;
 
-  public LeagueEntriesLoaderImpl(
+  public LeagueEntriesSeedLoaderImpl(
       @Qualifier("riotPlatformRestTemplate") RestTemplate platformRestTemplate) {
     this.platformRestTemplate = platformRestTemplate;
   }

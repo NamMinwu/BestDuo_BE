@@ -37,6 +37,15 @@ public class Summoner {
   @Column(name = "last_expand_run_at")
   private OffsetDateTime lastExpandRunAt;
 
+  @Column(name = "refresh_status", nullable = false)
+  private String refreshStatus; // READY/RUNNING/DONE/ERROR
+
+  @Column(name = "last_refresh_run_at")
+  private OffsetDateTime lastRefreshRunAt;
+
+  @Column(name = "last_match_start_time")
+  private Long lastMatchStartTime; // epoch seconds
+
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
 
@@ -51,6 +60,9 @@ public class Summoner {
         .expandStatus("READY") // 처음 들어오면 확장 대상이기도 함
         .lastSeedRunAt(null)
         .lastExpandRunAt(null)
+        .refreshStatus("READY")
+        .lastRefreshRunAt(null)
+        .lastMatchStartTime(null)
         .createdAt(now)
         .updatedAt(now)
         .build();
@@ -87,6 +99,25 @@ public class Summoner {
 
   public void markExpandError() {
     this.expandStatus = "ERROR";
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  public void markRefreshRunning() {
+    this.refreshStatus = "RUNNING";
+    this.lastRefreshRunAt = OffsetDateTime.now();
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  public void markRefreshDone(Long newLastMatchStartTimeOrNull) {
+    this.refreshStatus = "DONE";
+    if (newLastMatchStartTimeOrNull != null) {
+      this.lastMatchStartTime = newLastMatchStartTimeOrNull;
+    }
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  public void markRefreshError() {
+    this.refreshStatus = "ERROR";
     this.updatedAt = OffsetDateTime.now();
   }
 }

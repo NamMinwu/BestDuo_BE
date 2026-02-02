@@ -1,6 +1,6 @@
 package com.bestduo_BE.application;
 
-import com.bestduo_BE.application.port.LeagueEntriesLoader;
+import com.bestduo_BE.application.port.LeagueEntriesSeedLoader;
 import com.bestduo_BE.application.port.MatchIdsFinder;
 import com.bestduo_BE.application.port.SummonerSeedRegistry;
 import com.bestduo_BE.domain.model.SeedBootstrapCommand;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SeedBootstrapRun {
 
-  private final LeagueEntriesLoader leagueEntriesLoader;
+  private final LeagueEntriesSeedLoader leagueEntriesSeedLoader;
   private final MatchIdsFinder matchIdsFinder;
   private final SummonerSeedRegistry summonerSeedRegistry;
 
@@ -37,7 +37,7 @@ public class SeedBootstrapRun {
 
     for (int page = cmd.startPage(); page <= cmd.endPage(); page++) {
 
-      List<LeagueEntry> entries = leagueEntriesLoader.loadEntries(cmd.queue(), cmd.tier(), cmd.division(), page);
+      List<LeagueEntry> entries = leagueEntriesSeedLoader.loadEntries(cmd.queue(), cmd.tier(), cmd.division(), page);
       if (entries == null || entries.isEmpty()) break;
 
       pagesProcessed++;
@@ -69,7 +69,7 @@ public class SeedBootstrapRun {
 
           for (String matchId : matchIds) {
             if (matchId == null || matchId.isBlank()) continue;
-            rawCreated += collectMatchDetailAndSaveRaw.execute(matchId, cmd.seedTier());
+            rawCreated += collectMatchDetailAndSaveRaw.execute(matchId, cmd.seedTier()).rawCreated();
           }
 
           summonerSeedRegistry.markSeedDone(puuid);

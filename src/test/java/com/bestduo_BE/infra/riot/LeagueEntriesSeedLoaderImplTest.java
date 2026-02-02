@@ -18,22 +18,22 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
-class LeagueEntriesLoaderImplTest {
+class LeagueEntriesSeedLoaderImplTest {
 
   @Mock
   private RestTemplate platformRestTemplate;
 
-  private LeagueEntriesLoaderImpl loader;
+  private LeagueEntriesSeedLoaderImpl loader;
 
   @BeforeEach
   void setUp() {
-    loader = new LeagueEntriesLoaderImpl(platformRestTemplate);
+    loader = new LeagueEntriesSeedLoaderImpl(platformRestTemplate);
   }
 
   @Test
   void loadEntries_returnsEntriesFromPlatformEndpoint() {
-    LeagueEntry entry1 = new LeagueEntry("puuid-1");
-    LeagueEntry entry2 = new LeagueEntry("puuid-2");
+    LeagueEntry entry1 = new LeagueEntry("puuid-1", "MASTER", "RANKED_SOLO_5x5", "I", 100L);
+    LeagueEntry entry2 = new LeagueEntry("puuid-2", "MASTER", "RANKED_SOLO_5x5", "I", 80L);
     given(platformRestTemplate.getForObject(
         "/lol/league/v4/entries/{queue}/{tier}/{division}?page={page}",
         LeagueEntry[].class,
