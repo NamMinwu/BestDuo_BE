@@ -56,7 +56,7 @@ class CollectControllerTest {
     stubRiotMatchLoader.setResponse(sampleMatch());
 
     mockMvc.perform(post("/collect/match/{matchId}", "KR_ABCDE")
-            .param("tier", "EMERALD_PLUS"))
+            .param("tier", "EMERALD"))
         .andExpect(status().isOk())
         .andExpect(content().string(containsString("raw_created=2")));
 
@@ -69,7 +69,7 @@ class CollectControllerTest {
     assertThat(raws).extracting(BottomDuoRawEntity::getTeamId).containsExactlyInAnyOrder(100, 200);
 
     mockMvc.perform(post("/collect/match/{matchId}", "KR_ABCDE")
-            .param("tier", "EMERALD_PLUS"))
+            .param("tier", "EMERALD"))
         .andExpect(status().isOk());
 
     assertThat(matchRepository.count()).isEqualTo(1);

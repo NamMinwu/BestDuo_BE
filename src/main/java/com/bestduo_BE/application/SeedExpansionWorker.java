@@ -1,6 +1,7 @@
 package com.bestduo_BE.application;
 
 import com.bestduo_BE.application.port.MatchIdsFinder;
+import com.bestduo_BE.application.port.MatchQueueEnqueuer;
 import com.bestduo_BE.application.port.SummonerExpandQueue;
 import com.bestduo_BE.domain.model.Tier;
 import java.util.List;
@@ -11,19 +12,26 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SeedExpansionWorker {
 
+  private static final int PRIORITY_EXPAND = 60;
+
   private final SummonerExpandQueue summonerExpandQueue;
   private final MatchIdsFinder matchIdsFinder;
+  private final MatchQueueEnqueuer matchQueueEnqueuer;
 
-  private final CollectMatchDetailAndSaveRaw collectMatchDetailAndSaveRaw;
-
-  // Phase2B: match에서 participants 추출해 seed 확장
-  private final ExpandSeedsFromMatch expandSeedsFromMatch;
-
+  /**
+   * Phase2B(큐 기반):
+   * - 확장 대상 puuid를 뽑아
+   * - matchIds만 가져와 match_queue에 적재한다.
+   * - match detail(Phase1)은 MatchDetailQueueWorker가 수행한다.
+   *
+   * NOTE:
+   * - participants 기반 seed 확장(10 puuid upsert)은
+   *   "match detail 처리 시점"에 자동으로 발생하도록 옮기는 게 정석이다.
+   */
   public ExpansionResult execute(int batchSize, int matchesPerPuuid, Tier collectionTier) {
     int puuidPicked = 0;
     int matchIdsFetched = 0;
-    int rawCreated = 0;
-    int seedsExpanded = 0;
+    int matchIdsEnqueued = 0;
 
     List<String> puuids = summonerExpandQueue.findReadyPuuds(batchSize);
     puuidPicked = puuids.size();
@@ -40,15 +48,10 @@ public class SeedExpansionWorker {
 
         matchIdsFetched += matchIds.size();
 
-        for (String matchId : matchIds) {
-          if (matchId == null || matchId.isBlank()) continue;
-
-//           1) Phase1: match 저장 + raw 저장
-          rawCreated += collectMatchDetailAndSaveRaw.execute(matchId, collectionTier).rawCreated();
-
-//           2) Phase2B: 저장된 match_json에서 participants(10puuid) 뽑아서 seed 추가
-          seedsExpanded += expandSeedsFromMatch.execute(matchId);
-        }
+        // ✅ detail 호출 X
+        // ✅ matchIds를 match_queue에 적재
+        matchQueueEnqueuer.enqueueAllIdempotent(matchIds, collectionTier, PRIORITY_EXPAND);
+        matchIdsEnqueued += matchIds.size(); // (시도 수)
 
         summonerExpandQueue.markExpandDone(puuid);
 
@@ -57,13 +60,12 @@ public class SeedExpansionWorker {
       }
     }
 
-    return new ExpansionResult(puuidPicked, matchIdsFetched, rawCreated, seedsExpanded);
+    return new ExpansionResult(puuidPicked, matchIdsFetched, matchIdsEnqueued);
   }
 
   public record ExpansionResult(
       int puuidPicked,
       int matchIdsFetched,
-      int rawCreated,
-      int seedsExpanded
+      int matchIdsEnqueued
   ) {}
 }

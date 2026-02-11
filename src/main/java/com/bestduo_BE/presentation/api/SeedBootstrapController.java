@@ -21,7 +21,7 @@ public class SeedBootstrapController {
       @RequestParam String queue,
       @RequestParam String tier,
       @RequestParam String division,
-      @RequestParam(defaultValue = "EMERALD_PLUS") Tier seedTier,
+      @RequestParam(defaultValue = "EMERALD") Tier seedTier,
       @RequestParam(defaultValue = "1") int startPage,
       @RequestParam(defaultValue = "3") int endPage,
       @RequestParam(defaultValue = "10") int matchesPerPuuid

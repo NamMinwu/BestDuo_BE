@@ -2,17 +2,16 @@ package com.bestduo_BE.application;
 
 import com.bestduo_BE.application.port.LeagueEntriesRefreshLoader;
 import com.bestduo_BE.application.port.MatchIdsFinder;
-import com.bestduo_BE.domain.model.CollectResult;
+import com.bestduo_BE.application.port.MatchQueueEnqueuer;
+import com.bestduo_BE.application.port.SummonerRefreshStatusUpdater;
 import com.bestduo_BE.domain.model.Tier;
 import com.bestduo_BE.infra.persistence.entity.Summoner;
-import com.bestduo_BE.infra.persistence.repository.SummonerJpaRepository;
 import com.bestduo_BE.infra.riot.dto.LeagueEntry;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -20,49 +19,53 @@ import org.springframework.transaction.annotation.Transactional;
 public class RefreshSummonerMatches {
 
   private static final int FETCH_COUNT = 50;
+  private static final int PRIORITY_REFRESH = 10;
 
-  private final SummonerJpaRepository summonerJpaRepository;
   private final LeagueEntriesRefreshLoader leagueEntriesRefreshLoader;
   private final MatchIdsFinder matchIdsFinder;
+  private final MatchQueueEnqueuer matchQueueEnqueuer;
 
-  private final CollectMatchDetailAndSaveRaw collectMatchDetailAndSaveRaw;
+  private final SummonerRefreshStatusUpdater summonerRefreshStatusUpdater;
 
-  @Transactional
+  /**
+   * Phase5(큐 기반 Refresh):
+   * - 현재 티어 조회 → Tier 라벨 결정
+   * - lastMatchStartTime 이후 matchIds 조회(증분)
+   * - match_queue에 enqueue만 수행 (detail 처리는 QueueWorker가 수행)
+   */
   public Result execute(String puuid) {
-    Summoner s = summonerJpaRepository.findById(puuid)
-        .orElseGet(() -> summonerJpaRepository.save(Summoner.newReady(puuid)));
+    Summoner s = summonerRefreshStatusUpdater.findOrCreate(puuid);
 
     try {
-      s.markRefreshRunning();
+      summonerRefreshStatusUpdater.markRefreshRunning(puuid);
 
       Tier collectionTier = resolveCollectionTierBySolo(puuid);
       if (collectionTier == null || collectionTier == Tier.ALL_TIERS) {
-        s.markRefreshDone(s.getLastMatchStartTime());
+        summonerRefreshStatusUpdater.markRefreshDone(puuid, s.getLastMatchStartTime());
         return new Result(puuid, 0, collectionTier, s.getLastMatchStartTime());
       }
 
       List<String> matchIds = loadMatchIds(puuid, s.getLastMatchStartTime());
 
-      int totalRawCreated = 0;
-      Long newestStartTime = s.getLastMatchStartTime();
-
-      for (String matchId : matchIds) {
-        CollectResult r = collectMatchDetailAndSaveRaw.execute(matchId, collectionTier);
-        totalRawCreated += r.rawCreated();
-
-        if (r.matchStartTimeSec() != null) {
-          newestStartTime = (newestStartTime == null)
-              ? r.matchStartTimeSec()
-              : Math.max(newestStartTime, r.matchStartTimeSec());
-        }
+      if (matchIds == null || matchIds.isEmpty()) {
+        summonerRefreshStatusUpdater.markRefreshDone(puuid, s.getLastMatchStartTime());
+        return new Result(puuid, 0, collectionTier, s.getLastMatchStartTime());
       }
 
-      s.markRefreshDone(newestStartTime);
-      return new Result(puuid, totalRawCreated, collectionTier, newestStartTime);
+      // ✅ detail 호출 X
+      // ✅ matchIds를 queue에 적재 (refresh가 우선순위 높음)
+      matchQueueEnqueuer.enqueueAllIdempotent(matchIds, collectionTier, PRIORITY_REFRESH);
+
+      // 커서 갱신 정책:
+      // - 정확하게 하려면 "detail 처리 시점"에 matchStartTime을 보고 갱신하는 게 맞음.
+      // - 지금은 enqueue 성공을 DONE으로 기록하고, 커서는 그대로 둔다(안전하게 보수적).
+      summonerRefreshStatusUpdater.markRefreshDone(puuid, s.getLastMatchStartTime());
+
+      return new Result(puuid, matchIds.size(), collectionTier, s.getLastMatchStartTime());
 
     } catch (Exception e) {
-      log.error("Refresh failed. puuid={}", puuid, e);
-      s.markRefreshError();
+      log.error("Refresh enqueue failed. puuid={}", puuid, e);
+      summonerRefreshStatusUpdater.markRefreshError(puuid);
       throw e;
     }
   }
@@ -83,29 +86,24 @@ public class RefreshSummonerMatches {
 
     LeagueEntry solo = entries.stream()
         .filter(e -> "RANKED_SOLO_5x5".equals(e.queueType()))
-        .max(Comparator.comparingLong(LeagueEntry::leaguePoints))
+        .max(Comparator.comparingLong(e -> e.leaguePoints() == null ? 0L : e.leaguePoints()))
         .orElse(null);
 
-    if (solo == null) return null;
+    if (solo == null || solo.tier() == null) return null;
 
-    Tier riotTier;
     try {
-      riotTier = Tier.valueOf(solo.tier()); // e.g. "EMERALD"
+      Tier riotTier = Tier.valueOf(solo.tier()); // e.g. "EMERALD"
+      return switch (riotTier) {
+        default -> riotTier;
+      };
     } catch (IllegalArgumentException e) {
       return null;
     }
-
-    // ✅ bucket 정책 (필요하면 여기만 바꾸면 됨)
-    return switch (riotTier) {
-      case EMERALD -> Tier.EMERALD_PLUS;
-      // DIAMOND_PLUS가 enum에 없으니, 상위는 DIAMOND로 묶는 예시
-      default -> riotTier;
-    };
   }
 
   public record Result(
       String puuid,
-      int rawCreated,
+      int matchIdsEnqueued,
       Tier collectionTier,
       Long lastMatchStartTimeSec
   ) {}

@@ -7,6 +7,6 @@ public record BottomDuoRaw(
     int supChampionId,     // 예: 412 (Thresh)
     boolean win,           // 이 팀이 이겼는지
     String patch,          // "15.23"
-    Tier tier    // EMERALD_PLUS (collection context)
+    Tier tier    // EMERALD (collection context)
 ) {
 }

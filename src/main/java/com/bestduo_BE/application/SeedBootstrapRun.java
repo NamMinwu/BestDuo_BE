@@ -2,8 +2,10 @@ package com.bestduo_BE.application;
 
 import com.bestduo_BE.application.port.LeagueEntriesSeedLoader;
 import com.bestduo_BE.application.port.MatchIdsFinder;
+import com.bestduo_BE.application.port.MatchQueueEnqueuer;
 import com.bestduo_BE.application.port.SummonerSeedRegistry;
 import com.bestduo_BE.domain.model.SeedBootstrapCommand;
+import com.bestduo_BE.domain.model.Tier;
 import com.bestduo_BE.infra.riot.dto.LeagueEntry;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -13,31 +15,39 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SeedBootstrapRun {
 
+  private static final int PRIORITY_SEED = 50;
+
   private final LeagueEntriesSeedLoader leagueEntriesSeedLoader;
   private final MatchIdsFinder matchIdsFinder;
+  private final MatchQueueEnqueuer matchQueueEnqueuer;
   private final SummonerSeedRegistry summonerSeedRegistry;
-
-  private final CollectMatchDetailAndSaveRaw collectMatchDetailAndSaveRaw;
 
   public record SeedBootstrapResult(
       int pagesProcessed,
       int entriesFetched,
       int puuidRegistered,
       int matchIdsFetched,
-      int rawCreated
+      int matchIdsEnqueued
   ) {}
 
-  // 리펙이 필요할 듯
+  /**
+   * Phase2A(Seed Bootstrap):
+   * - league entries에서 puuid 수집
+   * - summoner 등록 + seed 상태 전이
+   * - puuid의 matchIds를 "match_queue에 적재"까지만 수행
+   * - match detail 처리(Phase1)는 MatchDetailQueueWorker가 수행
+   */
   public SeedBootstrapResult execute(SeedBootstrapCommand cmd) {
     int pagesProcessed = 0;
     int entriesFetched = 0;
     int puuidRegistered = 0;
     int matchIdsFetched = 0;
-    int rawCreated = 0;
+    int matchIdsEnqueued = 0;
 
     for (int page = cmd.startPage(); page <= cmd.endPage(); page++) {
+      List<LeagueEntry> entries = leagueEntriesSeedLoader.loadEntries(
+          cmd.queue(), cmd.tier(), cmd.division(), page);
 
-      List<LeagueEntry> entries = leagueEntriesSeedLoader.loadEntries(cmd.queue(), cmd.tier(), cmd.division(), page);
       if (entries == null || entries.isEmpty()) break;
 
       pagesProcessed++;
@@ -47,42 +57,45 @@ public class SeedBootstrapRun {
         if (e == null) continue;
 
         String puuid = e.puuid();
-        if (puuid == null || puuid.isBlank()) {
-          // PUUID-only 전제라면 여기서는 skip
-          continue;
-        }
+        if (puuid == null || puuid.isBlank()) continue;
 
+        // 1) summoner 등록(멱등) - 처음 본 puuid만 진행
         boolean firstTime = summonerSeedRegistry.registerIfAbsent(puuid);
         if (!firstTime) continue;
 
         puuidRegistered++;
 
+        // 2) seed status RUNNING
         summonerSeedRegistry.markSeedRunning(puuid);
+
         try {
+          // 3) matchIds 가져오기 (외부 API)
           List<String> matchIds = matchIdsFinder.findRecentMatchIds(puuid, cmd.matchesPerPuuid());
           if (matchIds == null || matchIds.isEmpty()) {
+            // matchIds가 없다면 seed는 "enqueue 할 게 없음"으로 DONE 처리
             summonerSeedRegistry.markSeedDone(puuid);
             continue;
           }
 
           matchIdsFetched += matchIds.size();
 
-          for (String matchId : matchIds) {
-            if (matchId == null || matchId.isBlank()) continue;
-            rawCreated += collectMatchDetailAndSaveRaw.execute(matchId, cmd.seedTier()).rawCreated();
-          }
+          // 4) ✅ matchIds를 match_queue에 적재 (detail 금지)
+          Tier tierLabel = cmd.seedTier(); // "seed 입력 tier"를 저장 라벨로 사용
+          matchQueueEnqueuer.enqueueAllIdempotent(matchIds, tierLabel, PRIORITY_SEED);
+          matchIdsEnqueued += matchIds.size(); // (정확히는 "시도 수". 실제 신규 enqueue 수는 repo에서 카운트하려면 별도 처리 필요)
 
+          // 5) seed status DONE (여기서 DONE은 "queue 적재 완료"의 의미)
           summonerSeedRegistry.markSeedDone(puuid);
 
         } catch (Exception ex) {
           summonerSeedRegistry.markSeedError(puuid);
-          // Phase2A는 계속 진행(운영상 보통 유리)
+          // Phase2A는 계속 진행 (다음 puuid로)
         }
       }
     }
 
-    return new SeedBootstrapResult(pagesProcessed, entriesFetched, puuidRegistered, matchIdsFetched, rawCreated);
+    return new SeedBootstrapResult(
+        pagesProcessed, entriesFetched, puuidRegistered, matchIdsFetched, matchIdsEnqueued
+    );
   }
-
-
 }

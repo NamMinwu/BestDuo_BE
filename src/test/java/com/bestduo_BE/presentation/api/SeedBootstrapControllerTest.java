@@ -45,7 +45,7 @@ class SeedBootstrapControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.pagesProcessed").value(1))
         .andExpect(jsonPath("$.entriesFetched").value(2))
-        .andExpect(jsonPath("$.rawCreated").value(5));
+        .andExpect(jsonPath("$.matchIdsEnqueued").value(5));
 
     ArgumentCaptor<SeedBootstrapCommand> captor =
         ArgumentCaptor.forClass(SeedBootstrapCommand.class);
@@ -76,7 +76,7 @@ class SeedBootstrapControllerTest {
         ArgumentCaptor.forClass(SeedBootstrapCommand.class);
     then(seedBootstrapRun).should().execute(captor.capture());
     SeedBootstrapCommand command = captor.getValue();
-    assertThat(command.seedTier()).isEqualTo(Tier.EMERALD_PLUS);
+    assertThat(command.seedTier()).isEqualTo(Tier.EMERALD);
     assertThat(command.startPage()).isEqualTo(1);
     assertThat(command.endPage()).isEqualTo(3);
     assertThat(command.matchesPerPuuid()).isEqualTo(10);

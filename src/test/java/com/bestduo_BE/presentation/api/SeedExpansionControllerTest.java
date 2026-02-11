@@ -30,7 +30,7 @@ class SeedExpansionControllerTest {
 
   @Test
   void expand_withExplicitParametersInvokesWorkerAndReturnsResult() throws Exception {
-    var result = new SeedExpansionWorker.ExpansionResult(3, 9, 27, 81);
+    var result = new SeedExpansionWorker.ExpansionResult(3, 9, 27);
     given(worker.execute(anyInt(), anyInt(), any())).willReturn(result);
 
     mockMvc.perform(post("/seed/expand")
@@ -40,8 +40,7 @@ class SeedExpansionControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.puuidPicked").value(3))
         .andExpect(jsonPath("$.matchIdsFetched").value(9))
-        .andExpect(jsonPath("$.rawCreated").value(27))
-        .andExpect(jsonPath("$.seedsExpanded").value(81));
+        .andExpect(jsonPath("$.matchIdsEnqueued").value(27));
 
     ArgumentCaptor<Integer> batchCaptor = ArgumentCaptor.forClass(Integer.class);
     ArgumentCaptor<Integer> matchesCaptor = ArgumentCaptor.forClass(Integer.class);
@@ -55,11 +54,11 @@ class SeedExpansionControllerTest {
   @Test
   void expand_withoutParametersUsesDefaults() throws Exception {
     given(worker.execute(anyInt(), anyInt(), any())).willReturn(
-        new SeedExpansionWorker.ExpansionResult(0, 0, 0, 0));
+        new SeedExpansionWorker.ExpansionResult(0, 0, 0));
 
     mockMvc.perform(post("/seed/expand"))
         .andExpect(status().isOk());
 
-    then(worker).should().execute(50, 5, Tier.EMERALD_PLUS);
+    then(worker).should().execute(50, 5, Tier.EMERALD);
   }
 }

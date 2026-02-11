@@ -19,7 +19,7 @@ public class SeedExpansionController {
   public SeedExpansionWorker.ExpansionResult expand(
       @RequestParam(defaultValue = "50") int batchSize,
       @RequestParam(defaultValue = "5") int matchesPerPuuid,
-      @RequestParam(defaultValue = "EMERALD_PLUS") Tier collectionTier
+      @RequestParam(defaultValue = "EMERALD") Tier collectionTier
   ) {
     return worker.execute(batchSize, matchesPerPuuid, collectionTier);
   }

@@ -6,7 +6,6 @@ public enum Tier {
   MASTER,
   DIAMOND,
   EMERALD,
-  EMERALD_PLUS,
   PLATINUM,
   GOLD,
   SILVER,
