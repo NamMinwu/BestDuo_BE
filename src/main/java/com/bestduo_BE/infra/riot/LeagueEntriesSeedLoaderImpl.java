@@ -2,6 +2,7 @@ package com.bestduo_BE.infra.riot;
 
 import com.bestduo_BE.application.port.LeagueEntriesSeedLoader;
 import com.bestduo_BE.infra.riot.dto.LeagueEntry;
+import com.bestduo_BE.infra.riot.exception.RiotApiException;
 import java.util.Arrays;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;

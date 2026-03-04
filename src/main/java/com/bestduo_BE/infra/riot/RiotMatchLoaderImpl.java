@@ -3,6 +3,7 @@ package com.bestduo_BE.infra.riot;
 import com.bestduo_BE.application.port.RiotMatchLoader;
 
 import com.bestduo_BE.infra.riot.dto.RiotMatchDto;
+import com.bestduo_BE.infra.riot.exception.RiotApiException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;

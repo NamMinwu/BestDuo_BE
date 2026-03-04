@@ -6,6 +6,7 @@ import static com.bestduo_BE.support.RiotMatchTestData.team;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.bestduo_BE.infra.riot.dto.RiotMatchDto;
+import com.bestduo_BE.infra.riot.exception.RiotApiException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClientException;

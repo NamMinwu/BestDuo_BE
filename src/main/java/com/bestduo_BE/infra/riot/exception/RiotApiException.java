@@ -1,4 +1,4 @@
-package com.bestduo_BE.infra.riot;
+package com.bestduo_BE.infra.riot.exception;
 
 public class RiotApiException extends RuntimeException {
 

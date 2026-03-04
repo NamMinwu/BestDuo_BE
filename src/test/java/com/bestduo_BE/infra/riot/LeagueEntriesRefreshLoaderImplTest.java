@@ -8,6 +8,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 import com.bestduo_BE.infra.riot.dto.LeagueEntry;
+import com.bestduo_BE.infra.riot.exception.RiotApiException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
