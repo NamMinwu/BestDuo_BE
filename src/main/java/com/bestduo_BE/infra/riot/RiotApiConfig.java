@@ -14,8 +14,8 @@ public class RiotApiConfig {
   @Bean
   public DualWindowRateLimiter riotRateLimiter() {
     return new DualWindowRateLimiter(
-        20, Duration.ofSeconds(1),
-        100, Duration.ofMinutes(2)
+        10, Duration.ofSeconds(1),
+        60, Duration.ofMinutes(2)
     );
   }
 

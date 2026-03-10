@@ -49,7 +49,7 @@ class RunDailySessionTest {
   @Test
   void executeRunsEnabledPhasesAndAggregatesCounts() {
     RunDailySession.SessionCommand cmd = new RunDailySession.SessionCommand(
-        120, true, true, 5, 10, 3, seedCommand
+        120, 20, 20, 80, true, true, 5, 10, 3, seedCommand
     );
     given(seedBootstrapRun.execute(seedCommand))
         .willReturn(new SeedBootstrapRun.SeedBootstrapResult(1, 2, 3, 4, 5));
@@ -68,15 +68,20 @@ class RunDailySessionTest {
     verify(matchDetailQueueWorker, times(2)).execute(10);
     assertThat(result.status()).isEqualTo("DONE");
     assertThat(result.remainingBudget()).isEqualTo(120);
-    assertThat(result.seedEnqueued()).isZero();
+    assertThat(result.seedEnqueued()).isEqualTo(5);
     assertThat(result.refreshEnqueued()).isEqualTo(7);
     assertThat(result.queueProcessed()).isEqualTo(5);
+    assertThat(result.picked()).isEqualTo(2);
+    assertThat(result.done()).isEqualTo(5);
+    assertThat(result.error()).isZero();
+    assertThat(result.rawCreated()).isEqualTo(5);
+    assertThat(result.message()).isEqualTo("OK");
   }
 
   @Test
   void executeStopsWhenBudgetExhausted() {
     RunDailySession.SessionCommand cmd = new RunDailySession.SessionCommand(
-        50, false, false, 0, 10, 1, seedCommand
+        50, 0, 0, 50, false, false, 0, 10, 1, seedCommand
     );
     given(matchDetailQueueWorker.execute(10))
         .willThrow(new BudgetExhaustedException("budget gone"));
@@ -89,12 +94,13 @@ class RunDailySessionTest {
     assertThat(result.remainingBudget()).isZero();
     assertThat(result.refreshEnqueued()).isZero();
     assertThat(result.queueProcessed()).isZero();
+    assertThat(result.message()).isEqualTo("budget gone");
   }
 
   @Test
   void executeStopsWhenRateLimited() {
     RunDailySession.SessionCommand cmd = new RunDailySession.SessionCommand(
-        80, false, false, 0, 10, 1, seedCommand
+        80, 0, 0, 80, false, false, 0, 10, 1, seedCommand
     );
     given(matchDetailQueueWorker.execute(10))
         .willThrow(new RiotRateLimitedException("slow down"));
@@ -105,5 +111,6 @@ class RunDailySessionTest {
     assertThat(result.remainingBudget()).isEqualTo(80);
     assertThat(result.refreshEnqueued()).isZero();
     assertThat(result.queueProcessed()).isZero();
+    assertThat(result.message()).isEqualTo("slow down");
   }
 }

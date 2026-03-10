@@ -22,7 +22,7 @@ public interface MatchQueueCoordinator {
   void markError(String matchId, String message);
 
   /**
-   * Budget/429 등 "실패가 아니라 세션 종료" 상황:
+   * Budget아/429 등 "실패가 니라 세션 종료" 상황:
    * RUNNING을 READY로 돌려 다음 세션에서 다시 처리되게 한다.
    */
   void unlockToReady(String matchId);

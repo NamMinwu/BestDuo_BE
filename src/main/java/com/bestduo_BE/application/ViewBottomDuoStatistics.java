@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ViewBottomDuoStatistics {
 
-  private static final int MAX_ROWS = 100;
+  private static final int MAX_ROWS = 1000;
 
   private final BottomDuoStatFinder statFinder;
   private final ChampionMetaClient championMetaClient;
