@@ -1,0 +1,52 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:}
+    username: ${SPRING_DATASOURCE_USERNAME:}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.postgresql.Driver}
+
+  jpa:
+    show-sql: true
+    properties:
+      # SQL을 보기 좋게 포맷팅
+      hibernate.format_sql: true
+      # Hibernate 내부 통계(쿼리 수, flush, entity insert/delete 등) 활성화
+      hibernate.generate_statistics: true
+    hibernate:
+      ddl-auto: update
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+
+external:
+  riot:
+    platform-base-url: https://kr.api.riotgames.com
+    regional-base-url: https://asia.api.riotgames.com
+    api-key: ${EXTERNAL_RIOT_API_KEY:}
+
+collector:
+  seed-puuids: [] # TODO populate with seed accounts to crawl
+  queue-id: 420
+  match-count: 20
+  poll-delay-ms: 60000
+
+daily-session:
+  run-seed: true
+  run-refresh: true
+  seed-ratio: 0.2      # budgetTotal 대비 seed 전용 비율
+  refresh-ratio: 0.2   # budgetTotal 대비 refresh 전용 비율
+  refresh-limit: 5
+  seed:
+    queue: RANKED_SOLO_5x5
+    tier: GOLD
+    division: I
+    seed-tier: GOLD
+    start-page: 1
+    end-page: 1
+    matches-per-puuid: 20
+
+session-run-request:
+  worker:
+    enabled: ${SESSION_RUN_REQUEST_WORKER_ENABLED:false}

@@ -1,0 +1,19 @@
+# Production profile - 활성화: SPRING_PROFILES_ACTIVE=prod
+# Railway 배포 시 환경 변수로 프로파일 설정
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:${DATABASE_URL:postgresql://localmaster:secret@localhost:5432/testdb}}
+  jpa:
+    show-sql: false
+    properties:
+      hibernate.format_sql: false
+      hibernate.generate_statistics: false
+
+logging:
+  level:
+    root: INFO
+    com.bestduo_BE: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
