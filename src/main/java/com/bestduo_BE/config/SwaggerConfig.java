@@ -2,9 +2,12 @@ package com.bestduo_BE.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 @Configuration
 public class SwaggerConfig {
@@ -12,6 +15,7 @@ public class SwaggerConfig {
     @Bean
     public OpenAPI bestduoOpenApi() {
         return new OpenAPI()
+                .servers(List.of(new Server().url("/")))  // 상대 경로로 same-origin 유지 (프록시/HTTPS 대응)
                 .info(new Info()
                         .title("BestDuo API")
                         .description("BestDuo 서비스 OpenAPI 문서")

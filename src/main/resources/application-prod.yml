@@ -1,6 +1,9 @@
 # Production profile - 활성화: SPRING_PROFILES_ACTIVE=prod
 # Railway 배포 시 환경 변수로 프로파일 설정
 
+server:
+  forward-headers-strategy: framework  # Railway 프록시 X-Forwarded-* 헤더 인식
+
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
