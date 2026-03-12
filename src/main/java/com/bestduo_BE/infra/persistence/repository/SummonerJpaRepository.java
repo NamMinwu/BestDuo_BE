@@ -14,8 +14,18 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
-      INSERT INTO summoner (puuid, seed_status, expand_status, last_seed_run_at, last_expand_run_at, created_at, updated_at)
-      VALUES (:puuid, 'READY', 'READY', NULL, NULL, :now, :now)
+      INSERT INTO summoner (
+          puuid,
+          seed_status,
+          expand_status,
+          refresh_status,
+          last_seed_run_at,
+          last_expand_run_at,
+          last_refresh_run_at,
+          last_match_start_time,
+          created_at,
+          updated_at)
+      VALUES (:puuid, 'READY', 'READY', 'READY', NULL, NULL, NULL, NULL, :now, :now)
       ON CONFLICT (puuid) DO NOTHING
       """, nativeQuery = true)
   int insertReadyIfAbsent(@Param("puuid") String puuid, @Param("now") OffsetDateTime now);

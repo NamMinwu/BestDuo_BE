@@ -18,6 +18,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class MatchQueue {
+  private static final int LAST_ERROR_MAX_LENGTH = 255;
+
   @Id
   @Column(name = "match_id", nullable = false)
   private String matchId;
@@ -76,8 +78,15 @@ public class MatchQueue {
   public void markError(String message) {
     this.status = "ERROR";
     this.retryCount += 1;
-    this.lastError = message;
+    this.lastError = truncate(message, LAST_ERROR_MAX_LENGTH);
     this.lockedAt = null;
     this.updatedAt = OffsetDateTime.now();
+  }
+
+  private static String truncate(String message, int maxLength) {
+    if (message == null || message.length() <= maxLength) {
+      return message;
+    }
+    return message.substring(0, maxLength);
   }
 }

@@ -3,6 +3,7 @@ package com.bestduo_BE.application;
 import com.bestduo_BE.application.port.SessionRunRequestFinder;
 import com.bestduo_BE.application.port.SessionRunRequestStatusUpdater;
 import com.bestduo_BE.infra.persistence.entity.SessionRunLog;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,8 +27,20 @@ public class SessionRunRequestWorker {
       return;
     }
 
+    Long runStartedAt = null;
+
     try {
       statusUpdater.markRunning(request.getId());
+
+      runStartedAt = System.nanoTime();
+      log.info(
+          "Session run started. requestId={} budgetTotal={} seedRatio={} refreshRatio={} consumeLimitPerCycle={} maxConsumeCycles={}",
+          request.getId(),
+          request.getBudgetTotal(),
+          request.getSeedRatio(),
+          request.getRefreshRatio(),
+          request.getConsumeLimitPerCycle(),
+          request.getMaxConsumeCycles());
 
       SessionRunLog.SessionResult result = sessionRunner.run(
           request.getBudgetTotal(),
@@ -37,16 +50,25 @@ public class SessionRunRequestWorker {
           request.getMaxConsumeCycles()
       );
 
+      long elapsedMillis = Duration.ofNanos(System.nanoTime() - runStartedAt).toMillis();
       statusUpdater.markDone(request.getId(), result);
 
       log.info(
-          "Session run request completed. requestId={}, stopReason={}",
+          "Session run request completed. requestId={} stopReason={} elapsedMs={} seedEnqueued={} refreshEnqueued={} picked={} done={} error={} rawCreated={}",
           request.getId(),
-          result.stopReason()
+          result.stopReason(),
+          elapsedMillis,
+          result.seedEnqueued(),
+          result.refreshEnqueued(),
+          result.picked(),
+          result.done(),
+          result.error(),
+          result.rawCreated()
       );
 
     } catch (Exception e) {
-      log.error("Session run request failed. requestId={}", request.getId(), e);
+      long elapsedMillis = runStartedAt == null ? 0 : Duration.ofNanos(System.nanoTime() - runStartedAt).toMillis();
+      log.error("Session run request failed. requestId={} elapsedMs={}", request.getId(), elapsedMillis, e);
       statusUpdater.markError(request.getId(), shorten(e.getMessage()));
     }
   }

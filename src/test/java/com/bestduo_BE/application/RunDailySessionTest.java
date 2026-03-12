@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.domain.model.Tier;
+import com.bestduo_BE.monitoring.QueryCountMonitor;
 import com.bestduo_BE.infra.riot.budget.BudgetExhaustedException;
 import com.bestduo_BE.infra.riot.budget.RiotRequestBudget;
 import com.bestduo_BE.infra.riot.exception.RiotRateLimitedException;
@@ -31,6 +32,7 @@ class RunDailySessionTest {
   private MatchDetailQueueWorker matchDetailQueueWorker;
 
   private RunDailySession useCase;
+  private QueryCountMonitor queryCountMonitor;
 
   private final SeedBootstrapCommand seedCommand = new SeedBootstrapCommand(
       "RANKED_SOLO", "GOLD", "I", Tier.GOLD, 1, 1, 20
@@ -38,7 +40,8 @@ class RunDailySessionTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new RunDailySession(seedBootstrapRun, refreshBatchRun, matchDetailQueueWorker);
+    queryCountMonitor = new QueryCountMonitor();
+    useCase = new RunDailySession(seedBootstrapRun, refreshBatchRun, matchDetailQueueWorker, queryCountMonitor);
   }
 
   @AfterEach
