@@ -13,8 +13,11 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
 @Configuration
 @RequiredArgsConstructor
+@ConditionalOnProperty(value = "monitoring.datasource.enabled", havingValue = "true", matchIfMissing = true)
 public class DataSourceMonitoringConfig {
 
   private final SqlExecutionLoggingListener sqlExecutionLoggingListener;

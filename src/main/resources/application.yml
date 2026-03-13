@@ -6,20 +6,24 @@ spring:
     driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.postgresql.Driver}
 
   jpa:
-    show-sql: true
+    show-sql: false
     properties:
       # SQL을 보기 좋게 포맷팅
       hibernate.format_sql: true
       # Hibernate 내부 통계(쿼리 수, flush, entity insert/delete 등) 활성화
       hibernate.generate_statistics: true
+      # 메모리·성능 최적화 (배치 INSERT/UPDATE)
+      hibernate.jdbc.batch_size: 50
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
     hibernate:
       ddl-auto: update
 
 logging:
   level:
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
-    com.bestduo_BE.SQL: DEBUG
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
+    com.bestduo_BE.SQL: WARN
 
 external:
   riot:
@@ -51,3 +55,7 @@ daily-session:
 session-run-request:
   worker:
     enabled: ${SESSION_RUN_REQUEST_WORKER_ENABLED:false}
+
+monitoring:
+  datasource:
+    enabled: false

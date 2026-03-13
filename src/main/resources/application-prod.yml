@@ -13,10 +13,21 @@ spring:
     properties:
       hibernate.format_sql: false
       hibernate.generate_statistics: false
+      # 메모리·성능 최적화 (OOM 완화)
+      hibernate.jdbc.batch_size: 50
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
+    hibernate:
+      ddl-auto: update
 
 logging:
   level:
     root: INFO
     com.bestduo_BE: INFO
+    com.bestduo_BE.SQL: WARN          # datasource-proxy / SqlExecutionLoggingListener 로깅 비활성화
     org.hibernate.SQL: WARN
     org.hibernate.orm.jdbc.bind: WARN
+
+monitoring:
+  datasource:
+    enabled: false
