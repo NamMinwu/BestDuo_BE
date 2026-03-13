@@ -1,7 +1,11 @@
 package com.bestduo_BE.infra.persistence;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.BDDMockito.any;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.times;
+import static org.mockito.BDDMockito.willThrow;
 
 import com.bestduo_BE.domain.model.BottomDuoRaw;
 import com.bestduo_BE.domain.model.Tier;

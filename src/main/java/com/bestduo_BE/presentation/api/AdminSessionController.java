@@ -1,9 +1,7 @@
 package com.bestduo_BE.presentation.api;
 
 import com.bestduo_BE.application.SessionRunRequestService;
-import com.bestduo_BE.application.SessionRunner;
-import com.bestduo_BE.config.DailySessionProperties;
-import com.bestduo_BE.infra.persistence.entity.SessionRunLog;
+import com.bestduo_BE.domain.model.Tier;
 import com.bestduo_BE.presentation.api.dto.SessionRunCreateRequest;
 import com.bestduo_BE.presentation.api.dto.SessionRunRequestResponse;
 import java.util.List;
@@ -24,8 +22,6 @@ import org.springframework.web.server.ResponseStatusException;
 public class AdminSessionController {
 
   private final SessionRunRequestService sessionRunRequestService;
-  private final SessionRunner sessionRunner;
-  private final DailySessionProperties dailySessionProperties;
 
   @PostMapping("/run")
   @ResponseStatus(HttpStatus.ACCEPTED)
@@ -34,7 +30,9 @@ public class AdminSessionController {
       @RequestParam(required = false) Double seedRatio,
       @RequestParam(required = false) Double refreshRatio,
       @RequestParam(defaultValue = "10") int consumeLimitPerCycle,
-      @RequestParam(defaultValue = "20") int maxConsumeCycles
+      @RequestParam(defaultValue = "20") int maxConsumeCycles,
+      @RequestParam(required = false) Integer refreshLimit,
+      @RequestParam(required = false) Tier tier
   ) {
     try {
       return sessionRunRequestService.create(
@@ -43,25 +41,14 @@ public class AdminSessionController {
               seedRatio,
               refreshRatio,
               consumeLimitPerCycle,
-              maxConsumeCycles
+              maxConsumeCycles,
+              refreshLimit,
+              tier
           )
       );
     } catch (IllegalStateException e) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
     }
-  }
-
-  @PostMapping("/aa")
-  public SessionRunLog.SessionResult aa(
-      @RequestParam(defaultValue = "200") int budgetTotal,
-      @RequestParam(required = false) Double seedRatioParam,
-      @RequestParam(required = false) Double refreshRatioParam,
-      @RequestParam(defaultValue = "10") int consumeLimitPerCycle,
-      @RequestParam(defaultValue = "20") int maxConsumeCycles
-  ) {
-    double seedRatio = seedRatioParam != null ? seedRatioParam : dailySessionProperties.getSeedRatio();
-    double refreshRatio = refreshRatioParam != null ? refreshRatioParam : dailySessionProperties.getRefreshRatio();
-    return sessionRunner.run(budgetTotal, seedRatio, refreshRatio, consumeLimitPerCycle, maxConsumeCycles);
   }
 
   @GetMapping("/requests")

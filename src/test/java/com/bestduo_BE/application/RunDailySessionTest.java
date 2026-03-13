@@ -8,10 +8,10 @@ import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.domain.model.Tier;
-import com.bestduo_BE.monitoring.QueryCountMonitor;
 import com.bestduo_BE.infra.riot.budget.BudgetExhaustedException;
 import com.bestduo_BE.infra.riot.budget.RiotRequestBudget;
 import com.bestduo_BE.infra.riot.exception.RiotRateLimitedException;
+import com.bestduo_BE.monitoring.QueryCountMonitor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -3,7 +3,10 @@ package com.bestduo_BE.infra.riot;
 import static com.bestduo_BE.support.RiotMatchTestData.participant;
 import static com.bestduo_BE.support.RiotMatchTestData.riotMatch;
 import static com.bestduo_BE.support.RiotMatchTestData.team;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.bestduo_BE.infra.riot.dto.RiotMatchDto;
 import com.bestduo_BE.infra.riot.exception.RiotApiException;

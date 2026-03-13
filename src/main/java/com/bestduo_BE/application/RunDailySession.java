@@ -1,11 +1,11 @@
 package com.bestduo_BE.application;
 
 import com.bestduo_BE.domain.model.SeedBootstrapCommand;
-import com.bestduo_BE.monitoring.QueryCountMonitor;
-import com.bestduo_BE.monitoring.QueryCountMonitor.QueryStats;
 import com.bestduo_BE.infra.riot.budget.BudgetExhaustedException;
 import com.bestduo_BE.infra.riot.budget.RiotRequestBudget;
 import com.bestduo_BE.infra.riot.exception.RiotRateLimitedException;
+import com.bestduo_BE.monitoring.QueryCountMonitor;
+import com.bestduo_BE.monitoring.QueryCountMonitor.QueryStats;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +42,7 @@ public class RunDailySession {
 
     } catch (BudgetExhaustedException e) {
       log.info("Daily session stopped by budget exhausted: {}", e.getMessage());
-      acc.snapshotCurrentPhaseBudget(RiotRequestBudget.remaining());
+      acc.snapshotCurrentPhaseBudget(0);
       Result result = acc.toResult("STOPPED_BUDGET", e.getMessage());
       logTimings(result, sessionStartedAt, acc.profilingSnapshot());
       return result;

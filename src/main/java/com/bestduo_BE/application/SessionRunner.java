@@ -2,6 +2,7 @@ package com.bestduo_BE.application;
 
 import com.bestduo_BE.config.DailySessionProperties;
 import com.bestduo_BE.domain.model.SeedBootstrapCommand;
+import com.bestduo_BE.domain.model.Tier;
 import com.bestduo_BE.infra.persistence.entity.SessionRunLog;
 import com.bestduo_BE.infra.persistence.repository.SessionRunLogJpaRepository;
 import java.time.OffsetDateTime;
@@ -18,7 +19,15 @@ public class SessionRunner {
   private final RunDailySession runDailySession;
   private final DailySessionProperties dailySessionProperties;
 
-  public SessionRunLog.SessionResult run(int budgetTotal, double seedRatio, double refreshRatio, int consumeLimitPerCycle, int maxConsumeCycles) {
+  public SessionRunLog.SessionResult run(
+      int budgetTotal,
+      double seedRatio,
+      double refreshRatio,
+      int consumeLimitPerCycle,
+      int maxConsumeCycles,
+      int refreshLimit,
+      Tier tier
+  ) {
     OffsetDateTime started = OffsetDateTime.now();
 
     int seedBudget = (int) Math.floor(budgetTotal * seedRatio);
@@ -31,7 +40,9 @@ public class SessionRunner {
         refreshBudget,
         consumeBudget,
         consumeLimitPerCycle,
-        maxConsumeCycles
+        maxConsumeCycles,
+        refreshLimit,
+        tier
     );
 
     log.info("command: {}", command);
@@ -105,15 +116,26 @@ public class SessionRunner {
     return result;
   }
 
-  private RunDailySession.SessionCommand buildCommand(int budgetTotal, int seedBudget, int refreshBudget, int consumeBudget, int consumeLimitPerCycle, int maxConsumeCycles) {
+  private RunDailySession.SessionCommand buildCommand(
+      int budgetTotal,
+      int seedBudget,
+      int refreshBudget,
+      int consumeBudget,
+      int consumeLimitPerCycle,
+      int maxConsumeCycles,
+      int refreshLimit,
+      Tier tier
+  ) {
     SeedBootstrapCommand seedCommand = null;
     if (dailySessionProperties.isRunSeed()) {
       DailySessionProperties.Seed seedProps = dailySessionProperties.getSeed();
+      Tier resolvedTier = tier != null ? tier : seedProps.getSeedTier();
+      String riotTier = tier != null ? tier.name() : seedProps.getTier();
       seedCommand = new SeedBootstrapCommand(
           seedProps.getQueue(),
-          seedProps.getTier(),
+          riotTier,
           seedProps.getDivision(),
-          seedProps.getSeedTier(),
+          resolvedTier,
           seedProps.getStartPage(),
           seedProps.getEndPage(),
           seedProps.getMatchesPerPuuid()
@@ -127,7 +149,7 @@ public class SessionRunner {
         consumeBudget,
         dailySessionProperties.isRunSeed(),
         dailySessionProperties.isRunRefresh(),
-        dailySessionProperties.getRefreshLimit(),
+        refreshLimit,
         consumeLimitPerCycle,
         maxConsumeCycles,
         seedCommand

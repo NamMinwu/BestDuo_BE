@@ -1,7 +1,8 @@
 package com.bestduo_BE.infra.persistence;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 import com.bestduo_BE.infra.persistence.entity.Match;
 import com.bestduo_BE.infra.persistence.repository.MatchJpaRepository;

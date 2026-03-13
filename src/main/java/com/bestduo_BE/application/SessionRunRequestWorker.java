@@ -34,20 +34,24 @@ public class SessionRunRequestWorker {
 
       runStartedAt = System.nanoTime();
       log.info(
-          "Session run started. requestId={} budgetTotal={} seedRatio={} refreshRatio={} consumeLimitPerCycle={} maxConsumeCycles={}",
+          "Session run started. requestId={} budgetTotal={} seedRatio={} refreshRatio={} consumeLimitPerCycle={} maxConsumeCycles={} refreshLimit={} tier={}",
           request.getId(),
           request.getBudgetTotal(),
           request.getSeedRatio(),
           request.getRefreshRatio(),
           request.getConsumeLimitPerCycle(),
-          request.getMaxConsumeCycles());
+          request.getMaxConsumeCycles(),
+          request.getRefreshLimit(),
+          request.getTier());
 
       SessionRunLog.SessionResult result = sessionRunner.run(
           request.getBudgetTotal(),
           request.getSeedRatio(),
           request.getRefreshRatio(),
           request.getConsumeLimitPerCycle(),
-          request.getMaxConsumeCycles()
+          request.getMaxConsumeCycles(),
+          request.getRefreshLimit(),
+          request.getTier()
       );
 
       long elapsedMillis = Duration.ofNanos(System.nanoTime() - runStartedAt).toMillis();

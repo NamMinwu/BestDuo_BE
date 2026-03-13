@@ -1,7 +1,7 @@
 package com.bestduo_BE.domain.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.bestduo_BE.domain.model.BottomDuoRaw;
 import com.bestduo_BE.domain.model.Tier;

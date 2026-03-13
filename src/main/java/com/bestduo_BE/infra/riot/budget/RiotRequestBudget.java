@@ -25,6 +25,7 @@ public class RiotRequestBudget {
 
     int next = v - cost;
     if (next < 0) {
+      remaining.set(0); // 예산이 바닥났음을 반영
       throw new BudgetExhaustedException("Riot request budget exhausted. remaining=" + v);
     }
     remaining.set(next);

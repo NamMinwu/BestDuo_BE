@@ -1,7 +1,10 @@
 package com.bestduo_BE.infra.persistence.entity;
 
+import com.bestduo_BE.domain.model.Tier;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -44,6 +47,13 @@ public class SessionRunRequest {
   private int maxConsumeCycles;
 
   @Column(nullable = false)
+  private int refreshLimit;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private Tier tier;
+
+  @Column(nullable = false)
   private OffsetDateTime requestedAt;
 
   private OffsetDateTime startedAt;
@@ -57,7 +67,9 @@ public class SessionRunRequest {
       double seedRatio,
       double refreshRatio,
       int consumeLimitPerCycle,
-      int maxConsumeCycles
+      int maxConsumeCycles,
+      int refreshLimit,
+      Tier tier
   ) {
     return SessionRunRequest.builder()
         .status("REQUESTED")
@@ -66,6 +78,8 @@ public class SessionRunRequest {
         .refreshRatio(refreshRatio)
         .consumeLimitPerCycle(consumeLimitPerCycle)
         .maxConsumeCycles(maxConsumeCycles)
+        .refreshLimit(refreshLimit)
+        .tier(tier)
         .requestedAt(OffsetDateTime.now())
         .build();
   }

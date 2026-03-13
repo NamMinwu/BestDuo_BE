@@ -3,6 +3,7 @@ package com.bestduo_BE.application;
 import com.bestduo_BE.application.port.SessionRunRequestFinder;
 import com.bestduo_BE.application.port.SessionRunRequestSaver;
 import com.bestduo_BE.config.DailySessionProperties;
+import com.bestduo_BE.domain.model.Tier;
 import com.bestduo_BE.infra.persistence.entity.SessionRunRequest;
 import com.bestduo_BE.presentation.api.dto.SessionRunCreateRequest;
 import com.bestduo_BE.presentation.api.dto.SessionRunRequestResponse;
@@ -33,13 +34,23 @@ public class SessionRunRequestService {
         ? request.refreshRatio()
         : properties.getRefreshRatio();
 
+    int refreshLimit = request.refreshLimit() != null
+        ? request.refreshLimit()
+        : properties.getRefreshLimit();
+
+    Tier tier = request.tier() != null
+        ? request.tier()
+        : properties.getSeed().getSeedTier();
+
     SessionRunRequest saved = saver.save(
         SessionRunRequest.newRequested(
             request.budgetTotal(),
             seedRatio,
             refreshRatio,
             request.consumeLimitPerCycle(),
-            request.maxConsumeCycles()
+            request.maxConsumeCycles(),
+            refreshLimit,
+            tier
         )
     );
 
@@ -83,6 +94,8 @@ public class SessionRunRequestService {
         r.getRefreshRatio(),
         r.getConsumeLimitPerCycle(),
         r.getMaxConsumeCycles(),
+        r.getRefreshLimit(),
+        r.getTier(),
         r.getRequestedAt(),
         r.getStartedAt(),
         r.getEndedAt(),
