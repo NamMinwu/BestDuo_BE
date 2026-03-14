@@ -14,9 +14,9 @@ spring:
       hibernate.format_sql: false
       hibernate.generate_statistics: false
       # 메모리·성능 최적화 (OOM 완화)
-      hibernate.jdbc.batch_size: 50
-      hibernate.order_inserts: true
-      hibernate.order_updates: true
+#      hibernate.jdbc.batch_size: 50
+#      hibernate.order_inserts: true
+#      hibernate.order_updates: true
     hibernate:
       ddl-auto: update
 
