@@ -1,0 +1,87 @@
+# 호스트 볼륨 마운트 없이 configs 인라인 사용 (File Sharing 제한 환경 대응)
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: bestduo-prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "9090:9090"
+    configs:
+      - source: prometheus_config
+        target: /etc/prometheus/prometheus.yml
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-lifecycle
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: bestduo-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_HTTP_PORT=3000
+    configs:
+      - source: grafana_datasource
+        target: /etc/grafana/provisioning/datasources/datasource.yml
+      - source: grafana_dashboard_provider
+        target: /etc/grafana/provisioning/dashboards/dashboard.yml
+      - source: grafana_jvm_dashboard
+        target: /etc/grafana/provisioning/dashboards/json/jvm-memory.json
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+configs:
+  prometheus_config:
+    content: |
+      global:
+        scrape_interval: 15s
+        evaluation_interval: 15s
+      scrape_configs:
+        - job_name: 'bestduo-be'
+          metrics_path: '/actuator/prometheus'
+          static_configs:
+            - targets: ['host.docker.internal:8080']
+          scrape_interval: 5s
+
+  grafana_datasource:
+    content: |
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          uid: prometheus
+          access: proxy
+          url: http://prometheus:9090
+          isDefault: true
+          editable: false
+
+  grafana_dashboard_provider:
+    content: |
+      apiVersion: 1
+      providers:
+        - name: 'JVM Dashboards'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          updateIntervalSeconds: 30
+          allowUiUpdates: true
+          options:
+            path: /etc/grafana/provisioning/dashboards/json
+
+  grafana_jvm_dashboard:
+    content: |
+      {"annotations":{"list":[]},"editable":true,"fiscalYearStartMonth":0,"graphTooltip":1,"id":null,"links":[],"liveNow":false,"panels":[{"datasource":{"type":"prometheus","uid":"prometheus"},"fieldConfig":{"defaults":{"color":{"mode":"palette-classic"},"custom":{"drawStyle":"line","lineWidth":1},"unit":"bytes"}},"gridPos":{"h":8,"w":12,"x":0,"y":0},"id":1,"options":{"legend":{"showLegend":true}},"targets":[{"expr":"jvm_memory_used_bytes{area=\"heap\"}","legendFormat":"Heap","refId":"A"}],"title":"Heap Memory Used","type":"timeseries"},{"datasource":{"type":"prometheus","uid":"prometheus"},"fieldConfig":{"defaults":{"color":{"mode":"palette-classic"},"custom":{"drawStyle":"line","lineWidth":1},"unit":"bytes"}},"gridPos":{"h":8,"w":12,"x":12,"y":0},"id":2,"options":{"legend":{"showLegend":true}},"targets":[{"expr":"jvm_memory_used_bytes{area=\"nonheap\"}","legendFormat":"Non-Heap","refId":"A"}],"title":"Non-Heap Memory Used","type":"timeseries"},{"datasource":{"type":"prometheus","uid":"prometheus"},"fieldConfig":{"defaults":{"color":{"mode":"palette-classic"},"custom":{"drawStyle":"line","lineWidth":1},"unit":"bytes"}},"gridPos":{"h":8,"w":24,"x":0,"y":8},"id":3,"options":{"legend":{"showLegend":true}},"targets":[{"expr":"sum(jvm_memory_used_bytes)","legendFormat":"Total Used","refId":"A"}],"title":"Total JVM Memory Used","type":"timeseries"},{"datasource":{"type":"prometheus","uid":"prometheus"},"fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"mappings":[],"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null}]},"unit":"bytes"}},"gridPos":{"h":6,"w":8,"x":0,"y":16},"id":4,"options":{"colorMode":"value","graphMode":"area","justifyMode":"auto","orientation":"auto","reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false},"textMode":"auto"},"targets":[{"expr":"sum(jvm_memory_used_bytes)","legendFormat":"Current","refId":"A"}],"title":"Current Memory (bytes)","type":"stat"}],"refresh":"5s","schemaVersion":39,"style":"dark","tags":["jvm","bestduo"],"templating":{"list":[]},"time":{"from":"now-15m","to":"now"},"timepicker":{},"timezone":"browser","title":"Bestduo JVM Memory","uid":"bestduo-jvm-memory","version":1}
+
+volumes:
+  grafana-data:

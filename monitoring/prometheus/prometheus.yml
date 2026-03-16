@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'bestduo-be'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      # host.docker.internal: Mac/Windows Docker에서 호스트 머신 접근
+      - targets: ['host.docker.internal:8080']
+    scrape_interval: 5s
