@@ -32,8 +32,12 @@ public class ViewBottomDuoCounters {
     var mySup = championMetaFinder.findById(mySupChampionId);
 
     var myMeta = new BottomDuoCounterResponse.DuoMeta(
-        myAdc.name(), myAdc.imageUrl(),
-        mySup.name(), mySup.imageUrl()
+        myAdcChampionId,
+        myAdc.name(),
+        myAdc.imageUrl(),
+        mySupChampionId,
+        mySup.name(),
+        mySup.imageUrl()
     );
 
     List<Item> counters =
@@ -52,8 +56,10 @@ public class ViewBottomDuoCounters {
     double pickRate = totalGames == 0 ? 0 : (double) row.games() / totalGames;
 
     return new BottomDuoCounterResponse.Item(
+        row.oppAdcChampionId(),
         oppAdc.name(),
         oppAdc.imageUrl(),
+        row.oppSupChampionId(),
         oppSup.name(),
         oppSup.imageUrl(),
         row.winRate(),

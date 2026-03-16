@@ -35,8 +35,10 @@ class BottomDuoStatisticsControllerTest {
         "GOLD",
         500,
         List.of(new BottomDuoStatisticsResponse.Item(
+            "ashe",
             "Ashe",
             "adc.png",
+            "thresh",
             "Thresh",
             "sup.png",
             0.55,

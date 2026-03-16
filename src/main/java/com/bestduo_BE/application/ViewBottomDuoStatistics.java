@@ -47,8 +47,10 @@ public class ViewBottomDuoStatistics {
     double pickRate = totalGames == 0 ? 0 : (double) row.games() / totalGames;
 
     return new BottomDuoStatisticsResponse.Item(
+        row.adcChampionId(),
         adc.name(),
         adc.imageUrl(),
+        row.supChampionId(),
         sup.name(),
         sup.imageUrl(),
         row.winRate(),

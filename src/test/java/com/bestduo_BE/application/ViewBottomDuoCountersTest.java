@@ -51,11 +51,15 @@ class ViewBottomDuoCountersTest {
     assertEquals("DIAMOND", response.tier());
     assertEquals(80, response.totalGames());
     assertEquals(10, response.counterSize());
+    assertEquals("ashe", response.myDuo().adcId());
     assertEquals("Ashe", response.myDuo().adcName());
+    assertEquals("lux", response.myDuo().supId());
     assertEquals("Lux", response.myDuo().supName());
     assertEquals(1, response.counters().size());
     BottomDuoCounterResponse.Item item = response.counters().get(0);
+    assertEquals("draven", item.oppAdcId());
     assertEquals("Draven", item.oppAdcName());
+    assertEquals("pyke", item.oppSupId());
     assertEquals("Pyke", item.oppSupName());
     assertEquals(row.winRate(), item.winRate(), 1e-9);
     assertEquals(0.5, item.pickRate(), 1e-9);

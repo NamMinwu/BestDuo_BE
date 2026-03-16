@@ -41,7 +41,8 @@ class SeedBootstrapControllerTest {
             .param("seedTier", "CHALLENGER")
             .param("startPage", "2")
             .param("endPage", "4")
-            .param("matchesPerPuuid", "15"))
+            .param("matchesPerPuuid", "15")
+            .param("maxEntries", "50"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.pagesProcessed").value(1))
         .andExpect(jsonPath("$.entriesFetched").value(2))
@@ -58,6 +59,7 @@ class SeedBootstrapControllerTest {
     assertThat(command.startPage()).isEqualTo(2);
     assertThat(command.endPage()).isEqualTo(4);
     assertThat(command.matchesPerPuuid()).isEqualTo(15);
+    assertThat(command.maxEntries()).isEqualTo(50);
   }
 
   @Test
@@ -80,5 +82,6 @@ class SeedBootstrapControllerTest {
     assertThat(command.startPage()).isEqualTo(1);
     assertThat(command.endPage()).isEqualTo(3);
     assertThat(command.matchesPerPuuid()).isEqualTo(10);
+    assertThat(command.maxEntries()).isZero();
   }
 }

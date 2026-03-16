@@ -39,10 +39,12 @@ class BottomDuoDetailStatisticsControllerTest {
     BottomDuoDetailStatisticsResponse response = new BottomDuoDetailStatisticsResponse(
         "GOLD",
         200,
-        new BottomDuoDetailStatisticsResponse.DuoMeta("Ashe", "a.png", "Lux", "l.png"),
+        new BottomDuoDetailStatisticsResponse.DuoMeta("ashe", "Ashe", "a.png", "lux", "Lux", "l.png"),
         List.of(new BottomDuoDetailStatisticsResponse.Item(
+            "jinx",
             "Jinx",
             "j.png",
+            "morgana",
             "Morgana",
             "m.png",
             0.45,
@@ -85,7 +87,7 @@ class BottomDuoDetailStatisticsControllerTest {
     BottomDuoCounterResponse response = new BottomDuoCounterResponse(
         "DIAMOND",
         500,
-        new BottomDuoCounterResponse.DuoMeta("Ashe", "a.png", "Lux", "l.png"),
+        new BottomDuoCounterResponse.DuoMeta("ashe", "Ashe", "a.png", "lux", "Lux", "l.png"),
         5,
         List.of()
     );

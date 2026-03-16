@@ -67,10 +67,14 @@ class ViewBottomDuoDetailStatisticsTest {
 
     assertEquals("EMERALD", response.tier());
     assertEquals(120, response.totalGames());
+    assertEquals("ashe", response.myDuo().adcId());
     assertEquals("Ashe", response.myDuo().adcName());
+    assertEquals("lux", response.myDuo().supId());
     assertEquals(1, response.items().size());
     BottomDuoDetailStatisticsResponse.Item item = response.items().get(0);
+    assertEquals("jinx", item.oppAdcId());
     assertEquals("Jinx", item.oppAdcName());
+    assertEquals("morgana", item.oppSupId());
     assertEquals("Morgana", item.oppSupName());
     assertEquals(row.winRate(), item.winRate(), 1e-9);
     assertEquals(40.0 / 120.0, item.pickRate(), 1e-9);

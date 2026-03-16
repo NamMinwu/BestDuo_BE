@@ -35,7 +35,7 @@ class RunDailySessionTest {
   private QueryCountMonitor queryCountMonitor;
 
   private final SeedBootstrapCommand seedCommand = new SeedBootstrapCommand(
-      "RANKED_SOLO", "GOLD", "I", Tier.GOLD, 1, 1, 20
+      "RANKED_SOLO", "GOLD", "I", Tier.GOLD, 1, 1, 20, 0
   );
 
   @BeforeEach

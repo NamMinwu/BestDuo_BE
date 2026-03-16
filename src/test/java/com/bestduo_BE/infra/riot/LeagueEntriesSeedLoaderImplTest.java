@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.bestduo_BE.infra.riot.dto.LeagueEntry;
+import com.bestduo_BE.infra.riot.dto.LeagueList;
 import com.bestduo_BE.infra.riot.exception.RiotApiException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,43 +34,43 @@ class LeagueEntriesSeedLoaderImplTest {
   }
 
   @Test
-  void loadEntries_returnsEntriesFromPlatformEndpoint() {
-    LeagueEntry entry1 = new LeagueEntry("puuid-1", "MASTER", "RANKED_SOLO_5x5", "I", 100L);
-    LeagueEntry entry2 = new LeagueEntry("puuid-2", "MASTER", "RANKED_SOLO_5x5", "I", 80L);
+  void loadEntries_returnsEntriesFromPaginatedEndpoint() {
+    LeagueEntry entry1 = new LeagueEntry("puuid-1", "DIAMOND", "RANKED_SOLO_5x5", "I", 100L);
+    LeagueEntry entry2 = new LeagueEntry("puuid-2", "DIAMOND", "RANKED_SOLO_5x5", "I", 80L);
     given(platformRestTemplate.getForObject(
         "/lol/league/v4/entries/{queue}/{tier}/{division}?page={page}",
         LeagueEntry[].class,
         "RANKED_SOLO_5x5",
-        "MASTER",
+        "DIAMOND",
         "I",
         3
     )).willReturn(new LeagueEntry[]{entry1, entry2});
 
-    List<LeagueEntry> result = loader.loadEntries("RANKED_SOLO_5x5", "MASTER", "I", 3);
+    List<LeagueEntry> result = loader.loadEntries("RANKED_SOLO_5x5", "DIAMOND", "I", 3);
 
     assertEquals(List.of(entry1, entry2), result);
     then(platformRestTemplate).should().getForObject(
         eq("/lol/league/v4/entries/{queue}/{tier}/{division}?page={page}"),
         eq(LeagueEntry[].class),
         eq("RANKED_SOLO_5x5"),
-        eq("MASTER"),
+        eq("DIAMOND"),
         eq("I"),
         eq(3)
     );
   }
 
   @Test
-  void loadEntries_returnsEmptyListWhenApiReturnsNull() {
+  void loadEntries_returnsEmptyListWhenPaginatedApiReturnsNull() {
     given(platformRestTemplate.getForObject(
         "/lol/league/v4/entries/{queue}/{tier}/{division}?page={page}",
         LeagueEntry[].class,
         "RANKED_FLEX_SR",
-        "CHALLENGER",
+        "PLATINUM",
         "II",
         1
     )).willReturn(null);
 
-    List<LeagueEntry> result = loader.loadEntries("RANKED_FLEX_SR", "CHALLENGER", "II", 1);
+    List<LeagueEntry> result = loader.loadEntries("RANKED_FLEX_SR", "PLATINUM", "II", 1);
 
     assertTrue(result.isEmpty());
   }
@@ -86,5 +88,55 @@ class LeagueEntriesSeedLoaderImplTest {
 
     assertThrows(RiotApiException.class,
         () -> loader.loadEntries("RANKED_SOLO_5x5", "DIAMOND", "III", 2));
+  }
+
+  @Test
+  void loadEntries_fetchesTopTierEntriesFromDedicatedEndpoint() {
+    LeagueEntry entry1 = new LeagueEntry("puuid-1", "CHALLENGER", "RANKED_SOLO_5x5", "I", 500L);
+    LeagueEntry entry2 = new LeagueEntry("puuid-2", "CHALLENGER", "RANKED_SOLO_5x5", "I", 450L);
+    LeagueList leagueList = new LeagueList(List.of(entry1, entry2));
+    given(platformRestTemplate.getForObject(
+        "/lol/league/v4/challengerleagues/by-queue/{queue}",
+        LeagueList.class,
+        "RANKED_SOLO_5x5"
+    )).willReturn(leagueList);
+
+    List<LeagueEntry> result = loader.loadEntries("RANKED_SOLO_5x5", "CHALLENGER", "I", 1);
+
+    assertEquals(List.of(entry1, entry2), result);
+    then(platformRestTemplate).should().getForObject(
+        eq("/lol/league/v4/challengerleagues/by-queue/{queue}"),
+        eq(LeagueList.class),
+        eq("RANKED_SOLO_5x5")
+    );
+  }
+
+  @Test
+  void loadEntries_fetchesMasterTierEntriesFromDedicatedEndpoint() {
+    LeagueEntry entry1 = new LeagueEntry("puuid-3", "MASTER", "RANKED_SOLO_5x5", "I", 250L);
+    LeagueEntry entry2 = new LeagueEntry("puuid-4", "MASTER", "RANKED_SOLO_5x5", "I", 200L);
+    LeagueList leagueList = new LeagueList(List.of(entry1, entry2));
+    given(platformRestTemplate.getForObject(
+        "/lol/league/v4/masterleagues/by-queue/{queue}",
+        LeagueList.class,
+        "RANKED_SOLO_5x5"
+    )).willReturn(leagueList);
+
+    List<LeagueEntry> result = loader.loadEntries("RANKED_SOLO_5x5", "MASTER", "I", 1);
+
+    assertEquals(List.of(entry1, entry2), result);
+    then(platformRestTemplate).should().getForObject(
+        eq("/lol/league/v4/masterleagues/by-queue/{queue}"),
+        eq(LeagueList.class),
+        eq("RANKED_SOLO_5x5")
+    );
+  }
+
+  @Test
+  void loadEntries_returnsEmptyListForTopTierWhenPageGreaterThanOne() {
+    List<LeagueEntry> result = loader.loadEntries("RANKED_SOLO_5x5", "MASTER", "I", 2);
+
+    assertTrue(result.isEmpty());
+    verifyNoInteractions(platformRestTemplate);
   }
 }

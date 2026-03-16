@@ -8,8 +8,10 @@ public record BottomDuoStatisticsResponse(
     List<Item> items
 ) {
   public record Item(
+      String adcId,
       String adcName,
       String adcImage,
+      String supId,
       String supName,
       String supImage,
       double winRate,

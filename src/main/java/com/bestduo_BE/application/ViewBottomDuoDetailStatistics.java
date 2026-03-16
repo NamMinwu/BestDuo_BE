@@ -31,8 +31,12 @@ public class ViewBottomDuoDetailStatistics {
     var mySup = championMetaClient.findById(mySupChampionId);
 
     var myMeta = new BottomDuoDetailStatisticsResponse.DuoMeta(
-        myAdc.name(), myAdc.imageUrl(),
-        mySup.name(), mySup.imageUrl()
+        myAdcChampionId,
+        myAdc.name(),
+        myAdc.imageUrl(),
+        mySupChampionId,
+        mySup.name(),
+        mySup.imageUrl()
     );
 
     List<BottomDuoDetailStatisticsResponse.Item> items =
@@ -59,8 +63,10 @@ public class ViewBottomDuoDetailStatistics {
     double pickRate = totalGames == 0 ? 0 : (double) row.games() / totalGames;
 
     return new BottomDuoDetailStatisticsResponse.Item(
+        row.oppAdcChampionId(),
         oppAdc.name(),
         oppAdc.imageUrl(),
+        row.oppSupChampionId(),
         oppSup.name(),
         oppSup.imageUrl(),
         row.winRate(),
