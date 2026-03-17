@@ -13,12 +13,17 @@ public class BottomDuoStatFinderImpl implements BottomDuoStatFinder {
   private final BottomDuoStatAggJpaRepository repository;
 
   @Override
-  public int findTierTotalGames(Tier tier) {
-    return repository.sumGamesByTier(tier.name());
+  public int findTierTotalGames(Tier tier, String patchVersionOrNull) {
+    String patchVersion = resolvePatchVersion(patchVersionOrNull);
+    if (patchVersion == null) {
+      return 0;
+    }
+    return repository.sumGamesByTier(patchVersion, tier.name());
   }
 
   @Override
   public List<StatRow> findStats(Tier tier,
+      String patchVersionOrNull,
       String adcChampionIdOrNull,
       String supChampionIdOrNull,
       SortKey sortKey,
@@ -30,11 +35,20 @@ public class BottomDuoStatFinderImpl implements BottomDuoStatFinder {
     String adc = blankToNull(adcChampionIdOrNull);
     String sup = blankToNull(supChampionIdOrNull);
 
+    String patchVersion = resolvePatchVersion(patchVersionOrNull);
+    if (patchVersion == null) {
+      return List.of();
+    }
+
     var entities = switch (sortKey) {
-      case WINRATE_DESC -> repository.findTopWinRateDesc(tier.name(), adc, sup, limit);
-      case WINRATE_ASC  -> repository.findTopWinRateAsc(tier.name(), adc, sup, limit);
-      case PICKRATE_DESC -> repository.findTopPickRateDesc(tier.name(), adc, sup, tierTotalGamesForPickRate, limit);
-      case PICKRATE_ASC  -> repository.findTopPickRateAsc(tier.name(), adc, sup, tierTotalGamesForPickRate, limit);
+      case WINRATE_DESC -> repository.findTopWinRateDesc(patchVersion, tier.name(), adc, sup, limit);
+      case WINRATE_ASC  -> repository.findTopWinRateAsc(patchVersion, tier.name(), adc, sup, limit);
+      case PICKRATE_DESC -> repository.findTopPickRateDesc(patchVersion, tier.name(), adc, sup, tierTotalGamesForPickRate, limit);
+      case PICKRATE_ASC  -> repository.findTopPickRateAsc(patchVersion, tier.name(), adc, sup, tierTotalGamesForPickRate, limit);
+      case DUO_TIER_ASC -> repository.findTopDuoTierAsc(patchVersion, tier.name(), adc, sup, limit);
+      case DUO_TIER_DESC -> repository.findTopDuoTierDesc(patchVersion, tier.name(), adc, sup, limit);
+      case RANKING_ASC -> repository.findTopRankingAsc(patchVersion, tier.name(), adc, sup, limit);
+      case RANKING_DESC -> repository.findTopRankingDesc(patchVersion, tier.name(), adc, sup, limit);
     };
 
     return entities.stream()
@@ -43,7 +57,10 @@ public class BottomDuoStatFinderImpl implements BottomDuoStatFinder {
             e.getSupChampionId(),
             Tier.valueOf(e.getTier()),
             e.getWins(),
-            e.getGames()
+            e.getGames(),
+            e.getDuoTier(),
+            e.getRanking(),
+            e.getRankDelta()
         ))
         .toList();
   }
@@ -52,6 +69,14 @@ public class BottomDuoStatFinderImpl implements BottomDuoStatFinder {
     if (v == null) return null;
     String t = v.trim();
     return t.isEmpty() ? null : t;
+  }
+
+  private String resolvePatchVersion(String patchVersionOrNull) {
+    String patchVersion = blankToNull(patchVersionOrNull);
+    if (patchVersion != null) {
+      return patchVersion;
+    }
+    return repository.findLatestPatchVersion();
   }
 
 }

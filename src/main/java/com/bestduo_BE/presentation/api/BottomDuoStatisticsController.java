@@ -30,10 +30,11 @@ public class BottomDuoStatisticsController {
   )
   public BottomDuoStatisticsResponse getList(
       @RequestParam Tier tier,
+      @RequestParam(required = false) String patchVersion,
       @RequestParam(required = false) String adcChampionId,
       @RequestParam(required = false) String supChampionId,
       @RequestParam(defaultValue = "PICKRATE_DESC") BottomDuoStatFinder.SortKey sort
   ) {
-    return useCase.execute(tier, adcChampionId, supChampionId, sort);
+    return useCase.execute(tier, patchVersion, adcChampionId, supChampionId, sort);
   }
 }

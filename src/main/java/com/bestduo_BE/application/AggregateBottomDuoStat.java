@@ -9,12 +9,13 @@ import org.springframework.stereotype.Service;
 public class AggregateBottomDuoStat {
 
   private final BottomDuoStatAggregator aggregator;
+  private final ComputeBottomDuoRanking ranking;
 
   public Result execute() {
     int affected = aggregator.aggregateAll();
-    return new Result(affected);
+    ComputeBottomDuoRanking.Result rankingResult = ranking.execute();
+    return new Result(affected, rankingResult.updatedRows());
   }
 
-  public record Result(int affectedRows) {}
+  public record Result(int affectedRows, int rankingsUpdated) {}
 }
-

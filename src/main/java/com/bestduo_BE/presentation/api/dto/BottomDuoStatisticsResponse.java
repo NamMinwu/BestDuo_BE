@@ -16,6 +16,9 @@ public record BottomDuoStatisticsResponse(
       String supImage,
       double winRate,
       double pickRate,
-      int games
+      int games,
+      Integer duoTier,
+      Integer ranking,
+      Integer rankDelta
   ) {}
 }

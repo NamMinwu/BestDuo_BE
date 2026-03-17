@@ -43,12 +43,16 @@ class BottomDuoStatisticsControllerTest {
             "sup.png",
             0.55,
             0.12,
-            60
+            60,
+            2,
+            5,
+            -1
         ))
     );
 
     when(viewBottomDuoStatistics.execute(
         Tier.GOLD,
+        "14.10",
         "Ashe",
         "Thresh",
         BottomDuoStatFinder.SortKey.WINRATE_ASC
@@ -56,6 +60,7 @@ class BottomDuoStatisticsControllerTest {
 
     mockMvc.perform(get("/bottom-duo/stats")
             .param("tier", "GOLD")
+            .param("patchVersion", "14.10")
             .param("adcChampionId", "Ashe")
             .param("supChampionId", "Thresh")
             .param("sort", "WINRATE_ASC"))
@@ -64,6 +69,7 @@ class BottomDuoStatisticsControllerTest {
 
     verify(viewBottomDuoStatistics).execute(
         Tier.GOLD,
+        "14.10",
         "Ashe",
         "Thresh",
         BottomDuoStatFinder.SortKey.WINRATE_ASC
@@ -77,6 +83,7 @@ class BottomDuoStatisticsControllerTest {
         Tier.SILVER,
         null,
         null,
+        null,
         BottomDuoStatFinder.SortKey.PICKRATE_DESC
     )).thenReturn(response);
 
@@ -87,6 +94,7 @@ class BottomDuoStatisticsControllerTest {
 
     verify(viewBottomDuoStatistics).execute(
         Tier.SILVER,
+        null,
         null,
         null,
         BottomDuoStatFinder.SortKey.PICKRATE_DESC

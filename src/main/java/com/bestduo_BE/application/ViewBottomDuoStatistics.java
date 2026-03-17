@@ -19,17 +19,23 @@ public class ViewBottomDuoStatistics {
 
   public BottomDuoStatisticsResponse execute(
       Tier tier,
+      String patchVersionOrNull,
       String adcChampionIdOrNull,
       String supChampionIdOrNull,
       BottomDuoStatFinder.SortKey sortKey
   ) {
-    int totalGames = statFinder.findTierTotalGames(tier);
+    String patchVersion = blankToNull(patchVersionOrNull);
+    String adcChampionId = blankToNull(adcChampionIdOrNull);
+    String supChampionId = blankToNull(supChampionIdOrNull);
+
+    int totalGames = statFinder.findTierTotalGames(tier, patchVersion);
 
     List<BottomDuoStatisticsResponse.Item> items =
         statFinder.findStats(
                 tier,
-                blankToNull(adcChampionIdOrNull),
-                blankToNull(supChampionIdOrNull),
+                patchVersion,
+                adcChampionId,
+                supChampionId,
                 sortKey,
                 totalGames,
                 MAX_ROWS
@@ -55,7 +61,10 @@ public class ViewBottomDuoStatistics {
         sup.imageUrl(),
         row.winRate(),
         pickRate,
-        row.games()
+        row.games(),
+        row.duoTier(),
+        row.ranking(),
+        row.rankDelta()
     );
   }
 
