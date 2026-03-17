@@ -56,6 +56,24 @@ class BottomDuoStatFinderImplTest {
   }
 
   @Test
+  void resolvePatchVersionPrefersProvidedValue() {
+    String patch = finder.resolvePatchVersion(" 14.9 ");
+
+    assertThat(patch).isEqualTo("14.9");
+    verify(repository, never()).findLatestPatchVersion();
+  }
+
+  @Test
+  void resolvePatchVersionFallsBackToLatest() {
+    when(repository.findLatestPatchVersion()).thenReturn("14.10");
+
+    String patch = finder.resolvePatchVersion(null);
+
+    assertThat(patch).isEqualTo("14.10");
+    verify(repository).findLatestPatchVersion();
+  }
+
+  @Test
   void findStatsMapsEntitiesForWinRateDesc() {
     OffsetDateTime now = OffsetDateTime.now();
     BottomDuoStatAgg entity = BottomDuoStatAgg.builder()

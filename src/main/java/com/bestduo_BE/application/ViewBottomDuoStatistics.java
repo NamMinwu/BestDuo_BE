@@ -28,12 +28,13 @@ public class ViewBottomDuoStatistics {
     String adcChampionId = blankToNull(adcChampionIdOrNull);
     String supChampionId = blankToNull(supChampionIdOrNull);
 
-    int totalGames = statFinder.findTierTotalGames(tier, patchVersion);
+    String resolvedPatchVersion = statFinder.resolvePatchVersion(patchVersion);
+    int totalGames = statFinder.findTierTotalGames(tier, resolvedPatchVersion);
 
     List<BottomDuoStatisticsResponse.Item> items =
         statFinder.findStats(
                 tier,
-                patchVersion,
+                resolvedPatchVersion,
                 adcChampionId,
                 supChampionId,
                 sortKey,
@@ -43,7 +44,7 @@ public class ViewBottomDuoStatistics {
             .map(row -> toItem(row, totalGames))
             .toList();
 
-    return new BottomDuoStatisticsResponse(tier.name(), totalGames, items);
+    return new BottomDuoStatisticsResponse(tier.name(), resolvedPatchVersion, totalGames, items);
   }
 
   private BottomDuoStatisticsResponse.Item toItem(BottomDuoStatFinder.StatRow row, int totalGames) {

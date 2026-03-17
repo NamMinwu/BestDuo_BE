@@ -36,4 +36,6 @@ public interface BottomDuoStatFinder {
       SortKey sortKey,
       int tierTotalGamesForPickRate,
       int maxRows);
+
+  String resolvePatchVersion(String patchVersionOrNull);
 }

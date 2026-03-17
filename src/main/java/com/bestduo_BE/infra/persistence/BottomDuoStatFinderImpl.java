@@ -71,7 +71,12 @@ public class BottomDuoStatFinderImpl implements BottomDuoStatFinder {
     return t.isEmpty() ? null : t;
   }
 
-  private String resolvePatchVersion(String patchVersionOrNull) {
+  @Override
+  public String resolvePatchVersion(String patchVersionOrNull) {
+    return doResolvePatchVersion(patchVersionOrNull);
+  }
+
+  private String doResolvePatchVersion(String patchVersionOrNull) {
     String patchVersion = blankToNull(patchVersionOrNull);
     if (patchVersion != null) {
       return patchVersion;

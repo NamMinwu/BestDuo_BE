@@ -33,6 +33,7 @@ class BottomDuoStatisticsControllerTest {
   void getListReturnsUseCaseResponse() throws Exception {
     BottomDuoStatisticsResponse response = new BottomDuoStatisticsResponse(
         "GOLD",
+        "14.10",
         500,
         List.of(new BottomDuoStatisticsResponse.Item(
             "ashe",
@@ -78,7 +79,7 @@ class BottomDuoStatisticsControllerTest {
 
   @Test
   void getListUsesDefaultSortWhenNotProvided() throws Exception {
-    BottomDuoStatisticsResponse response = new BottomDuoStatisticsResponse("SILVER", 0, List.of());
+    BottomDuoStatisticsResponse response = new BottomDuoStatisticsResponse("SILVER", null, 0, List.of());
     when(viewBottomDuoStatistics.execute(
         Tier.SILVER,
         null,
