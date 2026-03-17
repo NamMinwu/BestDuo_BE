@@ -24,10 +24,11 @@ public interface BottomDuoMatchupFinder {
     }
   }
 
-  int findMyDuoTotalGames(Tier tier, String myAdcChampionId, String mySupChampionId);
+  int findMyDuoTotalGames(Tier tier, String patchVersionOrNull, String myAdcChampionId, String mySupChampionId);
 
   List<MatchupRow> findMatchups(
       Tier tier,
+      String patchVersionOrNull,
       String myAdcChampionId,
       String mySupChampionId,
       String oppAdcChampionIdOrNull,
@@ -40,8 +41,11 @@ public interface BottomDuoMatchupFinder {
   // ✅ 추가: 카운터(최저 승률 N개)
   List<MatchupRow> findCountersByLowestWinRate(
       Tier tier,
+      String patchVersionOrNull,
       String myAdcChampionId,
       String mySupChampionId,
       int maxRows
   );
+
+  String resolvePatchVersion(String patchVersionOrNull);
 }

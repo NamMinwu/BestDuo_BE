@@ -18,11 +18,13 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
   @Transactional
   @Query(value = """
       insert into bottom_duo_matchup_agg(
+        patch_version,
         my_adc_champion_id, my_sup_champion_id,
         opp_adc_champion_id, opp_sup_champion_id,
         tier, wins, games, created_at, updated_at
       )
       select
+        coalesce(a.patch, 'UNKNOWN') as patch_version,
         a.adc_champion_id as my_adc,
         a.sup_champion_id as my_sup,
         b.adc_champion_id as opp_adc,
@@ -37,8 +39,8 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
         on a.match_id = b.match_id
        and a.collection_tier = b.collection_tier
        and a.team_id <> b.team_id
-      group by a.adc_champion_id, a.sup_champion_id, b.adc_champion_id, b.sup_champion_id, a.collection_tier
-      on conflict (my_adc_champion_id, my_sup_champion_id, opp_adc_champion_id, opp_sup_champion_id, tier)
+      group by coalesce(a.patch, 'UNKNOWN'), a.adc_champion_id, a.sup_champion_id, b.adc_champion_id, b.sup_champion_id, a.collection_tier
+      on conflict (patch_version, my_adc_champion_id, my_sup_champion_id, opp_adc_champion_id, opp_sup_champion_id, tier)
       do update set
         wins = excluded.wins,
         games = excluded.games,
@@ -50,18 +52,29 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
       select coalesce(sum(games), 0)
       from bottom_duo_matchup_agg
       where tier = :tier
+        and patch_version = :patchVersion
         and my_adc_champion_id = :myAdc
         and my_sup_champion_id = :mySup
       """, nativeQuery = true)
-  int sumGamesOfMyDuo(@Param("tier") String tier,
+  int sumGamesOfMyDuo(@Param("patchVersion") String patchVersion,
+      @Param("tier") String tier,
       @Param("myAdc") String myAdc,
       @Param("mySup") String mySup);
+
+  @Query(value = """
+      select patch_version
+      from bottom_duo_matchup_agg
+      order by updated_at desc
+      limit 1
+      """, nativeQuery = true)
+  String findLatestPatchVersion();
 
   // WINRATE DESC
   @Query(value = """
       select *
       from bottom_duo_matchup_agg
       where tier = :tier
+        and patch_version = :patchVersion
         and my_adc_champion_id = :myAdc
         and my_sup_champion_id = :mySup
         and (:oppAdc is null or opp_adc_champion_id = :oppAdc)
@@ -72,6 +85,7 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
       limit :limit
       """, nativeQuery = true)
   List<BottomDuoMatchupAgg> findTopWinRateDesc(
+      @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("myAdc") String myAdc,
       @Param("mySup") String mySup,
@@ -85,6 +99,7 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
       select *
       from bottom_duo_matchup_agg
       where tier = :tier
+        and patch_version = :patchVersion
         and my_adc_champion_id = :myAdc
         and my_sup_champion_id = :mySup
         and (:oppAdc is null or opp_adc_champion_id = :oppAdc)
@@ -95,6 +110,7 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
       limit :limit
       """, nativeQuery = true)
   List<BottomDuoMatchupAgg> findTopWinRateAsc(
+      @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("myAdc") String myAdc,
       @Param("mySup") String mySup,
@@ -108,6 +124,7 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
       select *
       from bottom_duo_matchup_agg
       where tier = :tier
+        and patch_version = :patchVersion
         and my_adc_champion_id = :myAdc
         and my_sup_champion_id = :mySup
         and (:oppAdc is null or opp_adc_champion_id = :oppAdc)
@@ -118,6 +135,7 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
       limit :limit
       """, nativeQuery = true)
   List<BottomDuoMatchupAgg> findTopPickRateDesc(
+      @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("myAdc") String myAdc,
       @Param("mySup") String mySup,
@@ -132,6 +150,7 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
       select *
       from bottom_duo_matchup_agg
       where tier = :tier
+        and patch_version = :patchVersion
         and my_adc_champion_id = :myAdc
         and my_sup_champion_id = :mySup
         and (:oppAdc is null or opp_adc_champion_id = :oppAdc)
@@ -142,6 +161,7 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
       limit :limit
       """, nativeQuery = true)
   List<BottomDuoMatchupAgg> findTopPickRateAsc(
+      @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("myAdc") String myAdc,
       @Param("mySup") String mySup,
@@ -156,14 +176,16 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
       select *
       from bottom_duo_matchup_agg
       where tier = :tier
+        and patch_version = :patchVersion
         and my_adc_champion_id = :myAdc
         and my_sup_champion_id = :mySup
-      order by
+     order by
         (case when games = 0 then 0 else (wins::double precision / games) end) asc,
         games desc
       limit :limit
       """, nativeQuery = true)
   List<BottomDuoMatchupAgg> findCountersByLowestWinRate(
+      @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("myAdc") String myAdc,
       @Param("mySup") String mySup,

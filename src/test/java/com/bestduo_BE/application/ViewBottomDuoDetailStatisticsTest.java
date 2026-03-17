@@ -36,12 +36,14 @@ class ViewBottomDuoDetailStatisticsTest {
 
   @Test
   void executeBuildsResponseWithPickRates() {
-    given(matchupFinder.findMyDuoTotalGames(Tier.EMERALD, "ashe", "lux")).willReturn(120);
+    given(matchupFinder.resolvePatchVersion(null)).willReturn("14.10");
+    given(matchupFinder.findMyDuoTotalGames(Tier.EMERALD, "14.10", "ashe", "lux")).willReturn(120);
     BottomDuoMatchupFinder.MatchupRow row = new BottomDuoMatchupFinder.MatchupRow(
         "ashe", "lux", "jinx", "morgana", Tier.EMERALD, 60, 40
     );
     given(matchupFinder.findMatchups(
         Tier.EMERALD,
+        "14.10",
         "ashe",
         "lux",
         "jinx",
@@ -58,6 +60,7 @@ class ViewBottomDuoDetailStatisticsTest {
 
     BottomDuoDetailStatisticsResponse response = useCase.execute(
         Tier.EMERALD,
+        null,
         "ashe",
         "lux",
         "jinx",
@@ -66,6 +69,7 @@ class ViewBottomDuoDetailStatisticsTest {
     );
 
     assertEquals("EMERALD", response.tier());
+    assertEquals("14.10", response.patchVersion());
     assertEquals(120, response.totalGames());
     assertEquals("ashe", response.myDuo().adcId());
     assertEquals("Ashe", response.myDuo().adcName());
@@ -83,9 +87,11 @@ class ViewBottomDuoDetailStatisticsTest {
 
   @Test
   void executeNormalizesOpponentFiltersAndCapsRows() {
-    given(matchupFinder.findMyDuoTotalGames(Tier.GOLD, "ashe", "lux")).willReturn(0);
+    given(matchupFinder.resolvePatchVersion(null)).willReturn("14.8");
+    given(matchupFinder.findMyDuoTotalGames(Tier.GOLD, "14.8", "ashe", "lux")).willReturn(0);
     given(matchupFinder.findMatchups(
         Tier.GOLD,
+        "14.8",
         "ashe",
         "lux",
         null,
@@ -99,6 +105,7 @@ class ViewBottomDuoDetailStatisticsTest {
 
     useCase.execute(
         Tier.GOLD,
+        null,
         "ashe",
         "lux",
         "  ",
@@ -108,6 +115,7 @@ class ViewBottomDuoDetailStatisticsTest {
 
     then(matchupFinder).should().findMatchups(
         eq(Tier.GOLD),
+        eq("14.8"),
         eq("ashe"),
         eq("lux"),
         isNull(),

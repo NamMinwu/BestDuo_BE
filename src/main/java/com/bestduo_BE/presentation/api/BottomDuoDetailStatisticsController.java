@@ -33,6 +33,7 @@ public class BottomDuoDetailStatisticsController {
   )
   public BottomDuoDetailStatisticsResponse getList(
       @RequestParam Tier tier,
+      @RequestParam(required = false) String patchVersion,
       @RequestParam String adcChampionId,
       @RequestParam String supChampionId,
       @RequestParam(required = false) String oppAdcChampionId,
@@ -41,6 +42,7 @@ public class BottomDuoDetailStatisticsController {
   ) {
     return useCase.execute(
         tier,
+        patchVersion,
         adcChampionId,
         supChampionId,
         oppAdcChampionId,
@@ -57,11 +59,12 @@ public class BottomDuoDetailStatisticsController {
   )
   public BottomDuoCounterResponse counters(
       @RequestParam Tier tier,
+      @RequestParam(required = false) String patchVersion,
       @RequestParam String adcChampionId,
       @RequestParam String supChampionId,
       @RequestParam(required = false) Integer size
   ) {
-    return counterUseCase.execute(tier, adcChampionId, supChampionId, size);
+    return counterUseCase.execute(tier, patchVersion, adcChampionId, supChampionId, size);
   }
 
 }

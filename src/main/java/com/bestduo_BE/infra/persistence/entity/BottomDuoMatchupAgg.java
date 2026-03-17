@@ -21,6 +21,11 @@ import lombok.NoArgsConstructor;
 @IdClass(BottomDuoMatchupAggId.class)
 public class BottomDuoMatchupAgg {
 
+
+  @Id
+  @Column(name = "patch_version", nullable = false, length = 20)
+  private String patchVersion;
+
   @Id
   @Column(name = "my_adc_champion_id", nullable = false)
   private String myAdcChampionId;

@@ -4,6 +4,7 @@ import java.util.List;
 
 public record BottomDuoCounterResponse(
     String tier,
+    String patchVersion,
     int totalGames,
     DuoMeta myDuo,
     int counterSize,

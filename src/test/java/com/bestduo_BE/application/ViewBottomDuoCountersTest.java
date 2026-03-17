@@ -34,11 +34,12 @@ class ViewBottomDuoCountersTest {
 
   @Test
   void executeUsesDefaultCounterSizeAndMapsResponse() {
-    given(matchupFinder.findMyDuoTotalGames(Tier.DIAMOND, "ashe", "lux")).willReturn(80);
+    given(matchupFinder.resolvePatchVersion(null)).willReturn("14.10");
+    given(matchupFinder.findMyDuoTotalGames(Tier.DIAMOND, "14.10", "ashe", "lux")).willReturn(80);
     BottomDuoMatchupFinder.MatchupRow row = new BottomDuoMatchupFinder.MatchupRow(
         "ashe", "lux", "draven", "pyke", Tier.DIAMOND, 30, 40
     );
-    given(matchupFinder.findCountersByLowestWinRate(Tier.DIAMOND, "ashe", "lux", 10))
+    given(matchupFinder.findCountersByLowestWinRate(Tier.DIAMOND, "14.10", "ashe", "lux", 10))
         .willReturn(List.of(row));
 
     stubChampionMeta("ashe", "Ashe", "ashe.png");
@@ -46,9 +47,10 @@ class ViewBottomDuoCountersTest {
     stubChampionMeta("draven", "Draven", "draven.png");
     stubChampionMeta("pyke", "Pyke", "pyke.png");
 
-    BottomDuoCounterResponse response = useCase.execute(Tier.DIAMOND, "ashe", "lux", null);
+    BottomDuoCounterResponse response = useCase.execute(Tier.DIAMOND, null, "ashe", "lux", null);
 
     assertEquals("DIAMOND", response.tier());
+    assertEquals("14.10", response.patchVersion());
     assertEquals(80, response.totalGames());
     assertEquals(10, response.counterSize());
     assertEquals("ashe", response.myDuo().adcId());
@@ -64,35 +66,37 @@ class ViewBottomDuoCountersTest {
     assertEquals(row.winRate(), item.winRate(), 1e-9);
     assertEquals(0.5, item.pickRate(), 1e-9);
     assertEquals(40, item.games());
-    then(matchupFinder).should().findCountersByLowestWinRate(Tier.DIAMOND, "ashe", "lux", 10);
+    then(matchupFinder).should().findCountersByLowestWinRate(Tier.DIAMOND, "14.10", "ashe", "lux", 10);
   }
 
   @Test
   void executeClampsCounterSizeToAtLeastOne() {
-    given(matchupFinder.findMyDuoTotalGames(Tier.GOLD, "ashe", "lux")).willReturn(0);
-    given(matchupFinder.findCountersByLowestWinRate(Tier.GOLD, "ashe", "lux", 1))
+    given(matchupFinder.resolvePatchVersion(null)).willReturn("14.9");
+    given(matchupFinder.findMyDuoTotalGames(Tier.GOLD, "14.9", "ashe", "lux")).willReturn(0);
+    given(matchupFinder.findCountersByLowestWinRate(Tier.GOLD, "14.9", "ashe", "lux", 1))
         .willReturn(List.of());
     stubChampionMeta("ashe", "Ashe", "ashe.png");
     stubChampionMeta("lux", "Lux", "lux.png");
 
-    BottomDuoCounterResponse response = useCase.execute(Tier.GOLD, "ashe", "lux", 0);
+    BottomDuoCounterResponse response = useCase.execute(Tier.GOLD, null, "ashe", "lux", 0);
 
     assertEquals(1, response.counterSize());
-    then(matchupFinder).should().findCountersByLowestWinRate(Tier.GOLD, "ashe", "lux", 1);
+    then(matchupFinder).should().findCountersByLowestWinRate(Tier.GOLD, "14.9", "ashe", "lux", 1);
   }
 
   @Test
   void executeClampsCounterSizeToAtMostFifty() {
-    given(matchupFinder.findMyDuoTotalGames(Tier.PLATINUM, "ashe", "lux")).willReturn(0);
-    given(matchupFinder.findCountersByLowestWinRate(Tier.PLATINUM, "ashe", "lux", 50))
+    given(matchupFinder.resolvePatchVersion(null)).willReturn("14.7");
+    given(matchupFinder.findMyDuoTotalGames(Tier.PLATINUM, "14.7", "ashe", "lux")).willReturn(0);
+    given(matchupFinder.findCountersByLowestWinRate(Tier.PLATINUM, "14.7", "ashe", "lux", 50))
         .willReturn(List.of());
     stubChampionMeta("ashe", "Ashe", "ashe.png");
     stubChampionMeta("lux", "Lux", "lux.png");
 
-    BottomDuoCounterResponse response = useCase.execute(Tier.PLATINUM, "ashe", "lux", 100);
+    BottomDuoCounterResponse response = useCase.execute(Tier.PLATINUM, null, "ashe", "lux", 100);
 
     assertEquals(50, response.counterSize());
-    then(matchupFinder).should().findCountersByLowestWinRate(Tier.PLATINUM, "ashe", "lux", 50);
+    then(matchupFinder).should().findCountersByLowestWinRate(Tier.PLATINUM, "14.7", "ashe", "lux", 50);
   }
 
   private void stubChampionMeta(String id, String name, String imageUrl) {
