@@ -19,17 +19,24 @@ public class ViewBottomDuoStatistics {
 
   public BottomDuoStatisticsResponse execute(
       Tier tier,
+      String patchVersionOrNull,
       String adcChampionIdOrNull,
       String supChampionIdOrNull,
       BottomDuoStatFinder.SortKey sortKey
   ) {
-    int totalGames = statFinder.findTierTotalGames(tier);
+    String patchVersion = blankToNull(patchVersionOrNull);
+    String adcChampionId = blankToNull(adcChampionIdOrNull);
+    String supChampionId = blankToNull(supChampionIdOrNull);
+
+    String resolvedPatchVersion = statFinder.resolvePatchVersion(patchVersion);
+    int totalGames = statFinder.findTierTotalGames(tier, resolvedPatchVersion);
 
     List<BottomDuoStatisticsResponse.Item> items =
         statFinder.findStats(
                 tier,
-                blankToNull(adcChampionIdOrNull),
-                blankToNull(supChampionIdOrNull),
+                resolvedPatchVersion,
+                adcChampionId,
+                supChampionId,
                 sortKey,
                 totalGames,
                 MAX_ROWS
@@ -37,7 +44,7 @@ public class ViewBottomDuoStatistics {
             .map(row -> toItem(row, totalGames))
             .toList();
 
-    return new BottomDuoStatisticsResponse(tier.name(), totalGames, items);
+    return new BottomDuoStatisticsResponse(tier.name(), resolvedPatchVersion, totalGames, items);
   }
 
   private BottomDuoStatisticsResponse.Item toItem(BottomDuoStatFinder.StatRow row, int totalGames) {
@@ -47,13 +54,18 @@ public class ViewBottomDuoStatistics {
     double pickRate = totalGames == 0 ? 0 : (double) row.games() / totalGames;
 
     return new BottomDuoStatisticsResponse.Item(
+        row.adcChampionId(),
         adc.name(),
         adc.imageUrl(),
+        row.supChampionId(),
         sup.name(),
         sup.imageUrl(),
         row.winRate(),
         pickRate,
-        row.games()
+        row.games(),
+        row.duoTier(),
+        row.ranking(),
+        row.rankDelta()
     );
   }
 

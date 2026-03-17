@@ -138,7 +138,8 @@ public class SessionRunner {
           resolvedTier,
           seedProps.getStartPage(),
           seedProps.getEndPage(),
-          seedProps.getMatchesPerPuuid()
+          seedProps.getMatchesPerPuuid(),
+          seedProps.getMaxEntries()
       );
     }
 

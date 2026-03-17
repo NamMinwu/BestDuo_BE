@@ -20,29 +20,40 @@ public class ViewBottomDuoCounters {
 
   public BottomDuoCounterResponse execute(
       Tier tier,
+      String patchVersionOrNull,
       String myAdcChampionId,
       String mySupChampionId,
       Integer counterSizeOrNull
   ) {
     int counterSize = (counterSizeOrNull == null) ? DEFAULT_COUNTER_SIZE : Math.max(1, Math.min(50, counterSizeOrNull));
 
-    int totalGames = matchupFinder.findMyDuoTotalGames(tier, myAdcChampionId, mySupChampionId);
+    String patchVersion = blankToNull(patchVersionOrNull);
+    String resolvedPatchVersion = matchupFinder.resolvePatchVersion(patchVersion);
+
+    int totalGames = resolvedPatchVersion == null
+        ? 0
+        : matchupFinder.findMyDuoTotalGames(tier, resolvedPatchVersion, myAdcChampionId, mySupChampionId);
 
     var myAdc = championMetaFinder.findById(myAdcChampionId);
     var mySup = championMetaFinder.findById(mySupChampionId);
 
     var myMeta = new BottomDuoCounterResponse.DuoMeta(
-        myAdc.name(), myAdc.imageUrl(),
-        mySup.name(), mySup.imageUrl()
+        myAdcChampionId,
+        myAdc.name(),
+        myAdc.imageUrl(),
+        mySupChampionId,
+        mySup.name(),
+        mySup.imageUrl()
     );
 
     List<Item> counters =
-        matchupFinder.findCountersByLowestWinRate(tier, myAdcChampionId, mySupChampionId, counterSize)
+        (resolvedPatchVersion == null ? List.<BottomDuoMatchupFinder.MatchupRow>of()
+            : matchupFinder.findCountersByLowestWinRate(tier, resolvedPatchVersion, myAdcChampionId, mySupChampionId, counterSize))
             .stream()
             .map(row -> toItem(row, totalGames))
             .toList();
 
-    return new BottomDuoCounterResponse(tier.name(), totalGames, myMeta, counterSize, counters);
+    return new BottomDuoCounterResponse(tier.name(), resolvedPatchVersion, totalGames, myMeta, counterSize, counters);
   }
 
   private BottomDuoCounterResponse.Item toItem(BottomDuoMatchupFinder.MatchupRow row, int totalGames) {
@@ -52,13 +63,23 @@ public class ViewBottomDuoCounters {
     double pickRate = totalGames == 0 ? 0 : (double) row.games() / totalGames;
 
     return new BottomDuoCounterResponse.Item(
+        row.oppAdcChampionId(),
         oppAdc.name(),
         oppAdc.imageUrl(),
+        row.oppSupChampionId(),
         oppSup.name(),
         oppSup.imageUrl(),
         row.winRate(),
         pickRate,
         row.games()
     );
+  }
+
+  private String blankToNull(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
   }
 }

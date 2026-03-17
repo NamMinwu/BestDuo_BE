@@ -33,20 +33,27 @@ class BottomDuoStatisticsControllerTest {
   void getListReturnsUseCaseResponse() throws Exception {
     BottomDuoStatisticsResponse response = new BottomDuoStatisticsResponse(
         "GOLD",
+        "14.10",
         500,
         List.of(new BottomDuoStatisticsResponse.Item(
+            "ashe",
             "Ashe",
             "adc.png",
+            "thresh",
             "Thresh",
             "sup.png",
             0.55,
             0.12,
-            60
+            60,
+            2,
+            5,
+            -1
         ))
     );
 
     when(viewBottomDuoStatistics.execute(
         Tier.GOLD,
+        "14.10",
         "Ashe",
         "Thresh",
         BottomDuoStatFinder.SortKey.WINRATE_ASC
@@ -54,6 +61,7 @@ class BottomDuoStatisticsControllerTest {
 
     mockMvc.perform(get("/bottom-duo/stats")
             .param("tier", "GOLD")
+            .param("patchVersion", "14.10")
             .param("adcChampionId", "Ashe")
             .param("supChampionId", "Thresh")
             .param("sort", "WINRATE_ASC"))
@@ -62,6 +70,7 @@ class BottomDuoStatisticsControllerTest {
 
     verify(viewBottomDuoStatistics).execute(
         Tier.GOLD,
+        "14.10",
         "Ashe",
         "Thresh",
         BottomDuoStatFinder.SortKey.WINRATE_ASC
@@ -70,9 +79,10 @@ class BottomDuoStatisticsControllerTest {
 
   @Test
   void getListUsesDefaultSortWhenNotProvided() throws Exception {
-    BottomDuoStatisticsResponse response = new BottomDuoStatisticsResponse("SILVER", 0, List.of());
+    BottomDuoStatisticsResponse response = new BottomDuoStatisticsResponse("SILVER", null, 0, List.of());
     when(viewBottomDuoStatistics.execute(
         Tier.SILVER,
+        null,
         null,
         null,
         BottomDuoStatFinder.SortKey.PICKRATE_DESC
@@ -85,6 +95,7 @@ class BottomDuoStatisticsControllerTest {
 
     verify(viewBottomDuoStatistics).execute(
         Tier.SILVER,
+        null,
         null,
         null,
         BottomDuoStatFinder.SortKey.PICKRATE_DESC

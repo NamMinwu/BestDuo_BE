@@ -27,7 +27,7 @@ class BottomDuoAggregateControllerTest {
 
   @Test
   void aggregateReturnsUseCaseResult() throws Exception {
-    AggregateBottomDuoStat.Result result = new AggregateBottomDuoStat.Result(10);
+    AggregateBottomDuoStat.Result result = new AggregateBottomDuoStat.Result(10, 7);
     when(aggregateBottomDuoStat.execute()).thenReturn(result);
 
     mockMvc.perform(post("/admin/aggregate/bottom-duo-stat"))

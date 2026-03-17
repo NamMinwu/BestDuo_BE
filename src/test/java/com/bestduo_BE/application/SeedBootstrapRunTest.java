@@ -39,7 +39,7 @@ class SeedBootstrapRunTest {
   private SeedBootstrapRun useCase;
 
   private final SeedBootstrapCommand command = new SeedBootstrapCommand(
-      "RANKED_SOLO_5x5", "DIAMOND", "I", Tier.MASTER, 1, 1, 2
+      "RANKED_SOLO_5x5", "DIAMOND", "I", Tier.MASTER, 1, 1, 2, 0
   );
 
   @BeforeEach
@@ -101,6 +101,27 @@ class SeedBootstrapRunTest {
     verify(summonerSeedRegistry).markSeedError("p-error");
     assertThat(result.matchIdsFetched()).isZero();
     assertThat(result.matchIdsEnqueued()).isZero();
+  }
+
+  @Test
+  void limitNumberOfEntriesWhenMaxEntriesConfigured() {
+    SeedBootstrapCommand limited = new SeedBootstrapCommand(
+        "RANKED_SOLO_5x5", "MASTER", "I", Tier.MASTER, 1, 1, 2, 1
+    );
+    List<LeagueEntry> entries = List.of(entry("new-1"), entry("new-2"));
+    given(leagueEntriesSeedLoader.loadEntries(
+        limited.queue(), limited.tier(), limited.division(), 1
+    )).willReturn(entries);
+    given(summonerSeedRegistry.registerIfAbsent("new-1")).willReturn(true);
+    given(matchIdsFinder.findRecentMatchIds("new-1", limited.matchesPerPuuid()))
+        .willReturn(List.of("m-1"));
+
+    SeedBootstrapRun.SeedBootstrapResult result = useCase.execute(limited);
+
+    verify(summonerSeedRegistry).registerIfAbsent("new-1");
+    verify(summonerSeedRegistry, never()).registerIfAbsent("new-2");
+    assertThat(result.entriesFetched()).isEqualTo(1);
+    assertThat(result.puuidRegistered()).isEqualTo(1);
   }
 
   private void givenEntries(List<LeagueEntry> entries) {

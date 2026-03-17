@@ -11,10 +11,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @EqualsAndHashCode
 public class BottomDuoMatchupAggId implements Serializable {
+  private String patchVersion;
   private String myAdcChampionId;
   private String mySupChampionId;
   private String oppAdcChampionId;
   private String oppSupChampionId;
   private String tier;
 }
-

@@ -43,6 +43,9 @@ public class SeedBootstrapRun {
     int puuidRegistered = 0;
     int matchIdsFetched = 0;
     int matchIdsEnqueued = 0;
+    int processedEntries = 0;
+    boolean limitEnabled = cmd.maxEntries() > 0;
+    int maxEntries = cmd.maxEntries();
 
     for (int page = cmd.startPage(); page <= cmd.endPage(); page++) {
       List<LeagueEntry> entries = leagueEntriesSeedLoader.loadEntries(
@@ -50,14 +53,27 @@ public class SeedBootstrapRun {
 
       if (entries == null || entries.isEmpty()) break;
 
-      pagesProcessed++;
-      entriesFetched += entries.size();
+      List<LeagueEntry> entriesToProcess = entries;
+      if (limitEnabled) {
+        int remainingSlots = maxEntries - processedEntries;
+        if (remainingSlots <= 0) break;
+        if (entries.size() > remainingSlots) {
+          entriesToProcess = entries.subList(0, remainingSlots);
+        }
+      }
 
-      for (LeagueEntry e : entries) {
+      if (entriesToProcess.isEmpty()) break;
+
+      pagesProcessed++;
+      entriesFetched += entriesToProcess.size();
+
+      for (LeagueEntry e : entriesToProcess) {
         if (e == null) continue;
 
         String puuid = e.puuid();
         if (puuid == null || puuid.isBlank()) continue;
+
+        processedEntries++;
 
         // 1) summoner 등록(멱등) - 처음 본 puuid만 진행
         boolean firstTime = summonerSeedRegistry.registerIfAbsent(puuid);
@@ -91,6 +107,14 @@ public class SeedBootstrapRun {
           summonerSeedRegistry.markSeedError(puuid);
           // Phase2A는 계속 진행 (다음 puuid로)
         }
+
+        if (limitEnabled && processedEntries >= maxEntries) {
+          break;
+        }
+      }
+
+      if (limitEnabled && processedEntries >= maxEntries) {
+        break;
       }
     }
 

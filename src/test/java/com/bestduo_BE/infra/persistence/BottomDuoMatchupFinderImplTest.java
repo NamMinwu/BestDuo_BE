@@ -34,17 +34,35 @@ class BottomDuoMatchupFinderImplTest {
 
   @Test
   void findMyDuoTotalGamesDelegatesToRepository() {
-    given(repository.sumGamesOfMyDuo("DIAMOND", "ashe", "lux")).willReturn(87);
+    given(repository.sumGamesOfMyDuo("14.9", "DIAMOND", "ashe", "lux")).willReturn(87);
 
-    int totalGames = finder.findMyDuoTotalGames(Tier.DIAMOND, "ashe", "lux");
+    int totalGames = finder.findMyDuoTotalGames(Tier.DIAMOND, "14.9", "ashe", "lux");
 
     assertEquals(87, totalGames);
+  }
+
+  @Test
+  void resolvePatchVersionPrefersProvidedValue() {
+    String patch = finder.resolvePatchVersion(" 14.8 ");
+
+    assertEquals("14.8", patch);
+  }
+
+  @Test
+  void resolvePatchVersionFallsBackToRepository() {
+    given(repository.findLatestPatchVersion()).willReturn("14.10");
+
+    String patch = finder.resolvePatchVersion(null);
+
+    assertEquals("14.10", patch);
+    then(repository).should().findLatestPatchVersion();
   }
 
   @Test
   void findMatchupsWinRateDescMapsEntitiesAndTrimsOpponentFilters() {
     OffsetDateTime now = OffsetDateTime.now();
     BottomDuoMatchupAgg entity = BottomDuoMatchupAgg.builder()
+        .patchVersion("14.10")
         .myAdcChampionId("ashe")
         .mySupChampionId("lux")
         .oppAdcChampionId("jinx")
@@ -55,11 +73,12 @@ class BottomDuoMatchupFinderImplTest {
         .createdAt(now)
         .updatedAt(now)
         .build();
-    given(repository.findTopWinRateDesc(eq("DIAMOND"), eq("ashe"), eq("lux"), isNull(), isNull(), eq(5)))
+    given(repository.findTopWinRateDesc(eq("14.10"), eq("DIAMOND"), eq("ashe"), eq("lux"), isNull(), isNull(), eq(5)))
         .willReturn(List.of(entity));
 
     List<BottomDuoMatchupFinder.MatchupRow> rows = finder.findMatchups(
         Tier.DIAMOND,
+        "14.10",
         "ashe",
         "lux",
         "   ",
@@ -82,11 +101,12 @@ class BottomDuoMatchupFinderImplTest {
 
   @Test
   void findMatchupsWinRateAscCallsRepository() {
-    given(repository.findTopWinRateAsc("DIAMOND", "ashe", "lux", "jinx", "morgana", 3))
+    given(repository.findTopWinRateAsc("14.10", "DIAMOND", "ashe", "lux", "jinx", "morgana", 3))
         .willReturn(List.of());
 
     finder.findMatchups(
         Tier.DIAMOND,
+        "14.10",
         "ashe",
         "lux",
         "jinx",
@@ -96,16 +116,17 @@ class BottomDuoMatchupFinderImplTest {
         3
     );
 
-    then(repository).should().findTopWinRateAsc("DIAMOND", "ashe", "lux", "jinx", "morgana", 3);
+    then(repository).should().findTopWinRateAsc("14.10", "DIAMOND", "ashe", "lux", "jinx", "morgana", 3);
   }
 
   @Test
   void findMatchupsPickRateDescEnforcesMinimumLimit() {
-    given(repository.findTopPickRateDesc("DIAMOND", "ashe", "lux", "jinx", null, 200, 1))
+    given(repository.findTopPickRateDesc("14.10", "DIAMOND", "ashe", "lux", "jinx", null, 200, 1))
         .willReturn(List.of());
 
     finder.findMatchups(
         Tier.DIAMOND,
+        "14.10",
         "ashe",
         "lux",
         "jinx",
@@ -115,16 +136,17 @@ class BottomDuoMatchupFinderImplTest {
         0
     );
 
-    then(repository).should().findTopPickRateDesc("DIAMOND", "ashe", "lux", "jinx", null, 200, 1);
+    then(repository).should().findTopPickRateDesc("14.10", "DIAMOND", "ashe", "lux", "jinx", null, 200, 1);
   }
 
   @Test
   void findMatchupsPickRateAscPassesThroughMyTotalGames() {
-    given(repository.findTopPickRateAsc("DIAMOND", "ashe", "lux", null, null, 321, 4))
+    given(repository.findTopPickRateAsc("14.10", "DIAMOND", "ashe", "lux", null, null, 321, 4))
         .willReturn(List.of());
 
     finder.findMatchups(
         Tier.DIAMOND,
+        "14.10",
         "ashe",
         "lux",
         null,
@@ -134,13 +156,14 @@ class BottomDuoMatchupFinderImplTest {
         4
     );
 
-    then(repository).should().findTopPickRateAsc("DIAMOND", "ashe", "lux", null, null, 321, 4);
+    then(repository).should().findTopPickRateAsc("14.10", "DIAMOND", "ashe", "lux", null, null, 321, 4);
   }
 
   @Test
   void findCountersByLowestWinRateMapsEntitiesAndAppliesLimitFloor() {
     OffsetDateTime now = OffsetDateTime.now();
     BottomDuoMatchupAgg entity = BottomDuoMatchupAgg.builder()
+        .patchVersion("14.10")
         .myAdcChampionId("xayah")
         .mySupChampionId("rakan")
         .oppAdcChampionId("draven")
@@ -151,17 +174,18 @@ class BottomDuoMatchupFinderImplTest {
         .createdAt(now)
         .updatedAt(now)
         .build();
-    given(repository.findCountersByLowestWinRate("GOLD", "xayah", "rakan", 1))
+    given(repository.findCountersByLowestWinRate("14.10", "GOLD", "xayah", "rakan", 1))
         .willReturn(List.of(entity));
 
     List<BottomDuoMatchupFinder.MatchupRow> rows = finder.findCountersByLowestWinRate(
         Tier.GOLD,
+        "14.10",
         "xayah",
         "rakan",
         0
     );
 
-    then(repository).should().findCountersByLowestWinRate("GOLD", "xayah", "rakan", 1);
+    then(repository).should().findCountersByLowestWinRate("14.10", "GOLD", "xayah", "rakan", 1);
     assertEquals(1, rows.size());
     BottomDuoMatchupFinder.MatchupRow row = rows.get(0);
     assertEquals("xayah", row.myAdcChampionId());

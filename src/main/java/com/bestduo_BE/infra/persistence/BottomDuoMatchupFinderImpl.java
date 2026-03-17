@@ -14,13 +14,18 @@ public class BottomDuoMatchupFinderImpl implements BottomDuoMatchupFinder {
   private final BottomDuoMatchupAggJpaRepository repository;
 
   @Override
-  public int findMyDuoTotalGames(Tier tier, String myAdcChampionId, String mySupChampionId) {
-    return repository.sumGamesOfMyDuo(tier.name(), myAdcChampionId, mySupChampionId);
+  public int findMyDuoTotalGames(Tier tier, String patchVersionOrNull, String myAdcChampionId, String mySupChampionId) {
+    String patchVersion = resolvePatchVersion(patchVersionOrNull);
+    if (patchVersion == null) {
+      return 0;
+    }
+    return repository.sumGamesOfMyDuo(patchVersion, tier.name(), myAdcChampionId, mySupChampionId);
   }
 
   @Override
   public List<MatchupRow> findMatchups(
       Tier tier,
+      String patchVersionOrNull,
       String myAdcChampionId,
       String mySupChampionId,
       String oppAdcChampionIdOrNull,
@@ -34,11 +39,16 @@ public class BottomDuoMatchupFinderImpl implements BottomDuoMatchupFinder {
     String oppAdc = blankToNull(oppAdcChampionIdOrNull);
     String oppSup = blankToNull(oppSupChampionIdOrNull);
 
+    String patchVersion = resolvePatchVersion(patchVersionOrNull);
+    if (patchVersion == null) {
+      return List.of();
+    }
+
     var entities = switch (sortKey) {
-      case WINRATE_DESC -> repository.findTopWinRateDesc(tier.name(), myAdcChampionId, mySupChampionId, oppAdc, oppSup, limit);
-      case WINRATE_ASC  -> repository.findTopWinRateAsc(tier.name(), myAdcChampionId, mySupChampionId, oppAdc, oppSup, limit);
-      case PICKRATE_DESC -> repository.findTopPickRateDesc(tier.name(), myAdcChampionId, mySupChampionId, oppAdc, oppSup, myTotalGamesForPickRate, limit);
-      case PICKRATE_ASC  -> repository.findTopPickRateAsc(tier.name(), myAdcChampionId, mySupChampionId, oppAdc, oppSup, myTotalGamesForPickRate, limit);
+      case WINRATE_DESC -> repository.findTopWinRateDesc(patchVersion, tier.name(), myAdcChampionId, mySupChampionId, oppAdc, oppSup, limit);
+      case WINRATE_ASC  -> repository.findTopWinRateAsc(patchVersion, tier.name(), myAdcChampionId, mySupChampionId, oppAdc, oppSup, limit);
+      case PICKRATE_DESC -> repository.findTopPickRateDesc(patchVersion, tier.name(), myAdcChampionId, mySupChampionId, oppAdc, oppSup, myTotalGamesForPickRate, limit);
+      case PICKRATE_ASC  -> repository.findTopPickRateAsc(patchVersion, tier.name(), myAdcChampionId, mySupChampionId, oppAdc, oppSup, myTotalGamesForPickRate, limit);
     };
 
     return entities.stream()
@@ -57,13 +67,20 @@ public class BottomDuoMatchupFinderImpl implements BottomDuoMatchupFinder {
   @Override
   public List<MatchupRow> findCountersByLowestWinRate(
       Tier tier,
+      String patchVersionOrNull,
       String myAdcChampionId,
       String mySupChampionId,
       int maxRows
   ) {
     int limit = Math.max(1, maxRows);
 
+    String patchVersion = resolvePatchVersion(patchVersionOrNull);
+    if (patchVersion == null) {
+      return List.of();
+    }
+
     var entities = repository.findCountersByLowestWinRate(
+        patchVersion,
         tier.name(),
         myAdcChampionId,
         mySupChampionId,
@@ -87,5 +104,14 @@ public class BottomDuoMatchupFinderImpl implements BottomDuoMatchupFinder {
     if (v == null) return null;
     String t = v.trim();
     return t.isEmpty() ? null : t;
+  }
+
+  @Override
+  public String resolvePatchVersion(String patchVersionOrNull) {
+    String patchVersion = blankToNull(patchVersionOrNull);
+    if (patchVersion != null) {
+      return patchVersion;
+    }
+    return repository.findLatestPatchVersion();
   }
 }

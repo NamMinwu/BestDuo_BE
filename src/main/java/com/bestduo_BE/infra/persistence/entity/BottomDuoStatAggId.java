@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @EqualsAndHashCode
 public class BottomDuoStatAggId implements Serializable {
+  private String patchVersion;
   private String adcChampionId;
   private String supChampionId;
   private String tier;

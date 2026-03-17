@@ -19,25 +19,37 @@ public class ViewBottomDuoDetailStatistics {
 
   public BottomDuoDetailStatisticsResponse execute(
       Tier tier,
+      String patchVersionOrNull,
       String myAdcChampionId,
       String mySupChampionId,
       String oppAdcChampionIdOrNull,
       String oppSupChampionIdOrNull,
       BottomDuoMatchupFinder.SortKey sortKey
   ) {
-    int totalGames = matchupFinder.findMyDuoTotalGames(tier, myAdcChampionId, mySupChampionId);
+    String patchVersion = blankToNull(patchVersionOrNull);
+    String resolvedPatchVersion = matchupFinder.resolvePatchVersion(patchVersion);
+
+    int totalGames = resolvedPatchVersion == null
+        ? 0
+        : matchupFinder.findMyDuoTotalGames(tier, resolvedPatchVersion, myAdcChampionId, mySupChampionId);
 
     var myAdc = championMetaClient.findById(myAdcChampionId);
     var mySup = championMetaClient.findById(mySupChampionId);
 
     var myMeta = new BottomDuoDetailStatisticsResponse.DuoMeta(
-        myAdc.name(), myAdc.imageUrl(),
-        mySup.name(), mySup.imageUrl()
+        myAdcChampionId,
+        myAdc.name(),
+        myAdc.imageUrl(),
+        mySupChampionId,
+        mySup.name(),
+        mySup.imageUrl()
     );
 
     List<BottomDuoDetailStatisticsResponse.Item> items =
-        matchupFinder.findMatchups(
+        (resolvedPatchVersion == null ? List.<BottomDuoMatchupFinder.MatchupRow>of()
+            : matchupFinder.findMatchups(
                 tier,
+                resolvedPatchVersion,
                 myAdcChampionId,
                 mySupChampionId,
                 blankToNull(oppAdcChampionIdOrNull),
@@ -45,11 +57,11 @@ public class ViewBottomDuoDetailStatistics {
                 sortKey,
                 totalGames,
                 MAX_ROWS
-            ).stream()
+            )).stream()
             .map(row -> toItem(row, totalGames))
             .toList();
 
-    return new BottomDuoDetailStatisticsResponse(tier.name(), totalGames, myMeta, items);
+    return new BottomDuoDetailStatisticsResponse(tier.name(), resolvedPatchVersion, totalGames, myMeta, items);
   }
 
   private BottomDuoDetailStatisticsResponse.Item toItem(BottomDuoMatchupFinder.MatchupRow row, int totalGames) {
@@ -59,8 +71,10 @@ public class ViewBottomDuoDetailStatistics {
     double pickRate = totalGames == 0 ? 0 : (double) row.games() / totalGames;
 
     return new BottomDuoDetailStatisticsResponse.Item(
+        row.oppAdcChampionId(),
         oppAdc.name(),
         oppAdc.imageUrl(),
+        row.oppSupChampionId(),
         oppSup.name(),
         oppSup.imageUrl(),
         row.winRate(),

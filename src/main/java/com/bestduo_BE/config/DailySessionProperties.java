@@ -32,5 +32,6 @@ public class DailySessionProperties {
     private int startPage = 1;
     private int endPage = 1;
     private int matchesPerPuuid = 20;
+    private int maxEntries = 0;
   }
 }

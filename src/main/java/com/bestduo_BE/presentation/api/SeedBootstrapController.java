@@ -24,12 +24,12 @@ public class SeedBootstrapController {
       @RequestParam(defaultValue = "EMERALD") Tier seedTier,
       @RequestParam(defaultValue = "1") int startPage,
       @RequestParam(defaultValue = "3") int endPage,
-      @RequestParam(defaultValue = "10") int matchesPerPuuid
+      @RequestParam(defaultValue = "10") int matchesPerPuuid,
+      @RequestParam(defaultValue = "0") int maxEntries
   ) {
     SeedBootstrapCommand cmd = new SeedBootstrapCommand(
-        queue, tier, division, seedTier, startPage, endPage, matchesPerPuuid
+        queue, tier, division, seedTier, startPage, endPage, matchesPerPuuid, maxEntries
     );
     return useCase.execute(cmd);
   }
 }
-

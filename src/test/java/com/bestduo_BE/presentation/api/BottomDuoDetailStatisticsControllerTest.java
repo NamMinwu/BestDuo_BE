@@ -38,11 +38,14 @@ class BottomDuoDetailStatisticsControllerTest {
   void listReturnsUseCaseResponse() throws Exception {
     BottomDuoDetailStatisticsResponse response = new BottomDuoDetailStatisticsResponse(
         "GOLD",
+        "14.10",
         200,
-        new BottomDuoDetailStatisticsResponse.DuoMeta("Ashe", "a.png", "Lux", "l.png"),
+        new BottomDuoDetailStatisticsResponse.DuoMeta("ashe", "Ashe", "a.png", "lux", "Lux", "l.png"),
         List.of(new BottomDuoDetailStatisticsResponse.Item(
+            "jinx",
             "Jinx",
             "j.png",
+            "morgana",
             "Morgana",
             "m.png",
             0.45,
@@ -53,6 +56,7 @@ class BottomDuoDetailStatisticsControllerTest {
 
     when(viewBottomDuoDetailStatistics.execute(
         Tier.GOLD,
+        "14.10",
         "ashe",
         "lux",
         "jinx",
@@ -62,6 +66,7 @@ class BottomDuoDetailStatisticsControllerTest {
 
     mockMvc.perform(get("/bottom-duo/matchups")
             .param("tier", "GOLD")
+            .param("patchVersion", "14.10")
             .param("adcChampionId", "ashe")
             .param("supChampionId", "lux")
             .param("oppAdcChampionId", "jinx")
@@ -72,6 +77,7 @@ class BottomDuoDetailStatisticsControllerTest {
 
     verify(viewBottomDuoDetailStatistics).execute(
         Tier.GOLD,
+        "14.10",
         "ashe",
         "lux",
         "jinx",
@@ -84,22 +90,24 @@ class BottomDuoDetailStatisticsControllerTest {
   void countersReturnsCounterUseCaseResponse() throws Exception {
     BottomDuoCounterResponse response = new BottomDuoCounterResponse(
         "DIAMOND",
+        "14.9",
         500,
-        new BottomDuoCounterResponse.DuoMeta("Ashe", "a.png", "Lux", "l.png"),
+        new BottomDuoCounterResponse.DuoMeta("ashe", "Ashe", "a.png", "lux", "Lux", "l.png"),
         5,
         List.of()
     );
 
-    when(viewBottomDuoCounters.execute(Tier.DIAMOND, "ashe", "lux", 5)).thenReturn(response);
+    when(viewBottomDuoCounters.execute(Tier.DIAMOND, "14.9", "ashe", "lux", 5)).thenReturn(response);
 
     mockMvc.perform(get("/bottom-duo/counters")
             .param("tier", "DIAMOND")
+            .param("patchVersion", "14.9")
             .param("adcChampionId", "ashe")
             .param("supChampionId", "lux")
             .param("size", "5"))
         .andExpect(status().isOk())
         .andExpect(content().json(objectMapper.writeValueAsString(response)));
 
-    verify(viewBottomDuoCounters).execute(Tier.DIAMOND, "ashe", "lux", 5);
+    verify(viewBottomDuoCounters).execute(Tier.DIAMOND, "14.9", "ashe", "lux", 5);
   }
 }
