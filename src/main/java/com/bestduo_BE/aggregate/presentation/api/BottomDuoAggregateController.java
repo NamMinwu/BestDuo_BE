@@ -1,6 +1,6 @@
 package com.bestduo_BE.aggregate.presentation.api;
 
-import com.bestduo_BE.aggregate.application.AggregateBottomDuoStat;
+import com.bestduo_BE.aggregate.application.AggregateBottomDuoStats;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/admin/aggregate")
 public class BottomDuoAggregateController {
 
-  private final AggregateBottomDuoStat useCase;
+  private final AggregateBottomDuoStats useCase;
 
   @PostMapping("/bottom-duo-stat")
-  public AggregateBottomDuoStat.Result aggregate() {
+  public AggregateBottomDuoStats.Result aggregate() {
     return useCase.execute();
   }
 }

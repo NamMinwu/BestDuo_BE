@@ -2,7 +2,7 @@ package com.bestduo_BE.aggregate.infra.persistence;
 
 import com.bestduo_BE.aggregate.application.port.BottomDuoStatFinder;
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggJpaRepository;
+import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggregateJpaRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class BottomDuoStatFinderImpl implements BottomDuoStatFinder {
-  private final BottomDuoStatAggJpaRepository repository;
+  private final BottomDuoStatAggregateJpaRepository repository;
 
   @Override
   public int findTierTotalGames(Tier tier, String patchVersionOrNull) {

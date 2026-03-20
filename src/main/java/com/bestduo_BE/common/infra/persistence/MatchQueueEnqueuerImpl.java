@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
-public class MatchQueueEnqueurImpl implements MatchQueueEnqueuer {
+public class MatchQueueEnqueuerImpl implements MatchQueueEnqueuer {
   private final MatchQueueJpaRepository repo;
 
   @Override

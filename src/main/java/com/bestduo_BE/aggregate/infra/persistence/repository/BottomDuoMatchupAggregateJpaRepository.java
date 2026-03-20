@@ -1,7 +1,7 @@
 package com.bestduo_BE.aggregate.infra.persistence.repository;
 
-import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoMatchupAgg;
-import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoMatchupAggId;
+import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoMatchupAggregate;
+import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoMatchupAggregateId;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
-public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDuoMatchupAgg, BottomDuoMatchupAggId> {
+public interface BottomDuoMatchupAggregateJpaRepository extends JpaRepository<BottomDuoMatchupAggregate, BottomDuoMatchupAggregateId> {
   /**
    * raw A(team) vs raw B(other team) self-join으로 matchup 생성.
    * team_id가 다르면 A->B, B->A가 둘 다 만들어져서 "내 듀오 기준" 조회가 가능해짐.
@@ -84,7 +84,7 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
         games desc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoMatchupAgg> findTopWinRateDesc(
+  List<BottomDuoMatchupAggregate> findTopWinRateDesc(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("myAdc") String myAdc,
@@ -109,7 +109,7 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
         games desc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoMatchupAgg> findTopWinRateAsc(
+  List<BottomDuoMatchupAggregate> findTopWinRateAsc(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("myAdc") String myAdc,
@@ -134,7 +134,7 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
         games desc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoMatchupAgg> findTopPickRateDesc(
+  List<BottomDuoMatchupAggregate> findTopPickRateDesc(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("myAdc") String myAdc,
@@ -160,7 +160,7 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
         games asc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoMatchupAgg> findTopPickRateAsc(
+  List<BottomDuoMatchupAggregate> findTopPickRateAsc(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("myAdc") String myAdc,
@@ -184,7 +184,7 @@ public interface BottomDuoMatchupAggJpaRepository extends JpaRepository<BottomDu
         games desc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoMatchupAgg> findCountersByLowestWinRate(
+  List<BottomDuoMatchupAggregate> findCountersByLowestWinRate(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("myAdc") String myAdc,

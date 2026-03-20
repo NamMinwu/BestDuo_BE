@@ -1,7 +1,7 @@
 package com.bestduo_BE.ingest.application;
 
 import com.bestduo_BE.ingest.application.port.MatchQueueStatusCount;
-import com.bestduo_BE.common.infra.persistence.repository.MatchQueueStatsJpaRepository;
+import com.bestduo_BE.common.infra.persistence.repository.IngestQueueStatsJpaRepository;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -13,9 +13,9 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class MatchQueueStats {
+public class IngestQueueStats {
 
-  private final MatchQueueStatsJpaRepository matchQueueStatsJpaRepository;
+  private final IngestQueueStatsJpaRepository matchQueueStatsJpaRepository;
 
   public Result getStats() {
     // 1) status counts

@@ -2,7 +2,7 @@ package com.bestduo_BE.common.application.port;
 
 import java.util.List;
 
-public interface SummonerExpandQueue {
+public interface SummonerExpansionQueue {
   List<String> findReadyPuuds(int limit);
   void markExpandRunning(String puuid);
   void markExpandDone(String puuid);

@@ -18,16 +18,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class MatchQueueEnqueurImplTest {
+class MatchQueueEnqueuerImplTest {
 
   @Mock
   private MatchQueueJpaRepository repository;
 
-  private MatchQueueEnqueurImpl enqueuer;
+  private MatchQueueEnqueuerImpl enqueuer;
 
   @BeforeEach
   void setUp() {
-    enqueuer = new MatchQueueEnqueurImpl(repository);
+    enqueuer = new MatchQueueEnqueuerImpl(repository);
   }
 
   @Test

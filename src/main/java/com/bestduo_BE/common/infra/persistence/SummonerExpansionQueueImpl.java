@@ -1,6 +1,6 @@
 package com.bestduo_BE.common.infra.persistence;
 
-import com.bestduo_BE.common.application.port.SummonerExpandQueue;
+import com.bestduo_BE.common.application.port.SummonerExpansionQueue;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
 import java.time.OffsetDateTime;
@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
-public class SummonerExpandQueueImpl implements SummonerExpandQueue {
+public class SummonerExpansionQueueImpl implements SummonerExpansionQueue {
 
   private final SummonerJpaRepository repository;
 

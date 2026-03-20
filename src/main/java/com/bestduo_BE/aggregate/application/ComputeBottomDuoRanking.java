@@ -1,7 +1,7 @@
 package com.bestduo_BE.aggregate.application;
 
-import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAgg;
-import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggJpaRepository;
+import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAggregate;
+import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggregateJpaRepository;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -20,7 +20,7 @@ public class ComputeBottomDuoRanking {
   private static final int MIN_GAMES = 4;
   private static final int INSUFFICIENT_TIER = 5;
 
-  private final BottomDuoStatAggJpaRepository repository;
+  private final BottomDuoStatAggregateJpaRepository repository;
 
   @Transactional
   public Result execute() {
@@ -29,28 +29,28 @@ public class ComputeBottomDuoRanking {
       return new Result(null, 0);
     }
 
-    List<BottomDuoStatAgg> currentStats = repository.findByPatchVersion(currentPatch);
+    List<BottomDuoStatAggregate> currentStats = repository.findByPatchVersion(currentPatch);
     if (currentStats.isEmpty()) {
       return new Result(currentPatch, 0);
     }
 
     Map<String, Integer> totalGamesByTier = currentStats.stream()
-        .collect(Collectors.groupingBy(BottomDuoStatAgg::getTier, Collectors.summingInt(BottomDuoStatAgg::getGames)));
+        .collect(Collectors.groupingBy(BottomDuoStatAggregate::getTier, Collectors.summingInt(BottomDuoStatAggregate::getGames)));
 
     Map<String, Integer> previousRankings = loadPreviousRankings(currentPatch);
     OffsetDateTime now = OffsetDateTime.now();
 
-    Map<String, List<BottomDuoStatAgg>> byTier = currentStats.stream()
-        .collect(Collectors.groupingBy(BottomDuoStatAgg::getTier));
+    Map<String, List<BottomDuoStatAggregate>> byTier = currentStats.stream()
+        .collect(Collectors.groupingBy(BottomDuoStatAggregate::getTier));
 
     int updatedRows = 0;
 
-    for (Map.Entry<String, List<BottomDuoStatAgg>> entry : byTier.entrySet()) {
+    for (Map.Entry<String, List<BottomDuoStatAggregate>> entry : byTier.entrySet()) {
       String tier = entry.getKey();
       int tierTotalGames = totalGamesByTier.getOrDefault(tier, 0);
       List<Candidate> eligible = new ArrayList<>();
 
-      for (BottomDuoStatAgg agg : entry.getValue()) {
+      for (BottomDuoStatAggregate agg : entry.getValue()) {
         double pickRate = tierTotalGames == 0 ? 0 : (double) agg.getGames() / tierTotalGames;
         boolean enoughSamples = agg.getGames() >= MIN_GAMES;
         if (!enoughSamples) {
@@ -69,7 +69,7 @@ public class ComputeBottomDuoRanking {
 
       int ranking = 1;
       for (Candidate candidate : eligible) {
-        BottomDuoStatAgg agg = candidate.agg();
+        BottomDuoStatAggregate agg = candidate.agg();
         Integer previousRanking = previousRankings.get(agg.duoKey());
         Integer rankDelta = previousRanking == null ? null : previousRanking - ranking;
         int duoTier = toDuoTier(candidate.rankScore());
@@ -98,10 +98,10 @@ public class ComputeBottomDuoRanking {
     }
     return repository.findByPatchVersion(previousPatch).stream()
         .filter(e -> e.getRanking() != null)
-        .collect(Collectors.toMap(BottomDuoStatAgg::duoKey, BottomDuoStatAgg::getRanking, (left, right) -> left, HashMap::new));
+        .collect(Collectors.toMap(BottomDuoStatAggregate::duoKey, BottomDuoStatAggregate::getRanking, (left, right) -> left, HashMap::new));
   }
 
-  private double computeRankScore(BottomDuoStatAgg agg, double pickRate) {
+  private double computeRankScore(BottomDuoStatAggregate agg, double pickRate) {
     double winScore = agg.getAdjustedWinRate();
     double pickScore = pickRate;
     double gameScore = Math.min(1.0, (double) agg.getGames() / MIN_GAMES);
@@ -119,5 +119,5 @@ public class ComputeBottomDuoRanking {
 
   public record Result(String patchVersion, int updatedRows) {}
 
-  private record Candidate(BottomDuoStatAgg agg, double pickRate, double rankScore) {}
+  private record Candidate(BottomDuoStatAggregate agg, double pickRate, double rankScore) {}
 }

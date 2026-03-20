@@ -7,7 +7,7 @@ import static org.mockito.Mockito.verify;
 import com.bestduo_BE.ingest.application.port.BottomDuoRawSaver;
 import com.bestduo_BE.ingest.application.port.MatchSaver;
 import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
-import com.bestduo_BE.common.application.port.SummonerExpandQueue;
+import com.bestduo_BE.common.application.port.SummonerExpansionQueue;
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;
@@ -38,7 +38,7 @@ class IngestMatchDetailTest {
   private BottomDuoRawSaver bottomDuoRawSaver;
 
   @Mock
-  private SummonerExpandQueue summonerExpandQueue;
+  private SummonerExpansionQueue summonerExpandQueue;
 
   private IngestMatchDetail useCase;
 

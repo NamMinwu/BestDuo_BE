@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
-public interface MatchQueueStatsJpaRepository extends Repository<MatchQueue, String> {
+public interface IngestQueueStatsJpaRepository extends Repository<MatchQueue, String> {
   @Query(value = """
     select mq.status as status, count(*) as cnt
     from match_queue mq

@@ -18,8 +18,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-@IdClass(BottomDuoMatchupAggId.class)
-public class BottomDuoMatchupAgg {
+@IdClass(BottomDuoMatchupAggregateId.class)
+public class BottomDuoMatchupAggregate {
 
 
   @Id

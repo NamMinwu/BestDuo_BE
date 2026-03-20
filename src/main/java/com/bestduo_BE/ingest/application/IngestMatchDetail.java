@@ -3,7 +3,7 @@ package com.bestduo_BE.ingest.application;
 import com.bestduo_BE.ingest.application.port.BottomDuoRawSaver;
 import com.bestduo_BE.ingest.application.port.MatchSaver;
 import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
-import com.bestduo_BE.common.application.port.SummonerExpandQueue;
+import com.bestduo_BE.common.application.port.SummonerExpansionQueue;
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;
@@ -23,7 +23,7 @@ public class IngestMatchDetail {
   private final BottomDuoRawSaver bottomDuoRawSaver;
 
   // ✅ 추가: participant puuid를 summoner로 확장(멱등)
-  private final SummonerExpandQueue summonerExpandQueue;
+  private final SummonerExpansionQueue summonerExpandQueue;
 
   private final BottomDuoExtractor extractor = new BottomDuoExtractor();
 

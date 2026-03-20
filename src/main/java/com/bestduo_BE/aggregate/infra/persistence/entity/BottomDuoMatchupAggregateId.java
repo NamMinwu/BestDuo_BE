@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
-public class BottomDuoMatchupAggId implements Serializable {
+public class BottomDuoMatchupAggregateId implements Serializable {
   private String patchVersion;
   private String myAdcChampionId;
   private String mySupChampionId;

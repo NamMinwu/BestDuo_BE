@@ -2,7 +2,7 @@ package com.bestduo_BE.aggregate.infra.persistence;
 
 import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupFinder;
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggJpaRepository;
+import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggregateJpaRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class BottomDuoMatchupFinderImpl implements BottomDuoMatchupFinder {
 
-  private final BottomDuoMatchupAggJpaRepository repository;
+  private final BottomDuoMatchupAggregateJpaRepository repository;
 
   @Override
   public int findMyDuoTotalGames(Tier tier, String patchVersionOrNull, String myAdcChampionId, String mySupChampionId) {

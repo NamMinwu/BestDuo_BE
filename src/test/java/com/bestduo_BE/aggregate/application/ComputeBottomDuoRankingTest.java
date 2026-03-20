@@ -6,8 +6,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAgg;
-import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggJpaRepository;
+import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAggregate;
+import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggregateJpaRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,7 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ComputeBottomDuoRankingTest {
 
   @Mock
-  private BottomDuoStatAggJpaRepository repository;
+  private BottomDuoStatAggregateJpaRepository repository;
 
   private ComputeBottomDuoRanking useCase;
 
@@ -43,7 +43,7 @@ class ComputeBottomDuoRankingTest {
   @Test
   void computeRankingAndApplyPreviousPatchDelta() {
     OffsetDateTime now = OffsetDateTime.now();
-    BottomDuoStatAgg asheLux = BottomDuoStatAgg.builder()
+    BottomDuoStatAggregate asheLux = BottomDuoStatAggregate.builder()
         .patchVersion("14.10")
         .adcChampionId("Ashe")
         .supChampionId("Lux")
@@ -58,11 +58,11 @@ class ComputeBottomDuoRankingTest {
         .duoTier(null)
         .previousRanking(null)
         .rankDelta(null)
-        .rankingStatus(BottomDuoStatAgg.RankingStatus.PENDING)
+        .rankingStatus(BottomDuoStatAggregate.RankingStatus.PENDING)
         .createdAt(now)
         .updatedAt(now)
         .build();
-    BottomDuoStatAgg jinxThresh = BottomDuoStatAgg.builder()
+    BottomDuoStatAggregate jinxThresh = BottomDuoStatAggregate.builder()
         .patchVersion("14.10")
         .adcChampionId("Jinx")
         .supChampionId("Thresh")
@@ -77,12 +77,12 @@ class ComputeBottomDuoRankingTest {
         .duoTier(null)
         .previousRanking(null)
         .rankDelta(null)
-        .rankingStatus(BottomDuoStatAgg.RankingStatus.PENDING)
+        .rankingStatus(BottomDuoStatAggregate.RankingStatus.PENDING)
         .createdAt(now)
         .updatedAt(now)
         .build();
 
-    BottomDuoStatAgg prevAsheLux = BottomDuoStatAgg.builder()
+    BottomDuoStatAggregate prevAsheLux = BottomDuoStatAggregate.builder()
         .patchVersion("14.9")
         .adcChampionId("Ashe")
         .supChampionId("Lux")
@@ -97,7 +97,7 @@ class ComputeBottomDuoRankingTest {
         .duoTier(2)
         .previousRanking(null)
         .rankDelta(null)
-        .rankingStatus(BottomDuoStatAgg.RankingStatus.RANKED)
+        .rankingStatus(BottomDuoStatAggregate.RankingStatus.RANKED)
         .createdAt(now.minusDays(10))
         .updatedAt(now.minusDays(5))
         .build();
@@ -119,16 +119,16 @@ class ComputeBottomDuoRankingTest {
     assertThat(asheLux.getRanking()).isEqualTo(1);
     assertThat(asheLux.getPreviousRanking()).isEqualTo(4);
     assertThat(asheLux.getRankDelta()).isEqualTo(3);
-    assertThat(asheLux.getRankingStatus()).isEqualTo(BottomDuoStatAgg.RankingStatus.RANKED);
+    assertThat(asheLux.getRankingStatus()).isEqualTo(BottomDuoStatAggregate.RankingStatus.RANKED);
     assertThat(jinxThresh.getRanking()).isEqualTo(2);
     assertThat(jinxThresh.getPreviousRanking()).isNull();
-    assertThat(jinxThresh.getRankingStatus()).isEqualTo(BottomDuoStatAgg.RankingStatus.RANKED);
+    assertThat(jinxThresh.getRankingStatus()).isEqualTo(BottomDuoStatAggregate.RankingStatus.RANKED);
   }
 
   @Test
   void markInsufficientDataWhenGamesBelowThreshold() {
     OffsetDateTime now = OffsetDateTime.now();
-    BottomDuoStatAgg lowSample = BottomDuoStatAgg.builder()
+    BottomDuoStatAggregate lowSample = BottomDuoStatAggregate.builder()
         .patchVersion("14.10")
         .adcChampionId("Ezreal")
         .supChampionId("Yuumi")
@@ -143,7 +143,7 @@ class ComputeBottomDuoRankingTest {
         .duoTier(null)
         .previousRanking(null)
         .rankDelta(null)
-        .rankingStatus(BottomDuoStatAgg.RankingStatus.PENDING)
+        .rankingStatus(BottomDuoStatAggregate.RankingStatus.PENDING)
         .createdAt(now)
         .updatedAt(now)
         .build();
@@ -159,6 +159,6 @@ class ComputeBottomDuoRankingTest {
     verify(repository).saveAll(List.of(lowSample));
     assertThat(lowSample.getRanking()).isNull();
     assertThat(lowSample.getDuoTier()).isEqualTo(5);
-    assertThat(lowSample.getRankingStatus()).isEqualTo(BottomDuoStatAgg.RankingStatus.INSUFFICIENT);
+    assertThat(lowSample.getRankingStatus()).isEqualTo(BottomDuoStatAggregate.RankingStatus.INSUFFICIENT);
   }
 }

@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.bestduo_BE.aggregate.application.AggregateBottomDuoStat;
+import com.bestduo_BE.aggregate.application.AggregateBottomDuoStats;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,11 +23,11 @@ class BottomDuoAggregateControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @MockitoBean
-  private AggregateBottomDuoStat aggregateBottomDuoStat;
+  private AggregateBottomDuoStats aggregateBottomDuoStat;
 
   @Test
   void aggregateReturnsUseCaseResult() throws Exception {
-    AggregateBottomDuoStat.Result result = new AggregateBottomDuoStat.Result(10, 7);
+    AggregateBottomDuoStats.Result result = new AggregateBottomDuoStats.Result(10, 7);
     when(aggregateBottomDuoStat.execute()).thenReturn(result);
 
     mockMvc.perform(post("/admin/aggregate/bottom-duo-stat"))

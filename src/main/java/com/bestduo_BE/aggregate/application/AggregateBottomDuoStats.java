@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class AggregateBottomDuoStat {
+public class AggregateBottomDuoStats {
 
   private final BottomDuoStatAggregator aggregator;
   private final ComputeBottomDuoRanking ranking;

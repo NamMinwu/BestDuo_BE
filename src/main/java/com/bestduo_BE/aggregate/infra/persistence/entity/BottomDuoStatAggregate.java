@@ -21,8 +21,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-@IdClass(BottomDuoStatAggId.class)
-public class BottomDuoStatAgg {
+@IdClass(BottomDuoStatAggregateId.class)
+public class BottomDuoStatAggregate {
 
   @Id
   @Column(name = "patch_version", nullable = false, length = 20)

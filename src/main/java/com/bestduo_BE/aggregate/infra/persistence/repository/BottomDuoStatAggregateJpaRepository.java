@@ -1,7 +1,7 @@
 package com.bestduo_BE.aggregate.infra.persistence.repository;
 
-import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAgg;
-import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAggId;
+import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAggregate;
+import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAggregateId;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
-public interface BottomDuoStatAggJpaRepository extends JpaRepository<BottomDuoStatAgg, BottomDuoStatAggId> {
+public interface BottomDuoStatAggregateJpaRepository extends JpaRepository<BottomDuoStatAggregate, BottomDuoStatAggregateId> {
   // ✅ Phase3 집계: raw -> agg upsert
   @Modifying
   @Transactional
@@ -100,7 +100,7 @@ public interface BottomDuoStatAggJpaRepository extends JpaRepository<BottomDuoSt
       """, nativeQuery = true)
   String findPreviousPatchVersion(@Param("currentPatch") String currentPatch);
 
-  List<BottomDuoStatAgg> findByPatchVersion(String patchVersion);
+  List<BottomDuoStatAggregate> findByPatchVersion(String patchVersion);
 
   // ✅ WINRATE DESC
   @Query(value = """
@@ -116,7 +116,7 @@ public interface BottomDuoStatAggJpaRepository extends JpaRepository<BottomDuoSt
         games desc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoStatAgg> findTopWinRateDesc(
+  List<BottomDuoStatAggregate> findTopWinRateDesc(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("adc") String adc,
@@ -138,7 +138,7 @@ public interface BottomDuoStatAggJpaRepository extends JpaRepository<BottomDuoSt
         games desc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoStatAgg> findTopWinRateAsc(
+  List<BottomDuoStatAggregate> findTopWinRateAsc(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("adc") String adc,
@@ -160,7 +160,7 @@ public interface BottomDuoStatAggJpaRepository extends JpaRepository<BottomDuoSt
         games desc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoStatAgg> findTopPickRateDesc(
+  List<BottomDuoStatAggregate> findTopPickRateDesc(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("adc") String adc,
@@ -183,7 +183,7 @@ public interface BottomDuoStatAggJpaRepository extends JpaRepository<BottomDuoSt
         games asc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoStatAgg> findTopPickRateAsc(
+  List<BottomDuoStatAggregate> findTopPickRateAsc(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("adc") String adc,
@@ -205,7 +205,7 @@ public interface BottomDuoStatAggJpaRepository extends JpaRepository<BottomDuoSt
         rank_score desc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoStatAgg> findTopDuoTierAsc(
+  List<BottomDuoStatAggregate> findTopDuoTierAsc(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("adc") String adc,
@@ -225,7 +225,7 @@ public interface BottomDuoStatAggJpaRepository extends JpaRepository<BottomDuoSt
         rank_score desc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoStatAgg> findTopDuoTierDesc(
+  List<BottomDuoStatAggregate> findTopDuoTierDesc(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("adc") String adc,
@@ -246,7 +246,7 @@ public interface BottomDuoStatAggJpaRepository extends JpaRepository<BottomDuoSt
         rank_score desc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoStatAgg> findTopRankingAsc(
+  List<BottomDuoStatAggregate> findTopRankingAsc(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("adc") String adc,
@@ -266,7 +266,7 @@ public interface BottomDuoStatAggJpaRepository extends JpaRepository<BottomDuoSt
         rank_score desc
       limit :limit
       """, nativeQuery = true)
-  List<BottomDuoStatAgg> findTopRankingDesc(
+  List<BottomDuoStatAggregate> findTopRankingDesc(
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier,
       @Param("adc") String adc,

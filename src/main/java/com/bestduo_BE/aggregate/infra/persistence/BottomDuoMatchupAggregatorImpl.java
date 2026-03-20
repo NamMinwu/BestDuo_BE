@@ -1,7 +1,7 @@
 package com.bestduo_BE.aggregate.infra.persistence;
 
 import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupAggregator;
-import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggJpaRepository;
+import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggregateJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class BottomDuoMatchupAggregatorImpl implements BottomDuoMatchupAggregator {
 
-  private final BottomDuoMatchupAggJpaRepository repository;
+  private final BottomDuoMatchupAggregateJpaRepository repository;
 
   @Override
   public int aggregateAll() {

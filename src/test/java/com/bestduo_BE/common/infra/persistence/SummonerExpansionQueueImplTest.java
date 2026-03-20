@@ -22,16 +22,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
-class SummonerExpandQueueImplTest {
+class SummonerExpansionQueueImplTest {
 
   @Mock
   private SummonerJpaRepository repository;
 
-  private SummonerExpandQueueImpl queue;
+  private SummonerExpansionQueueImpl queue;
 
   @BeforeEach
   void setUp() {
-    queue = new SummonerExpandQueueImpl(repository);
+    queue = new SummonerExpansionQueueImpl(repository);
   }
 
   @Test

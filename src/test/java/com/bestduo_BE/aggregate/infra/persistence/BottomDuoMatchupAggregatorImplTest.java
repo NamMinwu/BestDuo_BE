@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
-import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggJpaRepository;
+import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggregateJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,7 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class BottomDuoMatchupAggregatorImplTest {
 
   @Mock
-  private BottomDuoMatchupAggJpaRepository repository;
+  private BottomDuoMatchupAggregateJpaRepository repository;
 
   private BottomDuoMatchupAggregatorImpl aggregator;
 

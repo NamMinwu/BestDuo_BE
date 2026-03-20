@@ -9,8 +9,8 @@ import static org.mockito.BDDMockito.then;
 
 import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupFinder;
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoMatchupAgg;
-import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggJpaRepository;
+import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoMatchupAggregate;
+import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggregateJpaRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class BottomDuoMatchupFinderImplTest {
 
   @Mock
-  private BottomDuoMatchupAggJpaRepository repository;
+  private BottomDuoMatchupAggregateJpaRepository repository;
 
   private BottomDuoMatchupFinderImpl finder;
 
@@ -61,7 +61,7 @@ class BottomDuoMatchupFinderImplTest {
   @Test
   void findMatchupsWinRateDescMapsEntitiesAndTrimsOpponentFilters() {
     OffsetDateTime now = OffsetDateTime.now();
-    BottomDuoMatchupAgg entity = BottomDuoMatchupAgg.builder()
+    BottomDuoMatchupAggregate entity = BottomDuoMatchupAggregate.builder()
         .patchVersion("14.10")
         .myAdcChampionId("ashe")
         .mySupChampionId("lux")
@@ -162,7 +162,7 @@ class BottomDuoMatchupFinderImplTest {
   @Test
   void findCountersByLowestWinRateMapsEntitiesAndAppliesLimitFloor() {
     OffsetDateTime now = OffsetDateTime.now();
-    BottomDuoMatchupAgg entity = BottomDuoMatchupAgg.builder()
+    BottomDuoMatchupAggregate entity = BottomDuoMatchupAggregate.builder()
         .patchVersion("14.10")
         .myAdcChampionId("xayah")
         .mySupChampionId("rakan")

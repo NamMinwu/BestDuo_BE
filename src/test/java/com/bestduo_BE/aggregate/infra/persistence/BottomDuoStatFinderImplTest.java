@@ -8,8 +8,8 @@ import static org.mockito.Mockito.when;
 
 import com.bestduo_BE.aggregate.application.port.BottomDuoStatFinder;
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAgg;
-import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggJpaRepository;
+import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAggregate;
+import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggregateJpaRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class BottomDuoStatFinderImplTest {
 
   @Mock
-  private BottomDuoStatAggJpaRepository repository;
+  private BottomDuoStatAggregateJpaRepository repository;
 
   private BottomDuoStatFinderImpl finder;
 
@@ -76,7 +76,7 @@ class BottomDuoStatFinderImplTest {
   @Test
   void findStatsMapsEntitiesForWinRateDesc() {
     OffsetDateTime now = OffsetDateTime.now();
-    BottomDuoStatAgg entity = BottomDuoStatAgg.builder()
+    BottomDuoStatAggregate entity = BottomDuoStatAggregate.builder()
         .patchVersion("14.10")
         .adcChampionId("Ashe")
         .supChampionId("Lux")
@@ -91,7 +91,7 @@ class BottomDuoStatFinderImplTest {
         .duoTier(0)
         .previousRanking(2)
         .rankDelta(1)
-        .rankingStatus(BottomDuoStatAgg.RankingStatus.RANKED)
+        .rankingStatus(BottomDuoStatAggregate.RankingStatus.RANKED)
         .createdAt(now)
         .updatedAt(now)
         .build();
