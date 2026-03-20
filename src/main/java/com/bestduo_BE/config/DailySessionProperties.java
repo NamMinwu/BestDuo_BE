@@ -1,6 +1,6 @@
 package com.bestduo_BE.config;
 
-import com.bestduo_BE.domain.model.Tier;
+import com.bestduo_BE.common.domain.model.Tier;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;

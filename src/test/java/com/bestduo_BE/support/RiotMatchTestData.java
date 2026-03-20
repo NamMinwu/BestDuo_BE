@@ -1,9 +1,9 @@
 package com.bestduo_BE.support;
 
-import com.bestduo_BE.infra.riot.dto.InfoDto;
-import com.bestduo_BE.infra.riot.dto.ParticipantDto;
-import com.bestduo_BE.infra.riot.dto.RiotMatchDto;
-import com.bestduo_BE.infra.riot.dto.TeamDto;
+import com.bestduo_BE.common.infra.riot.dto.InfoDto;
+import com.bestduo_BE.common.infra.riot.dto.ParticipantDto;
+import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
+import com.bestduo_BE.common.infra.riot.dto.TeamDto;
 import java.util.List;
 
 public final class RiotMatchTestData {
