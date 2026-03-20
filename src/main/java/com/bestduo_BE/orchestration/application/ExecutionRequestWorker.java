@@ -15,7 +15,7 @@ public class ExecutionRequestWorker {
 
   private final ExecutionRequestFinder executionRequestFinder;
   private final ExecutionRequestStatusUpdater executionRequestStatusUpdater;
-  private final RunExecutor runExecutor;
+  private final ExecutionOrchestrator runExecutor;
 
   public void pollAndRunOnce() {
     if (executionRequestFinder.findRunning().isPresent()) {

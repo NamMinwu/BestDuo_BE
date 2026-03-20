@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class RunExecutor {
+public class ExecutionOrchestrator {
 
   private final ExecutionLogJpaRepository executionLogJpaRepository;
   private final ExecutionPipeline executionPipeline;

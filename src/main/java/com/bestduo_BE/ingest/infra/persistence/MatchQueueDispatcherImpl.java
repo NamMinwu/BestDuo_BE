@@ -1,6 +1,6 @@
 package com.bestduo_BE.ingest.infra.persistence;
 
-import com.bestduo_BE.ingest.application.port.MatchQueueCoordinator;
+import com.bestduo_BE.ingest.application.port.MatchQueueDispatcher;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
 import com.bestduo_BE.common.infra.persistence.repository.MatchQueueJpaRepository;
@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
-public class MatchQueueCoordinatorImpl implements MatchQueueCoordinator {
+public class MatchQueueDispatcherImpl implements MatchQueueDispatcher {
 
   private final MatchQueueJpaRepository repo;
 

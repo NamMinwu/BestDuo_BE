@@ -6,7 +6,7 @@ import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.bestduo_BE.ingest.application.port.MatchQueueCoordinator.Item;
+import com.bestduo_BE.ingest.application.port.MatchQueueDispatcher.Item;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
 import com.bestduo_BE.common.infra.persistence.repository.MatchQueueJpaRepository;
@@ -20,16 +20,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class MatchQueueCoordinatorImplTest {
+class MatchQueueDispatcherImplTest {
 
   @Mock
   private MatchQueueJpaRepository repository;
 
-  private MatchQueueCoordinatorImpl coordinator;
+  private MatchQueueDispatcherImpl coordinator;
 
   @BeforeEach
   void setUp() {
-    coordinator = new MatchQueueCoordinatorImpl(repository);
+    coordinator = new MatchQueueDispatcherImpl(repository);
   }
 
   @Test

@@ -3,7 +3,7 @@ package com.bestduo_BE.ingest.application.port;
 import com.bestduo_BE.common.domain.model.Tier;
 import java.util.List;
 
-public interface MatchQueueCoordinator {
+public interface MatchQueueDispatcher {
 
   /**
    * RUNNING stuck 복구 (lockedAt 오래된 항목 READY로)
