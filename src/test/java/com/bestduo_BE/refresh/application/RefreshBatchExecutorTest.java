@@ -16,7 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class RefreshBatchRunTest {
+class RefreshBatchExecutorTest {
 
   @Mock
   private SummonerJpaRepository summonerJpaRepository;
@@ -24,11 +24,11 @@ class RefreshBatchRunTest {
   @Mock
   private RefreshSummonerMatches refreshSummonerMatches;
 
-  private RefreshBatchRun useCase;
+  private RefreshBatchExecutor useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new RefreshBatchRun(summonerJpaRepository, refreshSummonerMatches);
+    useCase = new RefreshBatchExecutor(summonerJpaRepository, refreshSummonerMatches);
   }
 
   @Test
@@ -42,7 +42,7 @@ class RefreshBatchRunTest {
     given(refreshSummonerMatches.execute("p3"))
         .willThrow(new IllegalStateException("down"));
 
-    RefreshBatchRun.Result result = useCase.execute(3);
+    RefreshBatchExecutor.Result result = useCase.execute(3);
 
     verify(summonerJpaRepository).findRefreshTargets(3);
     assertThat(result.processed()).isEqualTo(3);
@@ -55,7 +55,7 @@ class RefreshBatchRunTest {
   void returnZerosWhenNoTargetsFound() {
     given(summonerJpaRepository.findRefreshTargets(5)).willReturn(List.of());
 
-    RefreshBatchRun.Result result = useCase.execute(5);
+    RefreshBatchExecutor.Result result = useCase.execute(5);
 
     assertThat(result.processed()).isZero();
     assertThat(result.success()).isZero();

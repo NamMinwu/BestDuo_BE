@@ -13,10 +13,10 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class DailyRunExecutor {
+public class RunExecutor {
 
   private final RunLogJpaRepository runLogJpaRepository;
-  private final ExecuteDailyRun executeDailyRun;
+  private final RunPipeline runPipeline;
   private final DailyRunProperties dailyRunProperties;
 
   public RunLog.RunResult run(
@@ -34,7 +34,7 @@ public class DailyRunExecutor {
     int refreshBudget = (int) Math.floor(budgetTotal * refreshRatio);
     int ingestBudget = Math.max(0, budgetTotal - seedBudget - refreshBudget);
 
-    ExecuteDailyRun.RunCommand command = buildCommand(
+    RunPipeline.RunCommand command = buildCommand(
         budgetTotal,
         seedBudget,
         refreshBudget,
@@ -48,7 +48,7 @@ public class DailyRunExecutor {
     log.info("command: {}", command);
 
     try {
-      ExecuteDailyRun.Result runResult = executeDailyRun.execute(command);
+      RunPipeline.Result runResult = runPipeline.execute(command);
       return persistResult(buildSuccessResult(started, budgetTotal, seedBudget, refreshBudget, ingestBudget, runResult));
 
     } catch (Exception e) {
@@ -63,7 +63,7 @@ public class DailyRunExecutor {
       int seedBudget,
       int refreshBudget,
       int ingestBudget,
-      ExecuteDailyRun.Result runResult
+      RunPipeline.Result runResult
   ) {
     OffsetDateTime ended = OffsetDateTime.now();
     return new RunLog.RunResult(
@@ -116,7 +116,7 @@ public class DailyRunExecutor {
     return result;
   }
 
-  private ExecuteDailyRun.RunCommand buildCommand(
+  private RunPipeline.RunCommand buildCommand(
       int budgetTotal,
       int seedBudget,
       int refreshBudget,
@@ -143,7 +143,7 @@ public class DailyRunExecutor {
       );
     }
 
-    return new ExecuteDailyRun.RunCommand(
+    return new RunPipeline.RunCommand(
         budgetTotal,
         seedBudget,
         refreshBudget,

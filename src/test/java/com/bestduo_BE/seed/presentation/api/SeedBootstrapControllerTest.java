@@ -10,7 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.seed.application.SeedBootstrapRun;
+import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,12 +26,12 @@ class SeedBootstrapControllerTest {
   private MockMvc mockMvc;
 
   @MockitoBean
-  private SeedBootstrapRun seedBootstrapRun;
+  private SeedBootstrapExecutor seedBootstrapRun;
 
   @Test
   void run_withExplicitParametersInvokesUsecaseAndReturnsResult() throws Exception {
-    SeedBootstrapRun.SeedBootstrapResult result =
-        new SeedBootstrapRun.SeedBootstrapResult(1, 2, 3, 4, 5);
+    SeedBootstrapExecutor.SeedBootstrapResult result =
+        new SeedBootstrapExecutor.SeedBootstrapResult(1, 2, 3, 4, 5);
     given(seedBootstrapRun.execute(any())).willReturn(result);
 
     mockMvc.perform(post("/seed/bootstrap")
@@ -64,8 +64,8 @@ class SeedBootstrapControllerTest {
 
   @Test
   void run_withoutOptionalParametersUsesDefaults() throws Exception {
-    SeedBootstrapRun.SeedBootstrapResult result =
-        new SeedBootstrapRun.SeedBootstrapResult(0, 0, 0, 0, 0);
+    SeedBootstrapExecutor.SeedBootstrapResult result =
+        new SeedBootstrapExecutor.SeedBootstrapResult(0, 0, 0, 0, 0);
     given(seedBootstrapRun.execute(any())).willReturn(result);
 
     mockMvc.perform(post("/seed/bootstrap")

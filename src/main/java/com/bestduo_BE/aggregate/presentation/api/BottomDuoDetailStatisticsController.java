@@ -1,7 +1,7 @@
 package com.bestduo_BE.aggregate.presentation.api;
 
-import com.bestduo_BE.aggregate.application.ViewBottomDuoCounters;
-import com.bestduo_BE.aggregate.application.ViewBottomDuoDetailStatistics;
+import com.bestduo_BE.aggregate.application.GetBottomDuoCounters;
+import com.bestduo_BE.aggregate.application.GetBottomDuoDetailStatistics;
 import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupFinder;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoCounterResponse;
@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 )
 public class BottomDuoDetailStatisticsController {
 
-  private final ViewBottomDuoDetailStatistics useCase;
-  private final ViewBottomDuoCounters counterUseCase;
+  private final GetBottomDuoDetailStatistics useCase;
+  private final GetBottomDuoCounters counterUseCase;
 
   @GetMapping("/matchups")
   @Operation(

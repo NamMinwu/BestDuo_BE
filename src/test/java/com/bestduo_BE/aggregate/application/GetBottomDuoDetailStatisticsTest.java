@@ -19,7 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class ViewBottomDuoDetailStatisticsTest {
+class GetBottomDuoDetailStatisticsTest {
 
   @Mock
   private BottomDuoMatchupFinder matchupFinder;
@@ -27,11 +27,11 @@ class ViewBottomDuoDetailStatisticsTest {
   @Mock
   private ChampionMetaClient championMetaClient;
 
-  private ViewBottomDuoDetailStatistics useCase;
+  private GetBottomDuoDetailStatistics useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new ViewBottomDuoDetailStatistics(matchupFinder, championMetaClient);
+    useCase = new GetBottomDuoDetailStatistics(matchupFinder, championMetaClient);
   }
 
   @Test

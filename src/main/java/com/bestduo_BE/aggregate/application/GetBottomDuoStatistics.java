@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class ViewBottomDuoStatistics {
+public class GetBottomDuoStatistics {
 
   private static final int MAX_ROWS = 1000;
 

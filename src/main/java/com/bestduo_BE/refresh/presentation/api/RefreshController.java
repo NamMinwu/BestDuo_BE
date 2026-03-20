@@ -1,6 +1,6 @@
 package com.bestduo_BE.refresh.presentation.api;
 
-import com.bestduo_BE.refresh.application.RefreshBatchRun;
+import com.bestduo_BE.refresh.application.RefreshBatchExecutor;
 import com.bestduo_BE.refresh.application.RefreshSummonerMatches;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class RefreshController {
 
   private final RefreshSummonerMatches refreshSummonerMatches;
-  private final RefreshBatchRun refreshBatchRun;
+  private final RefreshBatchExecutor refreshBatchRun;
 
   @PostMapping("/one")
   public RefreshSummonerMatches.Result one(@RequestParam String puuid) {
@@ -22,7 +22,7 @@ public class RefreshController {
   }
 
   @PostMapping("/batch")
-  public RefreshBatchRun.Result batch(@RequestParam(defaultValue = "50") int limit) {
+  public RefreshBatchExecutor.Result batch(@RequestParam(defaultValue = "50") int limit) {
     return refreshBatchRun.execute(limit);
   }
 }

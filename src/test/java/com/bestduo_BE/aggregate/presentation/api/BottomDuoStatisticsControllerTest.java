@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.bestduo_BE.aggregate.application.ViewBottomDuoStatistics;
+import com.bestduo_BE.aggregate.application.GetBottomDuoStatistics;
 import com.bestduo_BE.aggregate.application.port.BottomDuoStatFinder;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoStatisticsResponse;
@@ -27,7 +27,7 @@ class BottomDuoStatisticsControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @MockitoBean
-  private ViewBottomDuoStatistics viewBottomDuoStatistics;
+  private GetBottomDuoStatistics viewBottomDuoStatistics;
 
   @Test
   void getListReturnsUseCaseResponse() throws Exception {

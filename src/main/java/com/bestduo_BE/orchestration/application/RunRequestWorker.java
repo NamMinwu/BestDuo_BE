@@ -15,7 +15,7 @@ public class RunRequestWorker {
 
   private final RunRequestFinder finder;
   private final RunRequestStatusUpdater statusUpdater;
-  private final DailyRunExecutor dailyRunExecutor;
+  private final RunExecutor dailyRunExecutor;
 
   public void pollAndRunOnce() {
     if (finder.findRunning().isPresent()) {

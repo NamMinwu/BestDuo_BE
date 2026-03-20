@@ -6,8 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.bestduo_BE.aggregate.application.ViewBottomDuoCounters;
-import com.bestduo_BE.aggregate.application.ViewBottomDuoDetailStatistics;
+import com.bestduo_BE.aggregate.application.GetBottomDuoCounters;
+import com.bestduo_BE.aggregate.application.GetBottomDuoDetailStatistics;
 import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupFinder;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoCounterResponse;
@@ -27,10 +27,10 @@ class BottomDuoDetailStatisticsControllerTest {
   private MockMvc mockMvc;
 
   @MockitoBean
-  private ViewBottomDuoDetailStatistics viewBottomDuoDetailStatistics;
+  private GetBottomDuoDetailStatistics viewBottomDuoDetailStatistics;
 
   @MockitoBean
-  private ViewBottomDuoCounters viewBottomDuoCounters;
+  private GetBottomDuoCounters viewBottomDuoCounters;
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 

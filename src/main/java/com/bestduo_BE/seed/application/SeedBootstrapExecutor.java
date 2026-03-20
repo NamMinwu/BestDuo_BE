@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class SeedBootstrapRun {
+public class SeedBootstrapExecutor {
 
   private static final int PRIORITY_SEED = 50;
 

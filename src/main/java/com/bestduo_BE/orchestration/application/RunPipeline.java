@@ -7,8 +7,8 @@ import com.bestduo_BE.common.infra.riot.budget.RiotRequestBudget;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.monitoring.QueryCountMonitor;
 import com.bestduo_BE.monitoring.QueryCountMonitor.QueryStats;
-import com.bestduo_BE.refresh.application.RefreshBatchRun;
-import com.bestduo_BE.seed.application.SeedBootstrapRun;
+import com.bestduo_BE.refresh.application.RefreshBatchExecutor;
+import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,10 +17,10 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ExecuteDailyRun {
+public class RunPipeline {
 
-  private final SeedBootstrapRun seedBootstrapRun;
-  private final RefreshBatchRun refreshBatchRun;
+  private final SeedBootstrapExecutor seedBootstrapExecutor;
+  private final RefreshBatchExecutor refreshBatchExecutor;
   private final MatchIngestWorker matchIngestWorker;
   private final QueryCountMonitor queryCountMonitor;
 
@@ -71,7 +71,7 @@ public class ExecuteDailyRun {
       if (cmd.seedCommand() == null) {
         throw new IllegalArgumentException("Seed command must be provided when runSeed is enabled");
       }
-      var seedResult = seedBootstrapRun.execute(cmd.seedCommand());
+      var seedResult = seedBootstrapExecutor.execute(cmd.seedCommand());
       acc.addSeedEnqueued(seedResult.matchIdsEnqueued());
       acc.finishSeedPhase(RiotRequestBudget.remaining());
     } finally {
@@ -85,7 +85,7 @@ public class ExecuteDailyRun {
     queryCountMonitor.reset();
     long phaseStartedAt = System.nanoTime();
     try {
-      var refreshResult = refreshBatchRun.execute(cmd.refreshLimit());
+      var refreshResult = refreshBatchExecutor.execute(cmd.refreshLimit());
       acc.addRefreshEnqueued(refreshResult.matchIdsEnqueued());
       acc.finishRefreshPhase(RiotRequestBudget.remaining());
     } finally {
@@ -122,7 +122,7 @@ public class ExecuteDailyRun {
     QueryStats ingestSql = ingestProfiling.queryStats();
 
     log.info(
-        "ExecuteDailyRun timings status={} message={} totalMs={} seedMs={} seedSqlTotal={} seedSqlSelect={} seedSqlInsert={} seedSqlUpdate={} seedSqlDelete={} refreshMs={} refreshSqlTotal={} refreshSqlSelect={} refreshSqlInsert={} refreshSqlUpdate={} refreshSqlDelete={} ingestMs={} ingestSqlTotal={} ingestSqlSelect={} ingestSqlInsert={} ingestSqlUpdate={} ingestSqlDelete={} queueProcessed={} seedEnqueued={} refreshEnqueued={} picked={} done={} error={} rawCreated={}",
+        "RunPipeline timings status={} message={} totalMs={} seedMs={} seedSqlTotal={} seedSqlSelect={} seedSqlInsert={} seedSqlUpdate={} seedSqlDelete={} refreshMs={} refreshSqlTotal={} refreshSqlSelect={} refreshSqlInsert={} refreshSqlUpdate={} refreshSqlDelete={} ingestMs={} ingestSqlTotal={} ingestSqlSelect={} ingestSqlInsert={} ingestSqlUpdate={} ingestSqlDelete={} queueProcessed={} seedEnqueued={} refreshEnqueued={} picked={} done={} error={} rawCreated={}",
         result.status(),
         result.message(),
         totalMillis,

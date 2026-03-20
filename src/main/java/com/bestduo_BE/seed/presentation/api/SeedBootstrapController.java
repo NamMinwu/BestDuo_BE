@@ -1,6 +1,6 @@
 package com.bestduo_BE.seed.presentation.api;
 
-import com.bestduo_BE.seed.application.SeedBootstrapRun;
+import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.common.domain.model.Tier;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/seed")
 public class SeedBootstrapController {
 
-  private final SeedBootstrapRun useCase;
+  private final SeedBootstrapExecutor useCase;
 
   @PostMapping("/bootstrap")
-  public SeedBootstrapRun.SeedBootstrapResult run(
+  public SeedBootstrapExecutor.SeedBootstrapResult run(
       @RequestParam String queue,
       @RequestParam String tier,
       @RequestParam String division,

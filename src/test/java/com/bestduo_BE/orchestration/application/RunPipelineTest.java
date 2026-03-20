@@ -1,8 +1,8 @@
 package com.bestduo_BE.orchestration.application;
 
 import com.bestduo_BE.ingest.application.MatchIngestWorker;
-import com.bestduo_BE.refresh.application.RefreshBatchRun;
-import com.bestduo_BE.seed.application.SeedBootstrapRun;
+import com.bestduo_BE.refresh.application.RefreshBatchExecutor;
+import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -24,18 +24,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class ExecuteDailyRunTest {
+class RunPipelineTest {
 
   @Mock
-  private SeedBootstrapRun seedBootstrapRun;
+  private SeedBootstrapExecutor seedBootstrapRun;
 
   @Mock
-  private RefreshBatchRun refreshBatchRun;
+  private RefreshBatchExecutor refreshBatchRun;
 
   @Mock
   private MatchIngestWorker matchIngestWorker;
 
-  private ExecuteDailyRun useCase;
+  private RunPipeline useCase;
   private QueryCountMonitor queryCountMonitor;
 
   private final SeedBootstrapCommand seedCommand = new SeedBootstrapCommand(
@@ -45,7 +45,7 @@ class ExecuteDailyRunTest {
   @BeforeEach
   void setUp() {
     queryCountMonitor = new QueryCountMonitor();
-    useCase = new ExecuteDailyRun(seedBootstrapRun, refreshBatchRun, matchIngestWorker, queryCountMonitor);
+    useCase = new RunPipeline(seedBootstrapRun, refreshBatchRun, matchIngestWorker, queryCountMonitor);
   }
 
   @AfterEach
@@ -55,20 +55,20 @@ class ExecuteDailyRunTest {
 
   @Test
   void executeRunsEnabledPhasesAndAggregatesCounts() {
-    ExecuteDailyRun.RunCommand cmd = new ExecuteDailyRun.RunCommand(
+    RunPipeline.RunCommand cmd = new RunPipeline.RunCommand(
         120, 20, 20, 80, true, true, 5, 10, 3, seedCommand
     );
     given(seedBootstrapRun.execute(seedCommand))
-        .willReturn(new SeedBootstrapRun.SeedBootstrapResult(1, 2, 3, 4, 5));
+        .willReturn(new SeedBootstrapExecutor.SeedBootstrapResult(1, 2, 3, 4, 5));
     given(refreshBatchRun.execute(5))
-        .willReturn(new RefreshBatchRun.Result(2, 2, 0, 7));
+        .willReturn(new RefreshBatchExecutor.Result(2, 2, 0, 7));
     given(matchIngestWorker.execute(10))
         .willReturn(
             new MatchIngestWorker.Result(0, 2, 5, 5, 0, 5),
             new MatchIngestWorker.Result(0, 0, 0, 0, 0, 0)
         );
 
-    ExecuteDailyRun.Result result = useCase.execute(cmd);
+    RunPipeline.Result result = useCase.execute(cmd);
 
     verify(seedBootstrapRun).execute(seedCommand);
     verify(refreshBatchRun).execute(5);
@@ -87,13 +87,13 @@ class ExecuteDailyRunTest {
 
   @Test
   void executeStopsWhenBudgetExhausted() {
-    ExecuteDailyRun.RunCommand cmd = new ExecuteDailyRun.RunCommand(
+    RunPipeline.RunCommand cmd = new RunPipeline.RunCommand(
         50, 0, 0, 50, false, false, 0, 10, 1, seedCommand
     );
     given(matchIngestWorker.execute(10))
         .willThrow(new BudgetExhaustedException("budget gone"));
 
-    ExecuteDailyRun.Result result = useCase.execute(cmd);
+    RunPipeline.Result result = useCase.execute(cmd);
 
     verify(seedBootstrapRun, never()).execute(seedCommand);
     verify(refreshBatchRun, never()).execute(0);
@@ -106,13 +106,13 @@ class ExecuteDailyRunTest {
 
   @Test
   void executeStopsWhenRateLimited() {
-    ExecuteDailyRun.RunCommand cmd = new ExecuteDailyRun.RunCommand(
+    RunPipeline.RunCommand cmd = new RunPipeline.RunCommand(
         80, 0, 0, 80, false, false, 0, 10, 1, seedCommand
     );
     given(matchIngestWorker.execute(10))
         .willThrow(new RiotRateLimitedException("slow down"));
 
-    ExecuteDailyRun.Result result = useCase.execute(cmd);
+    RunPipeline.Result result = useCase.execute(cmd);
 
     assertThat(result.status()).isEqualTo("STOPPED_429");
     assertThat(result.remainingBudget()).isEqualTo(80);

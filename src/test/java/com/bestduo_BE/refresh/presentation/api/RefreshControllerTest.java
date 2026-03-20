@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.bestduo_BE.refresh.application.RefreshBatchRun;
+import com.bestduo_BE.refresh.application.RefreshBatchExecutor;
 import com.bestduo_BE.refresh.application.RefreshSummonerMatches;
 import com.bestduo_BE.common.domain.model.Tier;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,7 @@ class RefreshControllerTest {
   private RefreshSummonerMatches refreshSummonerMatches;
 
   @MockitoBean
-  private RefreshBatchRun refreshBatchRun;
+  private RefreshBatchExecutor refreshBatchRun;
 
   @Test
   void refreshOneEndpointDelegatesToUsecaseAndReturnsResult() throws Exception {
@@ -47,7 +47,7 @@ class RefreshControllerTest {
 
   @Test
   void refreshBatchEndpointPassesLimitParameterAndReturnsResult() throws Exception {
-    RefreshBatchRun.Result batchResult = new RefreshBatchRun.Result(12, 10, 2, 45);
+    RefreshBatchExecutor.Result batchResult = new RefreshBatchExecutor.Result(12, 10, 2, 45);
     given(refreshBatchRun.execute(25)).willReturn(batchResult);
 
     mockMvc.perform(post("/admin/refresh/batch")
@@ -63,7 +63,7 @@ class RefreshControllerTest {
 
   @Test
   void refreshBatchEndpointUsesDefaultLimitWhenMissing() throws Exception {
-    RefreshBatchRun.Result batchResult = new RefreshBatchRun.Result(0, 0, 0, 0);
+    RefreshBatchExecutor.Result batchResult = new RefreshBatchExecutor.Result(0, 0, 0, 0);
     given(refreshBatchRun.execute(50)).willReturn(batchResult);
 
     mockMvc.perform(post("/admin/refresh/batch"))

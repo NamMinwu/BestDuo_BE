@@ -22,7 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class SeedBootstrapRunTest {
+class SeedBootstrapExecutorTest {
 
   @Mock
   private LeagueEntriesSeedLoader leagueEntriesSeedLoader;
@@ -36,7 +36,7 @@ class SeedBootstrapRunTest {
   @Mock
   private SummonerSeedRegistry summonerSeedRegistry;
 
-  private SeedBootstrapRun useCase;
+  private SeedBootstrapExecutor useCase;
 
   private final SeedBootstrapCommand command = new SeedBootstrapCommand(
       "RANKED_SOLO_5x5", "DIAMOND", "I", Tier.MASTER, 1, 1, 2, 0
@@ -44,7 +44,7 @@ class SeedBootstrapRunTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new SeedBootstrapRun(
+    useCase = new SeedBootstrapExecutor(
         leagueEntriesSeedLoader,
         matchIdsFinder,
         matchQueueEnqueuer,
@@ -56,7 +56,7 @@ class SeedBootstrapRunTest {
   void returnZerosWhenLoaderReturnsEmptyList() {
     givenEntries(List.of());
 
-    SeedBootstrapRun.SeedBootstrapResult result = useCase.execute(command);
+    SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(command);
 
     assertThat(result.pagesProcessed()).isZero();
     assertThat(result.entriesFetched()).isZero();
@@ -74,7 +74,7 @@ class SeedBootstrapRunTest {
     given(matchIdsFinder.findRecentMatchIds("new-1", command.matchesPerPuuid()))
         .willReturn(List.of("m-1", "m-2"));
 
-    SeedBootstrapRun.SeedBootstrapResult result = useCase.execute(command);
+    SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(command);
 
     verify(summonerSeedRegistry).markSeedRunning("new-1");
     verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-1", "m-2"), Tier.MASTER, 50);
@@ -95,7 +95,7 @@ class SeedBootstrapRunTest {
     given(matchIdsFinder.findRecentMatchIds("p-error", command.matchesPerPuuid()))
         .willThrow(new IllegalStateException("boom"));
 
-    SeedBootstrapRun.SeedBootstrapResult result = useCase.execute(command);
+    SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(command);
 
     verify(summonerSeedRegistry).markSeedRunning("p-error");
     verify(summonerSeedRegistry).markSeedError("p-error");
@@ -116,7 +116,7 @@ class SeedBootstrapRunTest {
     given(matchIdsFinder.findRecentMatchIds("new-1", limited.matchesPerPuuid()))
         .willReturn(List.of("m-1"));
 
-    SeedBootstrapRun.SeedBootstrapResult result = useCase.execute(limited);
+    SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(limited);
 
     verify(summonerSeedRegistry).registerIfAbsent("new-1");
     verify(summonerSeedRegistry, never()).registerIfAbsent("new-2");

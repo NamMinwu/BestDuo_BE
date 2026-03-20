@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class ViewBottomDuoCounters {
+public class GetBottomDuoCounters {
 
   private static final int DEFAULT_COUNTER_SIZE = 10;
 

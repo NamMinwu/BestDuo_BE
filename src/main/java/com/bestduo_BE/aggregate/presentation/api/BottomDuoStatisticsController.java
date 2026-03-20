@@ -1,7 +1,7 @@
 package com.bestduo_BE.aggregate.presentation.api;
 
 
-import com.bestduo_BE.aggregate.application.ViewBottomDuoStatistics;
+import com.bestduo_BE.aggregate.application.GetBottomDuoStatistics;
 import com.bestduo_BE.aggregate.application.port.BottomDuoStatFinder;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoStatisticsResponse;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
     description = "바텀 듀오의 전반적인 통계 정보를 조회하는 API입니다."
 )
 public class BottomDuoStatisticsController {
-  private final ViewBottomDuoStatistics useCase;
+  private final GetBottomDuoStatistics useCase;
 
   @GetMapping("/stats")
   @Operation(

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class RefreshBatchRun {
+public class RefreshBatchExecutor {
 
   private final SummonerJpaRepository summonerJpaRepository;
   private final RefreshSummonerMatches refreshSummonerMatches;
@@ -30,7 +30,7 @@ public class RefreshBatchRun {
       } catch (Exception e) {
         failed++;
         // RefreshSummonerMatches 내부에서 markRefreshError까지 하니까 여기선 로그만
-        log.warn("RefreshBatchRun failed. puuid={}", s.getPuuid(), e);
+        log.warn("RefreshBatchExecutor failed. puuid={}", s.getPuuid(), e);
       }
     }
 

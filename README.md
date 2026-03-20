@@ -11,7 +11,7 @@ BestDuo_BE is the backend that powers **bestduo**, a League of Legends analytics
 - **Admin tooling** (`/admin/run`, `/ingest`, etc.) to manually trigger sessions, enqueue matches, or inspect the collection queue.
 
 ### High-Level Flow
-1. `SeedBootstrapRun` pulls league entries by tier/division and registers new summoner seeds.
+1. `SeedBootstrapExecutor` pulls league entries by tier/division and registers new summoner seeds.
 2. `MatchIdsFinder` fetches recent match IDs which are pushed into the `match_queue`.
 3. `IngestMatchDetail` loads match-v5 payloads, stores them, extracts bottom duos, and schedules new participants for expansion.
 4. Aggregators compute tier-scoped stats and write them into materialized tables that the presentation layer reads.
@@ -43,7 +43,7 @@ BestDuo_BE는 리그 오브 레전드 바텀 듀오 시너지를 분석하는 **
 - 세션 실행, 매치 적재, 큐 상태 확인을 위한 **관리 도구**(`/admin/run`, `/ingest` 등).
 
 ### 처리 흐름
-1. `SeedBootstrapRun`이 티어/디비전별 리그 엔트리를 가져와 신규 시드를 등록합니다.
+1. `SeedBootstrapExecutor`이 티어/디비전별 리그 엔트리를 가져와 신규 시드를 등록합니다.
 2. `MatchIdsFinder`가 최근 match ID를 조회해 `match_queue`에 적재합니다.
 3. `IngestMatchDetail`이 match-v5 payload를 불러와 저장하고, 바텀 듀오를 추출하며 참가자를 확장 큐에 넣습니다.
 4. 집계기에서 티어별 통계를 계산해 프레젠테이션 계층이 조회하는 테이블에 반영합니다.
