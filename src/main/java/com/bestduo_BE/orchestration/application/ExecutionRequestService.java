@@ -5,7 +5,7 @@ import com.bestduo_BE.orchestration.application.port.ExecutionRequestSaver;
 import com.bestduo_BE.config.DailyRunProperties;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.orchestration.infra.persistence.entity.ExecutionRequest;
-import com.bestduo_BE.orchestration.presentation.api.dto.RunCreateRequest;
+import com.bestduo_BE.orchestration.presentation.api.dto.ExecutionCreateRequest;
 import com.bestduo_BE.orchestration.presentation.api.dto.ExecutionRequestResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ public class ExecutionRequestService {
   private final DailyRunProperties properties;
 
   @Transactional
-  public ExecutionRequestResponse create(RunCreateRequest request) {
+  public ExecutionRequestResponse create(ExecutionCreateRequest request) {
     if (finder.existsActiveRequest()) {
       throw new IllegalStateException("Execution already REQUESTED or RUNNING.");
     }

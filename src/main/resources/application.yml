@@ -48,9 +48,9 @@ daily-run:
     end-page: 1
     matches-per-puuid: 20
 
-run-request:
+execution-request:
   worker:
-    enabled: ${RUN_REQUEST_WORKER_ENABLED:false}
+    enabled: ${EXECUTION_REQUEST_WORKER_ENABLED:false}
 
 management:
   endpoints:

@@ -13,7 +13,7 @@ public class ExecutionRequestPoller {
 
   private final ExecutionRequestWorker executionRequestWorker;
 
-  @Value("${run-request.worker.enabled:false}")
+  @Value("${execution-request.worker.enabled:false}")
   private boolean enabled;
 
   @PostConstruct

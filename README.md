@@ -15,7 +15,7 @@ BestDuo_BE is the backend that powers **bestduo**, a League of Legends analytics
 2. `MatchIdsFinder` fetches recent match IDs which are pushed into the `match_queue`.
 3. `IngestMatchDetail` loads match-v5 payloads, stores them, extracts bottom duos, and schedules new participants for expansion.
 4. Aggregators compute tier-scoped stats and write them into materialized tables that the presentation layer reads.
-5. `ViewBottomDuo*` use cases resolve patch versions, look up champion metadata, and expose the aggregated insights through controllers.
+5. `GetBottomDuo*` use cases resolve patch versions, look up champion metadata, and expose the aggregated insights through controllers.
 
 ### API Surface (Selected)
 - `GET /bottom-duo/stats`: global stats (win/pick/ban rate, ranking, tier delta) with filtering by tier, patch, or specific champions.
@@ -47,7 +47,7 @@ BestDuo_BE는 리그 오브 레전드 바텀 듀오 시너지를 분석하는 **
 2. `MatchIdsFinder`가 최근 match ID를 조회해 `match_queue`에 적재합니다.
 3. `IngestMatchDetail`이 match-v5 payload를 불러와 저장하고, 바텀 듀오를 추출하며 참가자를 확장 큐에 넣습니다.
 4. 집계기에서 티어별 통계를 계산해 프레젠테이션 계층이 조회하는 테이블에 반영합니다.
-5. `ViewBottomDuo*` 유스케이스가 패치 버전/챔피언 메타를 resolve하고, 컨트롤러를 통해 인사이트를 제공합니다.
+5. `GetBottomDuo*` 유스케이스가 패치 버전/챔피언 메타를 resolve하고, 컨트롤러를 통해 인사이트를 제공합니다.
 
 ### 제공 API 예시
 - `GET /bottom-duo/stats`: 티어, 패치, 챔피언 필터에 따른 승률/픽률/랭킹 조회.

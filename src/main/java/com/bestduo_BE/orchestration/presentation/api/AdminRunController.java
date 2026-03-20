@@ -2,7 +2,7 @@ package com.bestduo_BE.orchestration.presentation.api;
 
 import com.bestduo_BE.orchestration.application.ExecutionRequestService;
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.orchestration.presentation.api.dto.RunCreateRequest;
+import com.bestduo_BE.orchestration.presentation.api.dto.ExecutionCreateRequest;
 import com.bestduo_BE.orchestration.presentation.api.dto.ExecutionRequestResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,7 @@ public class AdminRunController {
   ) {
     try {
       return executionRequestService.create(
-          new RunCreateRequest(
+          new ExecutionCreateRequest(
               budgetTotal,
               seedRatio,
               refreshRatio,
