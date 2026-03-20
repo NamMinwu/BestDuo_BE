@@ -1,6 +1,6 @@
 package com.bestduo_BE.common.infra.riot;
 
-import com.bestduo_BE.consume.application.port.RiotMatchLoader;
+import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
 import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import com.bestduo_BE.common.infra.riot.exception.RiotApiException;
 import lombok.extern.slf4j.Slf4j;

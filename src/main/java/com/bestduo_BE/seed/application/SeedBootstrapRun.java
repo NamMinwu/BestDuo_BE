@@ -35,7 +35,7 @@ public class SeedBootstrapRun {
    * - league entries에서 puuid 수집
    * - summoner 등록 + seed 상태 전이
    * - puuid의 matchIds를 "match_queue에 적재"까지만 수행
-   * - match detail 처리(Phase1)는 MatchDetailQueueWorker가 수행
+   * - match detail 처리(Phase1)는 MatchIngestWorker가 수행
    */
   public SeedBootstrapResult execute(SeedBootstrapCommand cmd) {
     int pagesProcessed = 0;

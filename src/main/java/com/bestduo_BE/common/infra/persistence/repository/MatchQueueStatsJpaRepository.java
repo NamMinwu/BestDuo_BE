@@ -1,8 +1,8 @@
 package com.bestduo_BE.common.infra.persistence.repository;
 
-import com.bestduo_BE.consume.application.port.MatchQueueErrorTop;
-import com.bestduo_BE.consume.application.port.MatchQueueRetryCount;
-import com.bestduo_BE.consume.application.port.MatchQueueStatusCount;
+import com.bestduo_BE.ingest.application.port.MatchQueueErrorTop;
+import com.bestduo_BE.ingest.application.port.MatchQueueRetryCount;
+import com.bestduo_BE.ingest.application.port.MatchQueueStatusCount;
 import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
 import java.time.Instant;
 import java.util.List;

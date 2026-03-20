@@ -38,7 +38,7 @@ public class SwaggerConfig {
 
     /**
      * 운영용 Admin API 그룹
-     * 예: /admin/session/**, /admin/queue/**
+     * 예: /admin/run/**, /admin/queue/**
      */
     @Bean
     public GroupedOpenApi adminApi() {
