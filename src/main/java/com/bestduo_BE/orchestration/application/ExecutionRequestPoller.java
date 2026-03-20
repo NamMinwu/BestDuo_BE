@@ -9,9 +9,9 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class RunRequestPoller {
+public class ExecutionRequestPoller {
 
-  private final RunRequestWorker worker;
+  private final ExecutionRequestWorker executionRequestWorker;
 
   @Value("${run-request.worker.enabled:false}")
   private boolean enabled;
@@ -19,18 +19,18 @@ public class RunRequestPoller {
   @PostConstruct
   public void start() {
     if (!enabled) {
-      log.info("RunRequestPoller disabled.");
+      log.info("ExecutionRequestPoller disabled.");
       return;
     }
 
     Thread.startVirtualThread(() -> {
-      log.info("RunRequestPoller started.");
+      log.info("ExecutionRequestPoller started.");
       while (true) {
         try {
-          worker.pollAndRunOnce();
+          executionRequestWorker.pollAndRunOnce();
           Thread.sleep(5000);
         } catch (Exception e) {
-          log.error("RunRequestPoller loop failed.", e);
+          log.error("ExecutionRequestPoller loop failed.", e);
           try {
             Thread.sleep(5000);
           } catch (InterruptedException ie) {

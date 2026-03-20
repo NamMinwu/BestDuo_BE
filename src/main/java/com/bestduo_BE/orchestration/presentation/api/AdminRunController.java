@@ -1,9 +1,9 @@
 package com.bestduo_BE.orchestration.presentation.api;
 
-import com.bestduo_BE.orchestration.application.RunRequestService;
+import com.bestduo_BE.orchestration.application.ExecutionRequestService;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.orchestration.presentation.api.dto.RunCreateRequest;
-import com.bestduo_BE.orchestration.presentation.api.dto.RunRequestResponse;
+import com.bestduo_BE.orchestration.presentation.api.dto.ExecutionRequestResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,11 +21,11 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/admin/run")
 public class AdminRunController {
 
-  private final RunRequestService runRequestService;
+  private final ExecutionRequestService executionRequestService;
 
   @PostMapping
   @ResponseStatus(HttpStatus.ACCEPTED)
-  public RunRequestResponse run(
+  public ExecutionRequestResponse run(
       @RequestParam(defaultValue = "200") int budgetTotal,
       @RequestParam(required = false) Double seedRatio,
       @RequestParam(required = false) Double refreshRatio,
@@ -35,7 +35,7 @@ public class AdminRunController {
       @RequestParam(required = false) Tier tier
   ) {
     try {
-      return runRequestService.create(
+      return executionRequestService.create(
           new RunCreateRequest(
               budgetTotal,
               seedRatio,
@@ -52,22 +52,22 @@ public class AdminRunController {
   }
 
   @GetMapping("/requests")
-  public List<RunRequestResponse> getAll() {
-    return runRequestService.getAll();
+  public List<ExecutionRequestResponse> getAll() {
+    return executionRequestService.getAll();
   }
 
   @GetMapping("/requests/{id}")
-  public RunRequestResponse get(@PathVariable Long id) {
-    return runRequestService.get(id);
+  public ExecutionRequestResponse get(@PathVariable Long id) {
+    return executionRequestService.get(id);
   }
 
   @GetMapping("/requests/running")
-  public RunRequestResponse getRunning() {
-    return runRequestService.getRunning();
+  public ExecutionRequestResponse getRunning() {
+    return executionRequestService.getRunning();
   }
 
   @GetMapping("/requests/latest")
-  public RunRequestResponse getLatest() {
-    return runRequestService.getLatest();
+  public ExecutionRequestResponse getLatest() {
+    return executionRequestService.getLatest();
   }
 }

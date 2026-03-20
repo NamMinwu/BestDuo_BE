@@ -3,8 +3,8 @@ package com.bestduo_BE.orchestration.application;
 import com.bestduo_BE.config.DailyRunProperties;
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.orchestration.infra.persistence.entity.RunLog;
-import com.bestduo_BE.orchestration.infra.persistence.repository.RunLogJpaRepository;
+import com.bestduo_BE.orchestration.infra.persistence.entity.ExecutionLog;
+import com.bestduo_BE.orchestration.infra.persistence.repository.ExecutionLogJpaRepository;
 import java.time.OffsetDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,11 +15,11 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class RunExecutor {
 
-  private final RunLogJpaRepository runLogJpaRepository;
-  private final RunPipeline runPipeline;
+  private final ExecutionLogJpaRepository executionLogJpaRepository;
+  private final ExecutionPipeline executionPipeline;
   private final DailyRunProperties dailyRunProperties;
 
-  public RunLog.RunResult run(
+  public ExecutionLog.ExecutionResult run(
       int budgetTotal,
       double seedRatio,
       double refreshRatio,
@@ -34,7 +34,7 @@ public class RunExecutor {
     int refreshBudget = (int) Math.floor(budgetTotal * refreshRatio);
     int ingestBudget = Math.max(0, budgetTotal - seedBudget - refreshBudget);
 
-    RunPipeline.RunCommand command = buildCommand(
+    ExecutionPipeline.ExecutionCommand command = buildCommand(
         budgetTotal,
         seedBudget,
         refreshBudget,
@@ -48,7 +48,7 @@ public class RunExecutor {
     log.info("command: {}", command);
 
     try {
-      RunPipeline.Result runResult = runPipeline.execute(command);
+      ExecutionPipeline.Result runResult = executionPipeline.execute(command);
       return persistResult(buildSuccessResult(started, budgetTotal, seedBudget, refreshBudget, ingestBudget, runResult));
 
     } catch (Exception e) {
@@ -57,16 +57,16 @@ public class RunExecutor {
     }
   }
 
-  private RunLog.RunResult buildSuccessResult(
+  private ExecutionLog.ExecutionResult buildSuccessResult(
       OffsetDateTime started,
       int budgetTotal,
       int seedBudget,
       int refreshBudget,
       int ingestBudget,
-      RunPipeline.Result runResult
+      ExecutionPipeline.Result runResult
   ) {
     OffsetDateTime ended = OffsetDateTime.now();
-    return new RunLog.RunResult(
+    return new ExecutionLog.ExecutionResult(
         started,
         ended,
         runResult.status(),
@@ -84,7 +84,7 @@ public class RunExecutor {
     );
   }
 
-  private RunLog.RunResult buildErrorResult(
+  private ExecutionLog.ExecutionResult buildErrorResult(
       OffsetDateTime started,
       int budgetTotal,
       int seedBudget,
@@ -93,7 +93,7 @@ public class RunExecutor {
       Exception e
   ) {
     OffsetDateTime ended = OffsetDateTime.now();
-    return new RunLog.RunResult(
+    return new ExecutionLog.ExecutionResult(
         started,
         ended,
         "ERROR",
@@ -111,12 +111,12 @@ public class RunExecutor {
     );
   }
 
-  private RunLog.RunResult persistResult(RunLog.RunResult result) {
-    runLogJpaRepository.save(RunLog.of(result));
+  private ExecutionLog.ExecutionResult persistResult(ExecutionLog.ExecutionResult result) {
+    executionLogJpaRepository.save(ExecutionLog.of(result));
     return result;
   }
 
-  private RunPipeline.RunCommand buildCommand(
+  private ExecutionPipeline.ExecutionCommand buildCommand(
       int budgetTotal,
       int seedBudget,
       int refreshBudget,
@@ -143,7 +143,7 @@ public class RunExecutor {
       );
     }
 
-    return new RunPipeline.RunCommand(
+    return new ExecutionPipeline.ExecutionCommand(
         budgetTotal,
         seedBudget,
         refreshBudget,

@@ -17,14 +17,14 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class RunPipeline {
+public class ExecutionPipeline {
 
   private final SeedBootstrapExecutor seedBootstrapExecutor;
   private final RefreshBatchExecutor refreshBatchExecutor;
   private final MatchIngestWorker matchIngestWorker;
   private final QueryCountMonitor queryCountMonitor;
 
-  public Result execute(RunCommand cmd) {
+  public Result execute(ExecutionCommand cmd) {
     ExecutionAccumulator acc = new ExecutionAccumulator(cmd);
     long runStartedAt = System.nanoTime();
 
@@ -62,7 +62,7 @@ public class RunPipeline {
     }
   }
 
-  private void runSeedPhase(RunCommand cmd, ExecutionAccumulator acc) {
+  private void runSeedPhase(ExecutionCommand cmd, ExecutionAccumulator acc) {
     acc.startSeedPhase();
     RiotRequestBudget.start(cmd.seedBudget());
     queryCountMonitor.reset();
@@ -79,7 +79,7 @@ public class RunPipeline {
     }
   }
 
-  private void runRefreshPhase(RunCommand cmd, ExecutionAccumulator acc) {
+  private void runRefreshPhase(ExecutionCommand cmd, ExecutionAccumulator acc) {
     acc.startRefreshPhase();
     RiotRequestBudget.start(cmd.refreshBudget());
     queryCountMonitor.reset();
@@ -93,7 +93,7 @@ public class RunPipeline {
     }
   }
 
-  private void runIngestPhase(RunCommand cmd, ExecutionAccumulator acc) {
+  private void runIngestPhase(ExecutionCommand cmd, ExecutionAccumulator acc) {
     acc.startIngestPhase();
     RiotRequestBudget.start(cmd.ingestBudget());
     queryCountMonitor.reset();
@@ -122,7 +122,7 @@ public class RunPipeline {
     QueryStats ingestSql = ingestProfiling.queryStats();
 
     log.info(
-        "RunPipeline timings status={} message={} totalMs={} seedMs={} seedSqlTotal={} seedSqlSelect={} seedSqlInsert={} seedSqlUpdate={} seedSqlDelete={} refreshMs={} refreshSqlTotal={} refreshSqlSelect={} refreshSqlInsert={} refreshSqlUpdate={} refreshSqlDelete={} ingestMs={} ingestSqlTotal={} ingestSqlSelect={} ingestSqlInsert={} ingestSqlUpdate={} ingestSqlDelete={} queueProcessed={} seedEnqueued={} refreshEnqueued={} picked={} done={} error={} rawCreated={}",
+        "ExecutionPipeline timings status={} message={} totalMs={} seedMs={} seedSqlTotal={} seedSqlSelect={} seedSqlInsert={} seedSqlUpdate={} seedSqlDelete={} refreshMs={} refreshSqlTotal={} refreshSqlSelect={} refreshSqlInsert={} refreshSqlUpdate={} refreshSqlDelete={} ingestMs={} ingestSqlTotal={} ingestSqlSelect={} ingestSqlInsert={} ingestSqlUpdate={} ingestSqlDelete={} queueProcessed={} seedEnqueued={} refreshEnqueued={} picked={} done={} error={} rawCreated={}",
         result.status(),
         result.message(),
         totalMillis,
@@ -153,7 +153,7 @@ public class RunPipeline {
         result.rawCreated());
   }
 
-  public record RunCommand(
+  public record ExecutionCommand(
       int budgetTotal,
       int seedBudget,
       int refreshBudget,
@@ -180,7 +180,7 @@ public class RunPipeline {
   ) {}
 
   private static final class ExecutionAccumulator {
-    private final RunCommand command;
+    private final ExecutionCommand command;
     private int seedEnqueued;
     private int refreshEnqueued;
     private int queueProcessed;
@@ -198,7 +198,7 @@ public class RunPipeline {
     private PhaseProfiling refreshProfiling = PhaseProfiling.empty();
     private PhaseProfiling ingestProfiling = PhaseProfiling.empty();
 
-    ExecutionAccumulator(RunCommand command) {
+    ExecutionAccumulator(ExecutionCommand command) {
       this.command = command;
       this.remainingSeedBudget = command.seedBudget();
       this.remainingRefreshBudget = command.refreshBudget();

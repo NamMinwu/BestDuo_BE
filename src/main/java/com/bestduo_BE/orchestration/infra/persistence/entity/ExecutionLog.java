@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-public class RunLog {
+public class ExecutionLog {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,8 +67,8 @@ public class RunLog {
   @Column(name = "message")
   private String message;
 
-  public static RunLog of(RunResult r) {
-    return RunLog.builder()
+  public static ExecutionLog of(ExecutionResult r) {
+    return ExecutionLog.builder()
         .startedAt(r.startedAt())
         .endedAt(r.endedAt())
         .stopReason(r.stopReason())
@@ -86,7 +86,7 @@ public class RunLog {
         .build();
   }
 
-  public record RunResult(
+  public record ExecutionResult(
       OffsetDateTime startedAt,
       OffsetDateTime endedAt,
       String stopReason,

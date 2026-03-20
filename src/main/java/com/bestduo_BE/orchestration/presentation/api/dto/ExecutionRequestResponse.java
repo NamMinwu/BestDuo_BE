@@ -3,7 +3,7 @@ package com.bestduo_BE.orchestration.presentation.api.dto;
 import com.bestduo_BE.common.domain.model.Tier;
 import java.time.OffsetDateTime;
 
-public record RunRequestResponse(
+public record ExecutionRequestResponse(
     Long id,
     String status,
     int budgetTotal,

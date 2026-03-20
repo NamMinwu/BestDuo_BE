@@ -24,18 +24,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class RunPipelineTest {
+class ExecutionPipelineTest {
 
   @Mock
-  private SeedBootstrapExecutor seedBootstrapRun;
+  private SeedBootstrapExecutor seedBootstrapExecutor;
 
   @Mock
-  private RefreshBatchExecutor refreshBatchRun;
+  private RefreshBatchExecutor refreshBatchExecutor;
 
   @Mock
   private MatchIngestWorker matchIngestWorker;
 
-  private RunPipeline useCase;
+  private ExecutionPipeline useCase;
   private QueryCountMonitor queryCountMonitor;
 
   private final SeedBootstrapCommand seedCommand = new SeedBootstrapCommand(
@@ -45,7 +45,7 @@ class RunPipelineTest {
   @BeforeEach
   void setUp() {
     queryCountMonitor = new QueryCountMonitor();
-    useCase = new RunPipeline(seedBootstrapRun, refreshBatchRun, matchIngestWorker, queryCountMonitor);
+    useCase = new ExecutionPipeline(seedBootstrapExecutor, refreshBatchExecutor, matchIngestWorker, queryCountMonitor);
   }
 
   @AfterEach
@@ -55,12 +55,12 @@ class RunPipelineTest {
 
   @Test
   void executeRunsEnabledPhasesAndAggregatesCounts() {
-    RunPipeline.RunCommand cmd = new RunPipeline.RunCommand(
+    ExecutionPipeline.ExecutionCommand cmd = new ExecutionPipeline.ExecutionCommand(
         120, 20, 20, 80, true, true, 5, 10, 3, seedCommand
     );
-    given(seedBootstrapRun.execute(seedCommand))
+    given(seedBootstrapExecutor.execute(seedCommand))
         .willReturn(new SeedBootstrapExecutor.SeedBootstrapResult(1, 2, 3, 4, 5));
-    given(refreshBatchRun.execute(5))
+    given(refreshBatchExecutor.execute(5))
         .willReturn(new RefreshBatchExecutor.Result(2, 2, 0, 7));
     given(matchIngestWorker.execute(10))
         .willReturn(
@@ -68,10 +68,10 @@ class RunPipelineTest {
             new MatchIngestWorker.Result(0, 0, 0, 0, 0, 0)
         );
 
-    RunPipeline.Result result = useCase.execute(cmd);
+    ExecutionPipeline.Result result = useCase.execute(cmd);
 
-    verify(seedBootstrapRun).execute(seedCommand);
-    verify(refreshBatchRun).execute(5);
+    verify(seedBootstrapExecutor).execute(seedCommand);
+    verify(refreshBatchExecutor).execute(5);
     verify(matchIngestWorker, times(2)).execute(10);
     assertThat(result.status()).isEqualTo("DONE");
     assertThat(result.remainingBudget()).isEqualTo(120);
@@ -87,16 +87,16 @@ class RunPipelineTest {
 
   @Test
   void executeStopsWhenBudgetExhausted() {
-    RunPipeline.RunCommand cmd = new RunPipeline.RunCommand(
+    ExecutionPipeline.ExecutionCommand cmd = new ExecutionPipeline.ExecutionCommand(
         50, 0, 0, 50, false, false, 0, 10, 1, seedCommand
     );
     given(matchIngestWorker.execute(10))
         .willThrow(new BudgetExhaustedException("budget gone"));
 
-    RunPipeline.Result result = useCase.execute(cmd);
+    ExecutionPipeline.Result result = useCase.execute(cmd);
 
-    verify(seedBootstrapRun, never()).execute(seedCommand);
-    verify(refreshBatchRun, never()).execute(0);
+    verify(seedBootstrapExecutor, never()).execute(seedCommand);
+    verify(refreshBatchExecutor, never()).execute(0);
     assertThat(result.status()).isEqualTo("STOPPED_BUDGET");
     assertThat(result.remainingBudget()).isZero();
     assertThat(result.refreshEnqueued()).isZero();
@@ -106,13 +106,13 @@ class RunPipelineTest {
 
   @Test
   void executeStopsWhenRateLimited() {
-    RunPipeline.RunCommand cmd = new RunPipeline.RunCommand(
+    ExecutionPipeline.ExecutionCommand cmd = new ExecutionPipeline.ExecutionCommand(
         80, 0, 0, 80, false, false, 0, 10, 1, seedCommand
     );
     given(matchIngestWorker.execute(10))
         .willThrow(new RiotRateLimitedException("slow down"));
 
-    RunPipeline.Result result = useCase.execute(cmd);
+    ExecutionPipeline.Result result = useCase.execute(cmd);
 
     assertThat(result.status()).isEqualTo("STOPPED_429");
     assertThat(result.remainingBudget()).isEqualTo(80);

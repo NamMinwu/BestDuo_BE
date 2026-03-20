@@ -1,12 +1,12 @@
 package com.bestduo_BE.orchestration.application;
 
-import com.bestduo_BE.orchestration.application.port.RunRequestFinder;
-import com.bestduo_BE.orchestration.application.port.RunRequestSaver;
+import com.bestduo_BE.orchestration.application.port.ExecutionRequestFinder;
+import com.bestduo_BE.orchestration.application.port.ExecutionRequestSaver;
 import com.bestduo_BE.config.DailyRunProperties;
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.orchestration.infra.persistence.entity.RunRequest;
+import com.bestduo_BE.orchestration.infra.persistence.entity.ExecutionRequest;
 import com.bestduo_BE.orchestration.presentation.api.dto.RunCreateRequest;
-import com.bestduo_BE.orchestration.presentation.api.dto.RunRequestResponse;
+import com.bestduo_BE.orchestration.presentation.api.dto.ExecutionRequestResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,16 +14,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class RunRequestService {
+public class ExecutionRequestService {
 
-  private final RunRequestFinder finder;
-  private final RunRequestSaver saver;
+  private final ExecutionRequestFinder finder;
+  private final ExecutionRequestSaver saver;
   private final DailyRunProperties properties;
 
   @Transactional
-  public RunRequestResponse create(RunCreateRequest request) {
+  public ExecutionRequestResponse create(RunCreateRequest request) {
     if (finder.existsActiveRequest()) {
-      throw new IllegalStateException("Run already REQUESTED or RUNNING.");
+      throw new IllegalStateException("Execution already REQUESTED or RUNNING.");
     }
 
     double seedRatio = request.seedRatio() != null
@@ -42,8 +42,8 @@ public class RunRequestService {
         ? request.tier()
         : properties.getSeed().getSeedTier();
 
-    RunRequest saved = saver.save(
-        RunRequest.newRequested(
+    ExecutionRequest saved = saver.save(
+        ExecutionRequest.newRequested(
             request.budgetTotal(),
             seedRatio,
             refreshRatio,
@@ -58,35 +58,35 @@ public class RunRequestService {
   }
 
   @Transactional(readOnly = true)
-  public RunRequestResponse get(Long id) {
-    RunRequest request = finder.findById(id)
-        .orElseThrow(() -> new IllegalArgumentException("Run request not found. id=" + id));
+  public ExecutionRequestResponse get(Long id) {
+    ExecutionRequest request = finder.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("Execution request not found. id=" + id));
     return toResponse(request);
   }
 
   @Transactional(readOnly = true)
-  public List<RunRequestResponse> getAll() {
+  public List<ExecutionRequestResponse> getAll() {
     return finder.findAllOrderByRequestedAtDesc().stream()
         .map(this::toResponse)
         .toList();
   }
 
   @Transactional(readOnly = true)
-  public RunRequestResponse getRunning() {
+  public ExecutionRequestResponse getRunning() {
     return finder.findRunning()
         .map(this::toResponse)
         .orElse(null);
   }
 
   @Transactional(readOnly = true)
-  public RunRequestResponse getLatest() {
+  public ExecutionRequestResponse getLatest() {
     return finder.findLatest()
         .map(this::toResponse)
         .orElse(null);
   }
 
-  private RunRequestResponse toResponse(RunRequest r) {
-    return new RunRequestResponse(
+  private ExecutionRequestResponse toResponse(ExecutionRequest r) {
+    return new ExecutionRequestResponse(
         r.getId(),
         r.getStatus(),
         r.getBudgetTotal(),

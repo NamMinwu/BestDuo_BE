@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-public class RunRequest {
+public class ExecutionRequest {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -62,7 +62,7 @@ public class RunRequest {
 
   private String message;
 
-  public static RunRequest newRequested(
+  public static ExecutionRequest newRequested(
       int budgetTotal,
       double seedRatio,
       double refreshRatio,
@@ -71,7 +71,7 @@ public class RunRequest {
       int refreshLimit,
       Tier tier
   ) {
-    return RunRequest.builder()
+    return ExecutionRequest.builder()
         .status("REQUESTED")
         .budgetTotal(budgetTotal)
         .seedRatio(seedRatio)

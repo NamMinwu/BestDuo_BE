@@ -1,8 +1,8 @@
 package com.bestduo_BE.orchestration.application;
 
-import com.bestduo_BE.orchestration.application.port.RunRequestFinder;
-import com.bestduo_BE.orchestration.application.port.RunRequestStatusUpdater;
-import com.bestduo_BE.orchestration.infra.persistence.entity.RunLog;
+import com.bestduo_BE.orchestration.application.port.ExecutionRequestFinder;
+import com.bestduo_BE.orchestration.application.port.ExecutionRequestStatusUpdater;
+import com.bestduo_BE.orchestration.infra.persistence.entity.ExecutionLog;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,18 +11,18 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class RunRequestWorker {
+public class ExecutionRequestWorker {
 
-  private final RunRequestFinder finder;
-  private final RunRequestStatusUpdater statusUpdater;
-  private final RunExecutor dailyRunExecutor;
+  private final ExecutionRequestFinder executionRequestFinder;
+  private final ExecutionRequestStatusUpdater executionRequestStatusUpdater;
+  private final RunExecutor runExecutor;
 
   public void pollAndRunOnce() {
-    if (finder.findRunning().isPresent()) {
+    if (executionRequestFinder.findRunning().isPresent()) {
       return;
     }
 
-    var request = finder.findOldestRequested().orElse(null);
+    var request = executionRequestFinder.findOldestRequested().orElse(null);
     if (request == null) {
       return;
     }
@@ -30,7 +30,7 @@ public class RunRequestWorker {
     Long runStartedAt = null;
 
     try {
-      statusUpdater.markRunning(request.getId());
+      executionRequestStatusUpdater.markRunning(request.getId());
 
       runStartedAt = System.nanoTime();
       log.info(
@@ -44,7 +44,7 @@ public class RunRequestWorker {
           request.getRefreshLimit(),
           request.getTier());
 
-      RunLog.RunResult result = dailyRunExecutor.run(
+      ExecutionLog.ExecutionResult result = runExecutor.run(
           request.getBudgetTotal(),
           request.getSeedRatio(),
           request.getRefreshRatio(),
@@ -55,10 +55,10 @@ public class RunRequestWorker {
       );
 
       long elapsedMillis = Duration.ofNanos(System.nanoTime() - runStartedAt).toMillis();
-      statusUpdater.markDone(request.getId(), result);
+      executionRequestStatusUpdater.markDone(request.getId(), result);
 
       log.info(
-          "Run request completed. requestId={} stopReason={} elapsedMs={} seedEnqueued={} refreshEnqueued={} picked={} done={} error={} rawCreated={}",
+          "Execution request completed. requestId={} stopReason={} elapsedMs={} seedEnqueued={} refreshEnqueued={} picked={} done={} error={} rawCreated={}",
           request.getId(),
           result.stopReason(),
           elapsedMillis,
@@ -72,8 +72,8 @@ public class RunRequestWorker {
 
     } catch (Exception e) {
       long elapsedMillis = runStartedAt == null ? 0 : Duration.ofNanos(System.nanoTime() - runStartedAt).toMillis();
-      log.error("Run request failed. requestId={} elapsedMs={}", request.getId(), elapsedMillis, e);
-      statusUpdater.markError(request.getId(), shorten(e.getMessage()));
+      log.error("Execution request failed. requestId={} elapsedMs={}", request.getId(), elapsedMillis, e);
+      executionRequestStatusUpdater.markError(request.getId(), shorten(e.getMessage()));
     }
   }
 
