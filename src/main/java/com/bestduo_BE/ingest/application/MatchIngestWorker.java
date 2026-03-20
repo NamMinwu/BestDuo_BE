@@ -1,6 +1,6 @@
 package com.bestduo_BE.ingest.application;
 
-import com.bestduo_BE.ingest.application.port.MatchQueueCoordinator;
+import com.bestduo_BE.ingest.application.port.MatchQueueDispatcher;
 import com.bestduo_BE.common.infra.riot.budget.BudgetExhaustedException;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +16,7 @@ public class MatchIngestWorker {
   private static final int ERROR_COOLDOWN_MINUTES = 10;
   private static final int MAX_RETRY = 2;
 
-  private final MatchQueueCoordinator queue;
+  private final MatchQueueDispatcher queue;
   private final IngestMatchDetail ingestMatchDetail;
 
   /**
@@ -36,7 +36,7 @@ public class MatchIngestWorker {
 
     var items = queue.pickAndLock(limit, MAX_RETRY, ERROR_COOLDOWN_MINUTES);
 
-    for (MatchQueueCoordinator.Item item : items) {
+    for (MatchQueueDispatcher.Item item : items) {
       String matchId = item.matchId();
 
       try {
