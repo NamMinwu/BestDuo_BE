@@ -1,6 +1,7 @@
 package com.bestduo_BE.orchestration.application;
 
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
+import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.ingest.application.MatchIngestWorker;
 import com.bestduo_BE.common.infra.riot.budget.BudgetExhaustedException;
 import com.bestduo_BE.common.infra.riot.budget.RiotRequestBudget;
@@ -95,7 +96,7 @@ public class ExecutionPipeline {
 
   private void runRefreshPhase(ExecutionCommand cmd, ExecutionState state) {
     executePhase(Phase.REFRESH, cmd.refreshBudget(), state, () -> {
-      var refreshResult = refreshBatchExecutor.execute(cmd.refreshLimit());
+      var refreshResult = refreshBatchExecutor.execute(cmd.refreshLimit(), cmd.requestedTier());
       state.addRefreshEnqueued(refreshResult.matchIdsEnqueued());
     });
   }
@@ -103,7 +104,7 @@ public class ExecutionPipeline {
   private void runIngestPhase(ExecutionCommand cmd, ExecutionState state) {
     executePhase(Phase.INGEST, cmd.ingestBudget(), state, () -> {
       for (int i = 0; i < cmd.maxIngestCycles(); i++) {
-        var result = matchIngestWorker.execute(cmd.ingestBatchSize());
+        var result = matchIngestWorker.execute(cmd.ingestBatchSize(), cmd.requestedTier());
         state.recordQueueProcessing(result);
 
         if (result.processed() == 0) {
@@ -166,7 +167,8 @@ public class ExecutionPipeline {
       int refreshLimit,
       int ingestBatchSize,
       int maxIngestCycles,
-      SeedBootstrapCommand seedCommand
+      SeedBootstrapCommand seedCommand,
+      Tier requestedTier
   ) {}
 
   public record Result(

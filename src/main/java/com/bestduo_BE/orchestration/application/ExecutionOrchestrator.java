@@ -128,6 +128,10 @@ public class ExecutionOrchestrator {
       int refreshLimit,
       Tier tier
   ) {
+    SeedBootstrapCommand seedCommand = buildSeedCommand(tier);
+    Tier requestedTier = seedCommand != null
+        ? seedCommand.seedTier()
+        : (tier != null ? tier : Tier.ALL_TIERS);
     return new ExecutionPipeline.ExecutionCommand(
         budgets.seedBudget(),
         budgets.refreshBudget(),
@@ -137,7 +141,8 @@ public class ExecutionOrchestrator {
         refreshLimit,
         ingestLimitPerCycle,
         maxIngestCycles,
-        buildSeedCommand(tier)
+        seedCommand,
+        requestedTier
     );
   }
 
