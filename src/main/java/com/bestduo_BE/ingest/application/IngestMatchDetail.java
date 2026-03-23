@@ -4,6 +4,7 @@ import com.bestduo_BE.ingest.application.port.BottomDuoRawSaver;
 import com.bestduo_BE.ingest.application.port.MatchSaver;
 import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
 import com.bestduo_BE.common.application.port.SummonerExpansionQueue;
+import com.bestduo_BE.common.application.port.SummonerRefreshCursorTracker;
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;
@@ -23,6 +24,7 @@ public class IngestMatchDetail {
   private final BottomDuoRawSaver bottomDuoRawSaver;
 
   private final SummonerExpansionQueue summonerExpandQueue;
+  private final SummonerRefreshCursorTracker summonerRefreshCursorTracker;
 
   private final BottomDuoExtractor extractor = new BottomDuoExtractor();
 
@@ -34,6 +36,7 @@ public class IngestMatchDetail {
     saveBottomDuoRaws(raws);
     expandParticipants(match);
     Long startSec = extractMatchStartTimeSec(match);
+    summonerRefreshCursorTracker.confirmMatchIngested(matchId, startSec);
     return new IngestResult(raws.size(), startSec);
   }
 
