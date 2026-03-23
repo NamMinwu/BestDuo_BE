@@ -28,17 +28,10 @@ public class ExecutionOrchestrator {
       int refreshLimit,
       Tier tier
   ) {
-    OffsetDateTime started = OffsetDateTime.now();
-
-    int seedBudget = (int) Math.floor(budgetTotal * seedRatio);
-    int refreshBudget = (int) Math.floor(budgetTotal * refreshRatio);
-    int ingestBudget = Math.max(0, budgetTotal - seedBudget - refreshBudget);
-
+    OffsetDateTime startedAt = OffsetDateTime.now();
+    BudgetAllocation budgets = allocateBudgets(budgetTotal, seedRatio, refreshRatio);
     ExecutionPipeline.ExecutionCommand command = buildCommand(
-        budgetTotal,
-        seedBudget,
-        refreshBudget,
-        ingestBudget,
+        budgets,
         ingestLimitPerCycle,
         maxIngestCycles,
         refreshLimit,
@@ -48,59 +41,71 @@ public class ExecutionOrchestrator {
     log.info("command: {}", command);
 
     try {
-      ExecutionPipeline.Result runResult = executionPipeline.execute(command);
-      return persistResult(buildSuccessResult(started, budgetTotal, seedBudget, refreshBudget, ingestBudget, runResult));
+      return executeAndPersist(startedAt, budgetTotal, budgets, command);
 
     } catch (Exception e) {
-      persistResult(buildErrorResult(started, budgetTotal, seedBudget, refreshBudget, ingestBudget, e));
-      throw e; // 운영에서 원하면 result 반환으로 바꿔도 됨
+      persistResult(buildErrorResult(startedAt, budgetTotal, budgets, e));
+      throw e;
     }
   }
 
-  private ExecutionLog.ExecutionResult buildSuccessResult(
-      OffsetDateTime started,
+  private BudgetAllocation allocateBudgets(int budgetTotal, double seedRatio, double refreshRatio) {
+    int seedBudget = (int) Math.floor(budgetTotal * seedRatio);
+    int refreshBudget = (int) Math.floor(budgetTotal * refreshRatio);
+    int ingestBudget = Math.max(0, budgetTotal - seedBudget - refreshBudget);
+    return new BudgetAllocation(seedBudget, refreshBudget, ingestBudget);
+  }
+
+  private ExecutionLog.ExecutionResult executeAndPersist(
+      OffsetDateTime startedAt,
       int budgetTotal,
-      int seedBudget,
-      int refreshBudget,
-      int ingestBudget,
-      ExecutionPipeline.Result runResult
+      BudgetAllocation budgets,
+      ExecutionPipeline.ExecutionCommand command
   ) {
-    OffsetDateTime ended = OffsetDateTime.now();
+    ExecutionPipeline.Result pipelineResult = executionPipeline.execute(command);
+    return persistResult(buildSuccessResult(startedAt, budgetTotal, budgets, pipelineResult));
+  }
+
+  private ExecutionLog.ExecutionResult buildSuccessResult(
+      OffsetDateTime startedAt,
+      int budgetTotal,
+      BudgetAllocation budgets,
+      ExecutionPipeline.Result pipelineResult
+  ) {
+    OffsetDateTime endedAt = OffsetDateTime.now();
     return new ExecutionLog.ExecutionResult(
-        started,
-        ended,
-        runResult.status(),
+        startedAt,
+        endedAt,
+        pipelineResult.status(),
         budgetTotal,
-        seedBudget,
-        refreshBudget,
-        ingestBudget,
-        runResult.seedEnqueued(),
-        runResult.refreshEnqueued(),
-        runResult.picked(),
-        runResult.done(),
-        runResult.error(),
-        runResult.rawCreated(),
-        runResult.message()
+        budgets.seedBudget(),
+        budgets.refreshBudget(),
+        budgets.ingestBudget(),
+        pipelineResult.seedEnqueued(),
+        pipelineResult.refreshEnqueued(),
+        pipelineResult.picked(),
+        pipelineResult.done(),
+        pipelineResult.error(),
+        pipelineResult.rawCreated(),
+        pipelineResult.message()
     );
   }
 
   private ExecutionLog.ExecutionResult buildErrorResult(
-      OffsetDateTime started,
+      OffsetDateTime startedAt,
       int budgetTotal,
-      int seedBudget,
-      int refreshBudget,
-      int ingestBudget,
+      BudgetAllocation budgets,
       Exception e
   ) {
-    OffsetDateTime ended = OffsetDateTime.now();
+    OffsetDateTime endedAt = OffsetDateTime.now();
     return new ExecutionLog.ExecutionResult(
-        started,
-        ended,
+        startedAt,
+        endedAt,
         "ERROR",
         budgetTotal,
-        seedBudget,
-        refreshBudget,
-        ingestBudget,
+        budgets.seedBudget(),
+        budgets.refreshBudget(),
+        budgets.ingestBudget(),
         0,
         0,
         0,
@@ -117,43 +122,44 @@ public class ExecutionOrchestrator {
   }
 
   private ExecutionPipeline.ExecutionCommand buildCommand(
-      int budgetTotal,
-      int seedBudget,
-      int refreshBudget,
-      int ingestBudget,
+      BudgetAllocation budgets,
       int ingestLimitPerCycle,
       int maxIngestCycles,
       int refreshLimit,
       Tier tier
   ) {
-    SeedBootstrapCommand seedCommand = null;
-    if (dailyRunProperties.isRunSeed()) {
-      DailyRunProperties.Seed seedProps = dailyRunProperties.getSeed();
-      Tier resolvedTier = tier != null ? tier : seedProps.getSeedTier();
-      String riotTier = tier != null ? tier.name() : seedProps.getTier();
-      seedCommand = new SeedBootstrapCommand(
-          seedProps.getQueue(),
-          riotTier,
-          seedProps.getDivision(),
-          resolvedTier,
-          seedProps.getStartPage(),
-          seedProps.getEndPage(),
-          seedProps.getMatchesPerPuuid(),
-          seedProps.getMaxEntries()
-      );
-    }
-
     return new ExecutionPipeline.ExecutionCommand(
-        budgetTotal,
-        seedBudget,
-        refreshBudget,
-        ingestBudget,
+        budgets.seedBudget(),
+        budgets.refreshBudget(),
+        budgets.ingestBudget(),
         dailyRunProperties.isRunSeed(),
         dailyRunProperties.isRunRefresh(),
         refreshLimit,
         ingestLimitPerCycle,
         maxIngestCycles,
-        seedCommand
+        buildSeedCommand(tier)
     );
   }
+
+  private SeedBootstrapCommand buildSeedCommand(Tier tier) {
+    if (!dailyRunProperties.isRunSeed()) {
+      return null;
+    }
+
+    DailyRunProperties.Seed seedProps = dailyRunProperties.getSeed();
+    Tier resolvedTier = tier != null ? tier : seedProps.getSeedTier();
+    String riotTier = tier != null ? tier.name() : seedProps.getTier();
+    return new SeedBootstrapCommand(
+        seedProps.getQueue(),
+        riotTier,
+        seedProps.getDivision(),
+        resolvedTier,
+        seedProps.getStartPage(),
+        seedProps.getEndPage(),
+        seedProps.getMatchesPerPuuid(),
+        seedProps.getMaxEntries()
+    );
+  }
+
+  private record BudgetAllocation(int seedBudget, int refreshBudget, int ingestBudget) {}
 }

@@ -56,7 +56,7 @@ class ExecutionPipelineTest {
   @Test
   void executeRunsEnabledPhasesAndAggregatesCounts() {
     ExecutionPipeline.ExecutionCommand cmd = new ExecutionPipeline.ExecutionCommand(
-        120, 20, 20, 80, true, true, 5, 10, 3, seedCommand
+        20, 20, 80, true, true, 5, 10, 3, seedCommand
     );
     given(seedBootstrapExecutor.execute(seedCommand))
         .willReturn(new SeedBootstrapExecutor.SeedBootstrapResult(1, 2, 3, 4, 5));
@@ -88,7 +88,7 @@ class ExecutionPipelineTest {
   @Test
   void executeStopsWhenBudgetExhausted() {
     ExecutionPipeline.ExecutionCommand cmd = new ExecutionPipeline.ExecutionCommand(
-        50, 0, 0, 50, false, false, 0, 10, 1, seedCommand
+        0, 0, 50, false, false, 0, 10, 1, seedCommand
     );
     given(matchIngestWorker.execute(10))
         .willThrow(new BudgetExhaustedException("budget gone"));
@@ -107,7 +107,7 @@ class ExecutionPipelineTest {
   @Test
   void executeStopsWhenRateLimited() {
     ExecutionPipeline.ExecutionCommand cmd = new ExecutionPipeline.ExecutionCommand(
-        80, 0, 0, 80, false, false, 0, 10, 1, seedCommand
+        0, 0, 80, false, false, 0, 10, 1, seedCommand
     );
     given(matchIngestWorker.execute(10))
         .willThrow(new RiotRateLimitedException("slow down"));
