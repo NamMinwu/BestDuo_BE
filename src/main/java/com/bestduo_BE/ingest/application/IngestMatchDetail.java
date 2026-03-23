@@ -22,56 +22,79 @@ public class IngestMatchDetail {
   private final MatchSaver matchSaver;
   private final BottomDuoRawSaver bottomDuoRawSaver;
 
-  // ✅ 추가: participant puuid를 summoner로 확장(멱등)
   private final SummonerExpansionQueue summonerExpandQueue;
 
   private final BottomDuoExtractor extractor = new BottomDuoExtractor();
 
   @Transactional
   public IngestResult execute(String matchId, Tier tier) {
-    RiotMatchDto match = riotMatchLoader.loadMatch(matchId);
-
-    // 1) match 저장 (payload_json)
-    matchSaver.save(matchId, match);
-
-    // 2) raw 저장 (바텀 듀오)
-    List<BottomDuoRaw> raws = extractor.extract(matchId, match, tier);
-    bottomDuoRawSaver.saveAllIdempotent(raws);
-
-    // ✅ 3) participants puuid → summoner upsert(멱등)
-    // - metadata.participants는 match에 참여한 10 puuid
-    int expanded = expandSeedsFromParticipants(match);
-
+    RiotMatchDto match = loadMatch(matchId);
+    saveMatch(matchId, match);
+    List<BottomDuoRaw> raws = extractBottomDuoRaws(matchId, match, tier);
+    saveBottomDuoRaws(raws);
+    expandParticipants(match);
     Long startSec = extractMatchStartTimeSec(match);
-
-    // IngestResult에 expanded까지 넣고 싶으면 record를 확장하면 됨.
-    // 지금은 로깅/메트릭으로만 써도 충분.
     return new IngestResult(raws.size(), startSec);
   }
 
+  private RiotMatchDto loadMatch(String matchId) {
+    return riotMatchLoader.loadMatch(matchId);
+  }
+
+  private void saveMatch(String matchId, RiotMatchDto match) {
+    matchSaver.save(matchId, match);
+  }
+
+  private List<BottomDuoRaw> extractBottomDuoRaws(String matchId, RiotMatchDto match, Tier tier) {
+    return extractor.extract(matchId, match, tier);
+  }
+
+  private void saveBottomDuoRaws(List<BottomDuoRaw> raws) {
+    bottomDuoRawSaver.saveAllIdempotent(raws);
+  }
+
+  private void expandParticipants(RiotMatchDto match) {
+    expandSeedsFromParticipants(match);
+  }
+
   private int expandSeedsFromParticipants(RiotMatchDto match) {
-    if (match == null || match.metadata() == null) return 0;
+    if (match == null || match.metadata() == null) {
+      return 0;
+    }
 
     List<String> participants = match.metadata().participants();
-    if (participants == null || participants.isEmpty()) return 0;
+    if (participants == null || participants.isEmpty()) {
+      return 0;
+    }
 
     int created = 0;
     for (String p : participants) {
-      if (p == null) continue;
-      String puuid = p.trim();
-      if (puuid.isEmpty()) continue;
+      if (p == null) {
+        continue;
+      }
 
-      // registerIfAbsent 내부가 ON CONFLICT DO NOTHING이면
-      // 중복/순서는 신경 안 써도 됨.
-      if (summonerExpandQueue.registerIfAbsent(puuid)) created++;
+      String puuid = p.trim();
+      if (puuid.isEmpty()) {
+        continue;
+      }
+
+      if (summonerExpandQueue.registerIfAbsent(puuid)) {
+        created++;
+      }
     }
     return created;
   }
 
   private Long extractMatchStartTimeSec(RiotMatchDto match) {
-    if (match == null || match.info() == null) return null;
-    Long ms = match.info().gameStartTimestamp(); // RiotMatchDto에 있어야 함
-    if (ms == null) return null;
+    if (match == null || match.info() == null) {
+      return null;
+    }
+
+    Long ms = match.info().gameStartTimestamp();
+    if (ms == null) {
+      return null;
+    }
+
     return ms / 1000L;
   }
 }
