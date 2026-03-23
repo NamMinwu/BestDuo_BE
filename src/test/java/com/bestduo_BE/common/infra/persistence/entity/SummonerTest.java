@@ -7,29 +7,32 @@ import org.junit.jupiter.api.Test;
 class SummonerTest {
 
   @Test
-  void markExpandDoneUpdatesLastRunTimestamp() {
-    Summoner summoner = Summoner.newReady("p-1");
+  void createInitializesRequiredFields() {
+    Summoner summoner = Summoner.create("p-1");
 
-    assertThat(summoner.getLastExpandRunAt()).isNull();
-
-    summoner.markExpandRunning();
-
-    summoner.markExpandDone();
-
-    assertThat(summoner.getExpandStatus()).isEqualTo("DONE");
-    assertThat(summoner.getLastExpandRunAt()).isNotNull();
+    assertThat(summoner.getPuuid()).isEqualTo("p-1");
+    assertThat(summoner.getLastMatchStartTime()).isNull();
+    assertThat(summoner.getCreatedAt()).isNotNull();
+    assertThat(summoner.getUpdatedAt()).isNotNull();
   }
 
   @Test
-  void markExpandErrorUpdatesLastRunTimestamp() {
-    Summoner summoner = Summoner.newReady("p-2");
+  void advanceLastMatchStartTimeUpdatesCursor() {
+    Summoner summoner = Summoner.create("p-2");
 
-    summoner.markExpandRunning();
+    summoner.advanceLastMatchStartTime(1234L);
 
-    summoner.markExpandError();
+    assertThat(summoner.getLastMatchStartTime()).isEqualTo(1234L);
+  }
 
-    assertThat(summoner.getExpandStatus()).isEqualTo("ERROR");
-    assertThat(summoner.getLastExpandRunAt()).isNotNull();
+  @Test
+  void advanceLastMatchStartTimeDoesNotMoveCursorBackward() {
+    Summoner summoner = Summoner.create("p-3");
+    summoner.advanceLastMatchStartTime(2000L);
+
+    summoner.advanceLastMatchStartTime(1500L);
+
+    assertThat(summoner.getLastMatchStartTime()).isEqualTo(2000L);
   }
 
 }
