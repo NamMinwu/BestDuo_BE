@@ -3,6 +3,7 @@ package com.bestduo_BE.refresh.application;
 import com.bestduo_BE.refresh.application.port.LeagueEntriesRefreshLoader;
 import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
+import com.bestduo_BE.common.application.port.SummonerRefreshCursorTracker;
 import com.bestduo_BE.refresh.application.port.SummonerRefreshStatusUpdater;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
@@ -24,6 +25,7 @@ public class RefreshSummonerMatches {
   private final LeagueEntriesRefreshLoader leagueEntriesRefreshLoader;
   private final MatchIdsFinder matchIdsFinder;
   private final MatchQueueEnqueuer matchQueueEnqueuer;
+  private final SummonerRefreshCursorTracker summonerRefreshCursorTracker;
 
   private final SummonerRefreshStatusUpdater summonerRefreshStatusUpdater;
 
@@ -38,43 +40,48 @@ public class RefreshSummonerMatches {
   }
 
   public Result execute(String puuid, Tier requestedTier) {
-    Summoner s = summonerRefreshStatusUpdater.findOrCreate(puuid);
+    Summoner summoner = summonerRefreshStatusUpdater.findOrCreate(puuid);
 
     try {
-      summonerRefreshStatusUpdater.markRefreshRunning(puuid);
-
       Tier collectionTier = resolveCollectionTierBySolo(puuid);
       if (collectionTier == null || collectionTier == Tier.ALL_TIERS) {
-        summonerRefreshStatusUpdater.markRefreshDone(puuid, s.getLastMatchStartTime());
-        return new Result(puuid, 0, collectionTier, s.getLastMatchStartTime());
+        summonerRefreshStatusUpdater.syncRefreshCursor(puuid, summoner.getLastMatchStartTime());
+        return new Result(puuid, 0, collectionTier, summoner.getLastMatchStartTime());
       }
 
       if (requestedTier != null && requestedTier != Tier.ALL_TIERS && requestedTier != collectionTier) {
-        summonerRefreshStatusUpdater.markRefreshDone(puuid, s.getLastMatchStartTime());
-        return new Result(puuid, 0, collectionTier, s.getLastMatchStartTime());
+        summonerRefreshStatusUpdater.syncRefreshCursor(puuid, summoner.getLastMatchStartTime());
+        return new Result(puuid, 0, collectionTier, summoner.getLastMatchStartTime());
       }
 
-      List<String> matchIds = loadMatchIds(puuid, s.getLastMatchStartTime());
+      if (summonerRefreshCursorTracker.hasPendingMatches(puuid)) {
+        summonerRefreshStatusUpdater.syncRefreshCursor(puuid, summoner.getLastMatchStartTime());
+        return new Result(puuid, 0, collectionTier, summoner.getLastMatchStartTime());
+      }
+
+      List<String> matchIds = loadMatchIds(puuid, summoner.getLastMatchStartTime());
 
       if (matchIds == null || matchIds.isEmpty()) {
-        summonerRefreshStatusUpdater.markRefreshDone(puuid, s.getLastMatchStartTime());
-        return new Result(puuid, 0, collectionTier, s.getLastMatchStartTime());
+        summonerRefreshStatusUpdater.syncRefreshCursor(puuid, summoner.getLastMatchStartTime());
+        return new Result(puuid, 0, collectionTier, summoner.getLastMatchStartTime());
       }
 
       // ✅ detail 호출 X
       // ✅ matchIds를 queue에 적재 (refresh가 우선순위 높음)
       matchQueueEnqueuer.enqueueAllIdempotent(matchIds, collectionTier, PRIORITY_REFRESH);
+      Long safeCursor = summonerRefreshCursorTracker.registerRefreshBatch(
+          puuid,
+          matchIds,
+          summoner.getLastMatchStartTime()
+      );
 
-      // 커서 갱신 정책:
-      // - 정확하게 하려면 "detail 처리 시점"에 matchStartTime을 보고 갱신하는 게 맞음.
-      // - 지금은 enqueue 성공을 DONE으로 기록하고, 커서는 그대로 둔다(안전하게 보수적).
-      summonerRefreshStatusUpdater.markRefreshDone(puuid, s.getLastMatchStartTime());
+      summonerRefreshStatusUpdater.syncRefreshCursor(puuid, safeCursor);
 
-      return new Result(puuid, matchIds.size(), collectionTier, s.getLastMatchStartTime());
+      return new Result(puuid, matchIds.size(), collectionTier, safeCursor);
 
     } catch (Exception e) {
       log.error("Refresh enqueue failed. puuid={}", puuid, e);
-      summonerRefreshStatusUpdater.markRefreshError(puuid);
+      summonerRefreshStatusUpdater.syncRefreshCursor(puuid, null);
       throw e;
     }
   }

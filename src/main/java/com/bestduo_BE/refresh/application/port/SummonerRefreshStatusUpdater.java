@@ -6,9 +6,5 @@ public interface SummonerRefreshStatusUpdater {
 
   Summoner findOrCreate(String puuid);
 
-  void markRefreshRunning(String puuid);
-
-  void markRefreshDone(String puuid, Long newLastMatchStartTime);
-
-  void markRefreshError(String puuid);
+  void syncRefreshCursor(String puuid, Long newLastMatchStartTime);
 }

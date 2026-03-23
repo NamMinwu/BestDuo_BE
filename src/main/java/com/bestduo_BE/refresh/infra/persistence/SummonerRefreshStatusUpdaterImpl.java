@@ -17,24 +17,12 @@ public class SummonerRefreshStatusUpdaterImpl implements SummonerRefreshStatusUp
   @Transactional
   public Summoner findOrCreate(String puuid) {
     return repository.findById(puuid)
-        .orElseGet(() -> repository.save(Summoner.newReady(puuid)));
+        .orElseGet(() -> repository.save(Summoner.create(puuid)));
   }
 
   @Override
   @Transactional
-  public void markRefreshRunning(String puuid) {
-    repository.findById(puuid).ifPresent(Summoner::markRefreshRunning);
-  }
-
-  @Override
-  @Transactional
-  public void markRefreshDone(String puuid, Long newLastMatchStartTime) {
-    repository.findById(puuid).ifPresent(s -> s.markRefreshDone(newLastMatchStartTime));
-  }
-
-  @Override
-  @Transactional
-  public void markRefreshError(String puuid) {
-    repository.findById(puuid).ifPresent(Summoner::markRefreshError);
+  public void syncRefreshCursor(String puuid, Long newLastMatchStartTime) {
+    repository.advanceLastMatchStartTime(puuid, newLastMatchStartTime);
   }
 }
