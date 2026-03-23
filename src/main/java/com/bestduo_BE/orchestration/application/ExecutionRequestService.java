@@ -26,36 +26,52 @@ public class ExecutionRequestService {
       throw new IllegalStateException("Execution already REQUESTED or RUNNING.");
     }
 
-    double seedRatio = request.seedRatio() != null
-        ? request.seedRatio()
-        : properties.getSeedRatio();
-
-    double refreshRatio = request.refreshRatio() != null
-        ? request.refreshRatio()
-        : properties.getRefreshRatio();
-
-    int refreshLimit = request.refreshLimit() != null
-        ? request.refreshLimit()
-        : properties.getRefreshLimit();
-
-    Tier tier = request.tier() != null
-        ? request.tier()
-        : properties.getSeed().getSeedTier();
-
-    ExecutionRequest saved = saver.save(
-        ExecutionRequest.newRequested(
-            request.budgetTotal(),
-            seedRatio,
-            refreshRatio,
-            request.ingestLimitPerCycle(),
-            request.maxIngestCycles(),
-            refreshLimit,
-            tier
-        )
-    );
+    RequestAdjust requestAdjust = adjustRequest(request);
+    ExecutionRequest executionRequest = createExecutionRequest(request, requestAdjust);
+    ExecutionRequest saved = saver.save(executionRequest);
 
     return toResponse(saved);
   }
+
+  private ExecutionRequest createExecutionRequest(ExecutionCreateRequest request,
+      RequestAdjust requestAdjust) {
+    return ExecutionRequest.newRequested(
+        request.budgetTotal(),
+        requestAdjust.seedRatio(),
+        requestAdjust.refreshRatio(),
+        request.ingestLimitPerCycle(),
+        request.maxIngestCycles(),
+        requestAdjust.refreshLimit(),
+        requestAdjust.tier()
+    );
+  }
+
+  private RequestAdjust adjustRequest(ExecutionCreateRequest request) {
+    double seedRatio = resolveSeedRatio(request);
+    double refreshRatio = resolveRefreshRatio(request);
+    int refreshLimit = resolveRefreshLimit(request);
+    Tier tier = resolveTier(request);
+
+    return new RequestAdjust(seedRatio, refreshRatio, refreshLimit, tier);
+  }
+
+  private double resolveSeedRatio(ExecutionCreateRequest request) {
+    return request.seedRatio() != null ? request.seedRatio() : properties.getSeedRatio();
+  }
+
+  private double resolveRefreshRatio(ExecutionCreateRequest request) {
+    return request.refreshRatio() != null ? request.refreshRatio() : properties.getRefreshRatio();
+  }
+
+  private int resolveRefreshLimit(ExecutionCreateRequest request) {
+    return request.refreshLimit() != null ? request.refreshLimit() : properties.getRefreshLimit();
+  }
+
+  private Tier resolveTier(ExecutionCreateRequest request) {
+    return request.tier() != null ? request.tier() : properties.getSeed().getSeedTier();
+  }
+
+  private record RequestAdjust(double seedRatio, double refreshRatio, int refreshLimit, Tier tier) {}
 
   @Transactional(readOnly = true)
   public ExecutionRequestResponse get(Long id) {

@@ -17,9 +17,9 @@ spring:
 
 logging:
   level:
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: DEBUG
-    com.bestduo_BE.SQL: DEBUG
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
+    com.bestduo_BE.SQL: WARN
 
 external:
   riot:

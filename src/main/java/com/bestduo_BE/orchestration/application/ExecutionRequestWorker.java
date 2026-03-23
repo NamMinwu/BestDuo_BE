@@ -3,6 +3,8 @@ package com.bestduo_BE.orchestration.application;
 import com.bestduo_BE.orchestration.application.port.ExecutionRequestFinder;
 import com.bestduo_BE.orchestration.application.port.ExecutionRequestStatusUpdater;
 import com.bestduo_BE.orchestration.infra.persistence.entity.ExecutionLog;
+import com.bestduo_BE.orchestration.infra.persistence.entity.ExecutionRequest;
+import com.bestduo_BE.common.domain.model.Tier;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,70 +17,108 @@ public class ExecutionRequestWorker {
 
   private final ExecutionRequestFinder executionRequestFinder;
   private final ExecutionRequestStatusUpdater executionRequestStatusUpdater;
-  private final ExecutionOrchestrator runExecutor;
+  private final ExecutionOrchestrator executionOrchestrator;
 
   public void pollAndRunOnce() {
-    if (executionRequestFinder.findRunning().isPresent()) {
-      return;
-    }
-
-    var request = executionRequestFinder.findOldestRequested().orElse(null);
+    ExecutionRequest request = findExecutableRequest();
     if (request == null) {
       return;
     }
 
+    executeRequest(request);
+  }
+
+  private ExecutionRequest findExecutableRequest() {
+    if (executionRequestFinder.findRunning().isPresent()) {
+      return null;
+    }
+
+    return executionRequestFinder.findOldestRequested().orElse(null);
+  }
+
+  private void executeRequest(ExecutionRequest request) {
     Long runStartedAt = null;
 
     try {
       executionRequestStatusUpdater.markRunning(request.getId());
 
       runStartedAt = System.nanoTime();
-      log.info(
-          "Run started. requestId={} budgetTotal={} seedRatio={} refreshRatio={} ingestLimitPerCycle={} maxIngestCycles={} refreshLimit={} tier={}",
-          request.getId(),
-          request.getBudgetTotal(),
-          request.getSeedRatio(),
-          request.getRefreshRatio(),
-          request.getIngestLimitPerCycle(),
-          request.getMaxIngestCycles(),
-          request.getRefreshLimit(),
-          request.getTier());
+      logStart(request);
 
-      ExecutionLog.ExecutionResult result = runExecutor.run(
-          request.getBudgetTotal(),
-          request.getSeedRatio(),
-          request.getRefreshRatio(),
-          request.getIngestLimitPerCycle(),
-          request.getMaxIngestCycles(),
-          request.getRefreshLimit(),
-          request.getTier()
-      );
+      ExecutionLog.ExecutionResult result = runExecution(request);
 
-      long elapsedMillis = Duration.ofNanos(System.nanoTime() - runStartedAt).toMillis();
-      executionRequestStatusUpdater.markDone(request.getId(), result);
-
-      log.info(
-          "Execution request completed. requestId={} stopReason={} elapsedMs={} seedEnqueued={} refreshEnqueued={} picked={} done={} error={} rawCreated={}",
-          request.getId(),
-          result.stopReason(),
-          elapsedMillis,
-          result.seedEnqueued(),
-          result.refreshEnqueued(),
-          result.picked(),
-          result.done(),
-          result.error(),
-          result.rawCreated()
-      );
+      handleSuccess(request, result, runStartedAt);
 
     } catch (Exception e) {
-      long elapsedMillis = runStartedAt == null ? 0 : Duration.ofNanos(System.nanoTime() - runStartedAt).toMillis();
-      log.error("Execution request failed. requestId={} elapsedMs={}", request.getId(), elapsedMillis, e);
-      executionRequestStatusUpdater.markError(request.getId(), shorten(e.getMessage()));
+      handleFailure(request, runStartedAt, e);
     }
   }
 
+  private void logStart(ExecutionRequest request) {
+    log.info(
+        "Run started. requestId={} budgetTotal={} seedRatio={} refreshRatio={} ingestLimitPerCycle={} maxIngestCycles={} refreshLimit={} tier={}",
+        request.getId(),
+        request.getBudgetTotal(),
+        request.getSeedRatio(),
+        request.getRefreshRatio(),
+        request.getIngestLimitPerCycle(),
+        request.getMaxIngestCycles(),
+        request.getRefreshLimit(),
+        request.getTier()
+    );
+  }
+
+  private ExecutionLog.ExecutionResult runExecution(ExecutionRequest request) {
+    return executionOrchestrator.run(
+        request.getBudgetTotal(),
+        request.getSeedRatio(),
+        request.getRefreshRatio(),
+        request.getIngestLimitPerCycle(),
+        request.getMaxIngestCycles(),
+        request.getRefreshLimit(),
+        request.getTier()
+    );
+  }
+
+  private void handleSuccess(ExecutionRequest request, ExecutionLog.ExecutionResult result, Long runStartedAt) {
+    long elapsedMillis = elapsedMillis(runStartedAt);
+    Long requestId = request.getId();
+    executionRequestStatusUpdater.markDone(requestId, result);
+
+    log.info(
+        "Execution request completed. requestId={} stopReason={} elapsedMs={} seedEnqueued={} refreshEnqueued={} picked={} done={} error={} rawCreated={}",
+        requestId,
+        result.stopReason(),
+        elapsedMillis,
+        result.seedEnqueued(),
+        result.refreshEnqueued(),
+        result.picked(),
+        result.done(),
+        result.error(),
+        result.rawCreated()
+    );
+  }
+
+  private void handleFailure(ExecutionRequest request, Long runStartedAt, Exception e) {
+    Long requestId = request.getId();
+    long elapsedMillis = elapsedMillis(runStartedAt);
+    log.error("Execution request failed. requestId={} elapsedMs={}", requestId, elapsedMillis, e);
+    executionRequestStatusUpdater.markError(requestId, shorten(e.getMessage()));
+  }
+
+  private long elapsedMillis(Long startedAtNanos) {
+    if (startedAtNanos == null) {
+      return 0;
+    }
+
+    return Duration.ofNanos(System.nanoTime() - startedAtNanos).toMillis();
+  }
+
   private String shorten(String s) {
-    if (s == null) return null;
+    if (s == null) {
+      return null;
+    }
+
     return s.length() <= 500 ? s : s.substring(0, 500);
   }
 }
