@@ -17,6 +17,8 @@ public interface MatchQueueDispatcher {
    */
   List<Item> pickAndLock(int limit, int maxRetry, int errorCooldownMinutes);
 
+  List<Item> pickAndLock(int limit, int maxRetry, int errorCooldownMinutes, Tier requestedTier);
+
   void markDone(String matchId);
 
   void markError(String matchId, String message);
