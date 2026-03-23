@@ -33,7 +33,7 @@ collector:
   match-count: 20
   poll-delay-ms: 60000
 
-daily-session:
+daily-run:
   run-seed: true
   run-refresh: true
   seed-ratio: 0.2      # budgetTotal 대비 seed 전용 비율
@@ -48,9 +48,9 @@ daily-session:
     end-page: 1
     matches-per-puuid: 20
 
-session-run-request:
+execution-request:
   worker:
-    enabled: ${SESSION_RUN_REQUEST_WORKER_ENABLED:false}
+    enabled: ${EXECUTION_REQUEST_WORKER_ENABLED:false}
 
 management:
   endpoints:
