@@ -6,15 +6,19 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.never;
 
 import com.bestduo_BE.refresh.application.port.LeagueEntriesRefreshLoader;
 import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
-import com.bestduo_BE.common.application.port.SummonerRefreshCursorTracker;
+import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
 import com.bestduo_BE.refresh.application.port.SummonerRefreshStatusUpdater;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
+import com.bestduo_BE.common.infra.riot.dto.InfoDto;
+import com.bestduo_BE.common.infra.riot.dto.MetadataDto;
+import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,10 +40,10 @@ class RefreshSummonerMatchesTest {
   private MatchQueueEnqueuer matchQueueEnqueuer;
 
   @Mock
-  private SummonerRefreshStatusUpdater summonerRefreshStatusUpdater;
+  private RiotMatchLoader riotMatchLoader;
 
   @Mock
-  private SummonerRefreshCursorTracker summonerRefreshCursorTracker;
+  private SummonerRefreshStatusUpdater summonerRefreshStatusUpdater;
 
   private RefreshSummonerMatches useCase;
 
@@ -49,7 +53,7 @@ class RefreshSummonerMatchesTest {
         leagueEntriesRefreshLoader,
         matchIdsFinder,
         matchQueueEnqueuer,
-        summonerRefreshCursorTracker,
+        riotMatchLoader,
         summonerRefreshStatusUpdater
     );
   }
@@ -75,10 +79,8 @@ class RefreshSummonerMatchesTest {
     given(summonerRefreshStatusUpdater.findOrCreate("p-new")).willReturn(summoner);
     given(leagueEntriesRefreshLoader.loadEntriesByPuuid("p-new"))
         .willReturn(List.of(new LeagueEntry("p-new", "EMERALD", "RANKED_SOLO_5x5", "I", 200L)));
-    given(summonerRefreshCursorTracker.hasPendingMatches("p-new")).willReturn(false);
     given(matchIdsFinder.findRecentMatchIds("p-new", 50)).willReturn(List.of("m-1", "m-2"));
-    given(summonerRefreshCursorTracker.registerRefreshBatch("p-new", List.of("m-1", "m-2"), null))
-        .willReturn(12L);
+    given(riotMatchLoader.loadMatch("m-1")).willReturn(riotMatch(12_000L));
 
     RefreshSummonerMatches.Result result = useCase.execute("p-new", Tier.EMERALD);
 
@@ -95,15 +97,13 @@ class RefreshSummonerMatchesTest {
     given(summonerRefreshStatusUpdater.findOrCreate("p-mid")).willReturn(summoner);
     given(leagueEntriesRefreshLoader.loadEntriesByPuuid("p-mid"))
         .willReturn(List.of(new LeagueEntry("p-mid", "DIAMOND", "RANKED_SOLO_5x5", "I", 30L)));
-    given(summonerRefreshCursorTracker.hasPendingMatches("p-mid")).willReturn(false);
     given(matchIdsFinder.findMatchIdsSince("p-mid", 5678L, 50)).willReturn(List.of("m-42"));
-    given(summonerRefreshCursorTracker.registerRefreshBatch("p-mid", List.of("m-42"), 5678L))
-        .willReturn(6789L);
+    given(riotMatchLoader.loadMatch("m-42")).willReturn(riotMatch(67_890L));
 
     RefreshSummonerMatches.Result result = useCase.execute("p-mid", Tier.DIAMOND);
 
     verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-42"), Tier.DIAMOND, 10);
-    assertThat(result.lastMatchStartTimeSec()).isEqualTo(6789L);
+    assertThat(result.lastMatchStartTimeSec()).isEqualTo(67L);
   }
 
   @Test
@@ -112,7 +112,6 @@ class RefreshSummonerMatchesTest {
     given(summonerRefreshStatusUpdater.findOrCreate("p-err")).willReturn(summoner);
     given(leagueEntriesRefreshLoader.loadEntriesByPuuid("p-err"))
         .willReturn(List.of(new LeagueEntry("p-err", "MASTER", "RANKED_SOLO_5x5", "I", 300L)));
-    given(summonerRefreshCursorTracker.hasPendingMatches("p-err")).willReturn(false);
     given(matchIdsFinder.findRecentMatchIds("p-err", 50)).willReturn(List.of("m-err"));
     willThrow(new IllegalStateException("queue down"))
         .given(matchQueueEnqueuer)
@@ -139,21 +138,7 @@ class RefreshSummonerMatchesTest {
     assertThat(result.collectionTier()).isEqualTo(Tier.EMERALD);
   }
 
-  @Test
-  void skipMatchIdLookupWhilePendingRefreshFrontierExists() {
-    Summoner summoner = summoner("p-pending", 555L);
-    given(summonerRefreshStatusUpdater.findOrCreate("p-pending")).willReturn(summoner);
-    given(leagueEntriesRefreshLoader.loadEntriesByPuuid("p-pending"))
-        .willReturn(List.of(new LeagueEntry("p-pending", "EMERALD", "RANKED_SOLO_5x5", "I", 200L)));
-    given(summonerRefreshCursorTracker.hasPendingMatches("p-pending")).willReturn(true);
 
-    RefreshSummonerMatches.Result result = useCase.execute("p-pending", Tier.EMERALD);
-
-    verify(summonerRefreshStatusUpdater).syncRefreshCursor("p-pending", 555L);
-    verifyNoInteractions(matchIdsFinder, matchQueueEnqueuer);
-    assertThat(result.matchIdsEnqueued()).isZero();
-    assertThat(result.lastMatchStartTimeSec()).isEqualTo(555L);
-  }
 
   private Summoner summoner(String puuid, Long lastMatchStartTime) {
     OffsetDateTime now = OffsetDateTime.now();
@@ -163,5 +148,18 @@ class RefreshSummonerMatchesTest {
         .createdAt(now)
         .updatedAt(now)
         .build();
+  }
+
+  private RiotMatchDto riotMatch(long gameStartMs) {
+    return new RiotMatchDto(new MetadataDto("1", "m", List.of()), new InfoDto(
+        null, null, null, null, null, null,
+        gameStartMs,
+        null,
+        null,
+        null, null, null,
+        null,
+        null,
+        null
+    ));
   }
 }

@@ -3,11 +3,12 @@ package com.bestduo_BE.refresh.application;
 import com.bestduo_BE.refresh.application.port.LeagueEntriesRefreshLoader;
 import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
-import com.bestduo_BE.common.application.port.SummonerRefreshCursorTracker;
 import com.bestduo_BE.refresh.application.port.SummonerRefreshStatusUpdater;
+import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
+import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -25,16 +26,10 @@ public class RefreshSummonerMatches {
   private final LeagueEntriesRefreshLoader leagueEntriesRefreshLoader;
   private final MatchIdsFinder matchIdsFinder;
   private final MatchQueueEnqueuer matchQueueEnqueuer;
-  private final SummonerRefreshCursorTracker summonerRefreshCursorTracker;
+  private final RiotMatchLoader riotMatchLoader;
 
   private final SummonerRefreshStatusUpdater summonerRefreshStatusUpdater;
 
-  /**
-   * Phase5(큐 기반 Refresh):
-   * - 현재 티어 조회 → Tier 라벨 결정
-   * - lastMatchStartTime 이후 matchIds 조회(증분)
-   * - match_queue에 enqueue만 수행 (detail 처리는 QueueWorker가 수행)
-   */
   public Result execute(String puuid) {
     return execute(puuid, Tier.ALL_TIERS);
   }
@@ -54,11 +49,6 @@ public class RefreshSummonerMatches {
         return new Result(puuid, 0, collectionTier, summoner.getLastMatchStartTime());
       }
 
-      if (summonerRefreshCursorTracker.hasPendingMatches(puuid)) {
-        summonerRefreshStatusUpdater.syncRefreshCursor(puuid, summoner.getLastMatchStartTime());
-        return new Result(puuid, 0, collectionTier, summoner.getLastMatchStartTime());
-      }
-
       List<String> matchIds = loadMatchIds(puuid, summoner.getLastMatchStartTime());
 
       if (matchIds == null || matchIds.isEmpty()) {
@@ -66,22 +56,20 @@ public class RefreshSummonerMatches {
         return new Result(puuid, 0, collectionTier, summoner.getLastMatchStartTime());
       }
 
-      // ✅ detail 호출 X
-      // ✅ matchIds를 queue에 적재 (refresh가 우선순위 높음)
       matchQueueEnqueuer.enqueueAllIdempotent(matchIds, collectionTier, PRIORITY_REFRESH);
-      Long safeCursor = summonerRefreshCursorTracker.registerRefreshBatch(
-          puuid,
-          matchIds,
-          summoner.getLastMatchStartTime()
-      );
 
-      summonerRefreshStatusUpdater.syncRefreshCursor(puuid, safeCursor);
+      Long newCursor = loadNewestMatchStartTimeSec(matchIds.get(0));
+      if (newCursor == null) {
+        newCursor = summoner.getLastMatchStartTime();
+      }
 
-      return new Result(puuid, matchIds.size(), collectionTier, safeCursor);
+      summonerRefreshStatusUpdater.syncRefreshCursor(puuid, newCursor);
+
+      return new Result(puuid, matchIds.size(), collectionTier, newCursor);
 
     } catch (Exception e) {
       log.error("Refresh enqueue failed. puuid={}", puuid, e);
-      summonerRefreshStatusUpdater.syncRefreshCursor(puuid, null);
+      summonerRefreshStatusUpdater.syncRefreshCursor(puuid, summoner.getLastMatchStartTime());
       throw e;
     }
   }
@@ -93,10 +81,19 @@ public class RefreshSummonerMatches {
     return matchIdsFinder.findMatchIdsSince(puuid, lastMatchStartTimeSecOrNull, FETCH_COUNT);
   }
 
-  /**
-   * Riot entries/by-puuid에서 SOLO 티어를 가져와서
-   * 서비스 저장 기준(Tier)로 변환한다.
-   */
+  private Long loadNewestMatchStartTimeSec(String newestMatchId) {
+    try {
+      RiotMatchDto match = riotMatchLoader.loadMatch(newestMatchId);
+      if (match == null || match.info() == null || match.info().gameStartTimestamp() == null) {
+        return null;
+      }
+      return match.info().gameStartTimestamp() / 1000L;
+    } catch (Exception e) {
+      log.warn("Failed to load newest match for cursor. matchId={}", newestMatchId, e);
+      return null;
+    }
+  }
+
   private Tier resolveCollectionTierBySolo(String puuid) {
     List<LeagueEntry> entries = leagueEntriesRefreshLoader.loadEntriesByPuuid(puuid);
 
@@ -108,7 +105,7 @@ public class RefreshSummonerMatches {
     if (solo == null || solo.tier() == null) return null;
 
     try {
-      Tier riotTier = Tier.valueOf(solo.tier()); // e.g. "EMERALD"
+      Tier riotTier = Tier.valueOf(solo.tier());
       return switch (riotTier) {
         default -> riotTier;
       };

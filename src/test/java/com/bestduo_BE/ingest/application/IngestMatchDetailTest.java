@@ -3,12 +3,12 @@ package com.bestduo_BE.ingest.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.bestduo_BE.ingest.application.port.BottomDuoRawSaver;
 import com.bestduo_BE.ingest.application.port.MatchSaver;
 import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
 import com.bestduo_BE.common.application.port.SummonerExpansionQueue;
-import com.bestduo_BE.common.application.port.SummonerRefreshCursorTracker;
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;
@@ -41,9 +41,6 @@ class IngestMatchDetailTest {
   @Mock
   private SummonerExpansionQueue summonerExpandQueue;
 
-  @Mock
-  private SummonerRefreshCursorTracker summonerRefreshCursorTracker;
-
   private IngestMatchDetail useCase;
 
   @BeforeEach
@@ -52,8 +49,7 @@ class IngestMatchDetailTest {
         riotMatchLoader,
         matchSaver,
         bottomDuoRawSaver,
-        summonerExpandQueue,
-        summonerRefreshCursorTracker
+        summonerExpandQueue
     );
   }
 
@@ -77,7 +73,6 @@ class IngestMatchDetailTest {
     verify(summonerExpandQueue).registerIfAbsent("puuid-1");
     verify(summonerExpandQueue).registerIfAbsent("puuid-2");
     verify(summonerExpandQueue).registerIfAbsent("puuid-3");
-    verify(summonerRefreshCursorTracker).confirmMatchIngested("KR_1", 12345L);
 
     assertThat(result.rawCreated()).isEqualTo(2);
     assertThat(result.matchStartTimeSec()).isEqualTo(12345L);
