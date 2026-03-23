@@ -75,13 +75,23 @@ class RefreshBatchExecutorTest {
     assertThat(result.matchIdsEnqueued()).isEqualTo(1);
   }
 
+  @Test
+  void stillForwardsRequestedTierToRefreshWorker() {
+    given(summonerJpaRepository.findRefreshTargets(2)).willReturn(List.of(summoner("p1")));
+    given(refreshSummonerMatches.execute("p1", Tier.EMERALD))
+        .willReturn(new RefreshSummonerMatches.Result("p1", 1, Tier.EMERALD, 1L));
+
+    RefreshBatchExecutor.Result result = useCase.execute(2, Tier.EMERALD);
+
+    verify(summonerJpaRepository).findRefreshTargets(2);
+    verify(refreshSummonerMatches).execute("p1", Tier.EMERALD);
+    assertThat(result.success()).isEqualTo(1);
+  }
+
   private Summoner summoner(String puuid) {
     OffsetDateTime now = OffsetDateTime.now();
     return Summoner.builder()
         .puuid(puuid)
-        .seedStatus("READY")
-        .expandStatus("READY")
-        .refreshStatus("READY")
         .createdAt(now)
         .updatedAt(now)
         .build();
