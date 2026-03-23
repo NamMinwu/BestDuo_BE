@@ -34,6 +34,10 @@ public class RefreshSummonerMatches {
    * - match_queue에 enqueue만 수행 (detail 처리는 QueueWorker가 수행)
    */
   public Result execute(String puuid) {
+    return execute(puuid, Tier.ALL_TIERS);
+  }
+
+  public Result execute(String puuid, Tier requestedTier) {
     Summoner s = summonerRefreshStatusUpdater.findOrCreate(puuid);
 
     try {
@@ -41,6 +45,11 @@ public class RefreshSummonerMatches {
 
       Tier collectionTier = resolveCollectionTierBySolo(puuid);
       if (collectionTier == null || collectionTier == Tier.ALL_TIERS) {
+        summonerRefreshStatusUpdater.markRefreshDone(puuid, s.getLastMatchStartTime());
+        return new Result(puuid, 0, collectionTier, s.getLastMatchStartTime());
+      }
+
+      if (requestedTier != null && requestedTier != Tier.ALL_TIERS && requestedTier != collectionTier) {
         summonerRefreshStatusUpdater.markRefreshDone(puuid, s.getLastMatchStartTime());
         return new Result(puuid, 0, collectionTier, s.getLastMatchStartTime());
       }

@@ -56,7 +56,7 @@ class RefreshSummonerMatchesTest {
     given(leagueEntriesRefreshLoader.loadEntriesByPuuid("p1"))
         .willReturn(List.of(new LeagueEntry("p1", "EMERALD", "RANKED_FLEX_SR", "I", 10L)));
 
-    RefreshSummonerMatches.Result result = useCase.execute("p1");
+    RefreshSummonerMatches.Result result = useCase.execute("p1", Tier.GOLD);
 
     verify(summonerRefreshStatusUpdater).markRefreshRunning("p1");
     verify(summonerRefreshStatusUpdater).markRefreshDone("p1", 1234L);
@@ -73,7 +73,7 @@ class RefreshSummonerMatchesTest {
         .willReturn(List.of(new LeagueEntry("p-new", "EMERALD", "RANKED_SOLO_5x5", "I", 200L)));
     given(matchIdsFinder.findRecentMatchIds("p-new", 50)).willReturn(List.of("m-1", "m-2"));
 
-    RefreshSummonerMatches.Result result = useCase.execute("p-new");
+    RefreshSummonerMatches.Result result = useCase.execute("p-new", Tier.EMERALD);
 
     verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-1", "m-2"), Tier.EMERALD, 10);
     verify(summonerRefreshStatusUpdater).markRefreshDone("p-new", null);
@@ -89,7 +89,7 @@ class RefreshSummonerMatchesTest {
         .willReturn(List.of(new LeagueEntry("p-mid", "DIAMOND", "RANKED_SOLO_5x5", "I", 30L)));
     given(matchIdsFinder.findMatchIdsSince("p-mid", 5678L, 50)).willReturn(List.of("m-42"));
 
-    RefreshSummonerMatches.Result result = useCase.execute("p-mid");
+    RefreshSummonerMatches.Result result = useCase.execute("p-mid", Tier.DIAMOND);
 
     verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-42"), Tier.DIAMOND, 10);
     assertThat(result.lastMatchStartTimeSec()).isEqualTo(5678L);
@@ -106,10 +106,25 @@ class RefreshSummonerMatchesTest {
         .given(matchQueueEnqueuer)
         .enqueueAllIdempotent(List.of("m-err"), Tier.MASTER, 10);
 
-    IllegalStateException ex = assertThrows(IllegalStateException.class, () -> useCase.execute("p-err"));
+    IllegalStateException ex = assertThrows(IllegalStateException.class, () -> useCase.execute("p-err", Tier.MASTER));
     assertThat(ex).hasMessageContaining("queue down");
 
     verify(summonerRefreshStatusUpdater).markRefreshError("p-err");
+  }
+
+  @Test
+  void skipWhenResolvedTierDoesNotMatchRequestedTier() {
+    Summoner summoner = summoner("p-miss", 777L);
+    given(summonerRefreshStatusUpdater.findOrCreate("p-miss")).willReturn(summoner);
+    given(leagueEntriesRefreshLoader.loadEntriesByPuuid("p-miss"))
+        .willReturn(List.of(new LeagueEntry("p-miss", "EMERALD", "RANKED_SOLO_5x5", "I", 200L)));
+
+    RefreshSummonerMatches.Result result = useCase.execute("p-miss", Tier.GOLD);
+
+    verify(summonerRefreshStatusUpdater).markRefreshDone("p-miss", 777L);
+    verifyNoInteractions(matchIdsFinder, matchQueueEnqueuer);
+    assertThat(result.matchIdsEnqueued()).isZero();
+    assertThat(result.collectionTier()).isEqualTo(Tier.EMERALD);
   }
 
   private Summoner summoner(String puuid, Long lastMatchStartTime) {
