@@ -17,28 +17,10 @@ public class SummonerSeedRegistryImpl implements SummonerSeedRegistry {
   @Override
   public boolean registerIfAbsent(String puuid) {
     try {
-      repository.save(Summoner.newReady(puuid));
+      repository.save(Summoner.create(puuid));
       return true;
     } catch (DataIntegrityViolationException e) {
       return false; // already exists
     }
-  }
-
-  @Override
-  @Transactional
-  public void markSeedRunning(String puuid) {
-    repository.findById(puuid).ifPresent(Summoner::markSeedRunning);
-  }
-
-  @Override
-  @Transactional
-  public void markSeedDone(String puuid) {
-    repository.findById(puuid).ifPresent(Summoner::markSeedDone);
-  }
-
-  @Override
-  @Transactional
-  public void markSeedError(String puuid) {
-    repository.findById(puuid).ifPresent(Summoner::markSeedError);
   }
 }
