@@ -4,11 +4,10 @@ import com.bestduo_BE.refresh.application.port.LeagueEntriesRefreshLoader;
 import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
 import com.bestduo_BE.refresh.application.port.SummonerRefreshStatusUpdater;
-import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
-import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +25,6 @@ public class RefreshSummonerMatches {
   private final LeagueEntriesRefreshLoader leagueEntriesRefreshLoader;
   private final MatchIdsFinder matchIdsFinder;
   private final MatchQueueEnqueuer matchQueueEnqueuer;
-  private final RiotMatchLoader riotMatchLoader;
 
   private final SummonerRefreshStatusUpdater summonerRefreshStatusUpdater;
 
@@ -58,11 +56,7 @@ public class RefreshSummonerMatches {
 
       matchQueueEnqueuer.enqueueAllIdempotent(matchIds, collectionTier, PRIORITY_REFRESH);
 
-      Long newCursor = loadNewestMatchStartTimeSec(matchIds.get(0));
-      if (newCursor == null) {
-        newCursor = summoner.getLastMatchStartTime();
-      }
-
+      long newCursor = Instant.now().getEpochSecond();
       summonerRefreshStatusUpdater.syncRefreshCursor(puuid, newCursor);
 
       return new Result(puuid, matchIds.size(), collectionTier, newCursor);
@@ -79,19 +73,6 @@ public class RefreshSummonerMatches {
       return matchIdsFinder.findRecentMatchIds(puuid, FETCH_COUNT);
     }
     return matchIdsFinder.findMatchIdsSince(puuid, lastMatchStartTimeSecOrNull, FETCH_COUNT);
-  }
-
-  private Long loadNewestMatchStartTimeSec(String newestMatchId) {
-    try {
-      RiotMatchDto match = riotMatchLoader.loadMatch(newestMatchId);
-      if (match == null || match.info() == null || match.info().gameStartTimestamp() == null) {
-        return null;
-      }
-      return match.info().gameStartTimestamp() / 1000L;
-    } catch (Exception e) {
-      log.warn("Failed to load newest match for cursor. matchId={}", newestMatchId, e);
-      return null;
-    }
   }
 
   private Tier resolveCollectionTierBySolo(String puuid) {
