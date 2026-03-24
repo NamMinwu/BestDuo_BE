@@ -14,6 +14,7 @@ import com.bestduo_BE.refresh.application.port.SummonerRefreshStatusUpdater;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,10 +57,9 @@ class RefreshSummonerMatchesTest {
     given(leagueEntriesRefreshLoader.loadEntriesByPuuid("p1"))
         .willReturn(List.of(new LeagueEntry("p1", "EMERALD", "RANKED_FLEX_SR", "I", 10L)));
 
-    RefreshSummonerMatches.Result result = useCase.execute("p1");
+    RefreshSummonerMatches.Result result = useCase.execute("p1", Tier.GOLD);
 
-    verify(summonerRefreshStatusUpdater).markRefreshRunning("p1");
-    verify(summonerRefreshStatusUpdater).markRefreshDone("p1", 1234L);
+    verify(summonerRefreshStatusUpdater).syncRefreshCursor("p1", 1234L);
     verifyNoInteractions(matchIdsFinder, matchQueueEnqueuer);
     assertThat(result.matchIdsEnqueued()).isZero();
     assertThat(result.collectionTier()).isNull();
@@ -73,12 +73,14 @@ class RefreshSummonerMatchesTest {
         .willReturn(List.of(new LeagueEntry("p-new", "EMERALD", "RANKED_SOLO_5x5", "I", 200L)));
     given(matchIdsFinder.findRecentMatchIds("p-new", 50)).willReturn(List.of("m-1", "m-2"));
 
-    RefreshSummonerMatches.Result result = useCase.execute("p-new");
+    long before = Instant.now().getEpochSecond();
+    RefreshSummonerMatches.Result result = useCase.execute("p-new", Tier.EMERALD);
+    long after = Instant.now().getEpochSecond();
 
     verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-1", "m-2"), Tier.EMERALD, 10);
-    verify(summonerRefreshStatusUpdater).markRefreshDone("p-new", null);
     assertThat(result.matchIdsEnqueued()).isEqualTo(2);
     assertThat(result.collectionTier()).isEqualTo(Tier.EMERALD);
+    assertThat(result.lastMatchStartTimeSec()).isBetween(before, after);
   }
 
   @Test
@@ -89,10 +91,12 @@ class RefreshSummonerMatchesTest {
         .willReturn(List.of(new LeagueEntry("p-mid", "DIAMOND", "RANKED_SOLO_5x5", "I", 30L)));
     given(matchIdsFinder.findMatchIdsSince("p-mid", 5678L, 50)).willReturn(List.of("m-42"));
 
-    RefreshSummonerMatches.Result result = useCase.execute("p-mid");
+    long before = Instant.now().getEpochSecond();
+    RefreshSummonerMatches.Result result = useCase.execute("p-mid", Tier.DIAMOND);
+    long after = Instant.now().getEpochSecond();
 
     verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-42"), Tier.DIAMOND, 10);
-    assertThat(result.lastMatchStartTimeSec()).isEqualTo(5678L);
+    assertThat(result.lastMatchStartTimeSec()).isBetween(before, after);
   }
 
   @Test
@@ -106,19 +110,33 @@ class RefreshSummonerMatchesTest {
         .given(matchQueueEnqueuer)
         .enqueueAllIdempotent(List.of("m-err"), Tier.MASTER, 10);
 
-    IllegalStateException ex = assertThrows(IllegalStateException.class, () -> useCase.execute("p-err"));
+    IllegalStateException ex = assertThrows(IllegalStateException.class, () -> useCase.execute("p-err", Tier.MASTER));
     assertThat(ex).hasMessageContaining("queue down");
 
-    verify(summonerRefreshStatusUpdater).markRefreshError("p-err");
+    verify(summonerRefreshStatusUpdater).syncRefreshCursor("p-err", null);
   }
+
+  @Test
+  void skipWhenResolvedTierDoesNotMatchRequestedTier() {
+    Summoner summoner = summoner("p-miss", 777L);
+    given(summonerRefreshStatusUpdater.findOrCreate("p-miss")).willReturn(summoner);
+    given(leagueEntriesRefreshLoader.loadEntriesByPuuid("p-miss"))
+        .willReturn(List.of(new LeagueEntry("p-miss", "EMERALD", "RANKED_SOLO_5x5", "I", 200L)));
+
+    RefreshSummonerMatches.Result result = useCase.execute("p-miss", Tier.GOLD);
+
+    verify(summonerRefreshStatusUpdater).syncRefreshCursor("p-miss", 777L);
+    verifyNoInteractions(matchIdsFinder, matchQueueEnqueuer);
+    assertThat(result.matchIdsEnqueued()).isZero();
+    assertThat(result.collectionTier()).isEqualTo(Tier.EMERALD);
+  }
+
+
 
   private Summoner summoner(String puuid, Long lastMatchStartTime) {
     OffsetDateTime now = OffsetDateTime.now();
     return Summoner.builder()
         .puuid(puuid)
-        .seedStatus("READY")
-        .expandStatus("READY")
-        .refreshStatus("READY")
         .lastMatchStartTime(lastMatchStartTime)
         .createdAt(now)
         .updatedAt(now)

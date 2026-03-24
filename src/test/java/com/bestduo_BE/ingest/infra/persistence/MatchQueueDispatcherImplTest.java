@@ -47,13 +47,13 @@ class MatchQueueDispatcherImplTest {
     MatchQueue ready1 = match("m-1", Tier.GOLD, 1);
     MatchQueue ready2 = match("m-2", Tier.SILVER, 2);
     MatchQueue error = match("m-3", Tier.BRONZE, 3);
-    given(repository.pickReadyAndLock(3)).willReturn(List.of(ready1, ready2));
-    given(repository.pickRetryableErrorAndLock(1, 2, 5)).willReturn(List.of(error));
+    given(repository.pickReadyAndLock(3, null)).willReturn(List.of(ready1, ready2));
+    given(repository.pickRetryableErrorAndLock(1, 2, 5, null)).willReturn(List.of(error));
 
     List<Item> items = coordinator.pickAndLock(3, 2, 5);
 
-    verify(repository).pickReadyAndLock(3);
-    verify(repository).pickRetryableErrorAndLock(1, 2, 5);
+    verify(repository).pickReadyAndLock(3, null);
+    verify(repository).pickRetryableErrorAndLock(1, 2, 5, null);
     assertThat(items).containsExactly(
         new Item("m-1", Tier.GOLD, 1),
         new Item("m-2", Tier.SILVER, 2),
@@ -65,16 +65,29 @@ class MatchQueueDispatcherImplTest {
   void skipsRetryableErrorsWhenReadyFillLimit() {
     MatchQueue ready1 = match("m-1", Tier.EMERALD, 1);
     MatchQueue ready2 = match("m-2", Tier.EMERALD, 2);
-    given(repository.pickReadyAndLock(2)).willReturn(List.of(ready1, ready2));
+    given(repository.pickReadyAndLock(2, null)).willReturn(List.of(ready1, ready2));
 
     List<Item> items = coordinator.pickAndLock(2, 2, 5);
 
-    verify(repository).pickReadyAndLock(2);
-    verify(repository, never()).pickRetryableErrorAndLock(anyInt(), anyInt(), anyInt());
+    verify(repository).pickReadyAndLock(2, null);
+    verify(repository, never()).pickRetryableErrorAndLock(anyInt(), anyInt(), anyInt(), org.mockito.ArgumentMatchers.<String>any());
     assertThat(items).containsExactly(
         new Item("m-1", Tier.EMERALD, 1),
         new Item("m-2", Tier.EMERALD, 2)
     );
+  }
+
+  @Test
+  void pickAndLockFiltersByRequestedTier() {
+    MatchQueue ready = match("m-gold", Tier.GOLD, 1);
+    given(repository.pickReadyAndLock(2, "GOLD")).willReturn(List.of(ready));
+    given(repository.pickRetryableErrorAndLock(1, 2, 5, "GOLD")).willReturn(List.of());
+
+    List<Item> items = coordinator.pickAndLock(2, 2, 5, Tier.GOLD);
+
+    verify(repository).pickReadyAndLock(2, "GOLD");
+    verify(repository).pickRetryableErrorAndLock(1, 2, 5, "GOLD");
+    assertThat(items).containsExactly(new Item("m-gold", Tier.GOLD, 1));
   }
 
   @Test

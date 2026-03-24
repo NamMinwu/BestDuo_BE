@@ -25,14 +25,21 @@ public class MatchQueueDispatcherImpl implements MatchQueueDispatcher {
   @Override
   @Transactional
   public List<Item> pickAndLock(int limit, int maxRetry, int errorCooldownMinutes) {
-    List<Item> out = new ArrayList<>();
+    return pickAndLock(limit, maxRetry, errorCooldownMinutes, Tier.ALL_TIERS);
+  }
 
-    List<MatchQueue> ready = repo.pickReadyAndLock(limit);
+  @Override
+  @Transactional
+  public List<Item> pickAndLock(int limit, int maxRetry, int errorCooldownMinutes, Tier requestedTier) {
+    List<Item> out = new ArrayList<>();
+    String collectionTier = toCollectionTier(requestedTier);
+
+    List<MatchQueue> ready = repo.pickReadyAndLock(limit, collectionTier);
     out.addAll(toItems(ready));
 
     int remaining = limit - ready.size();
     if (remaining > 0) {
-      List<MatchQueue> errs = repo.pickRetryableErrorAndLock(remaining, maxRetry, errorCooldownMinutes);
+      List<MatchQueue> errs = repo.pickRetryableErrorAndLock(remaining, maxRetry, errorCooldownMinutes, collectionTier);
       out.addAll(toItems(errs));
     }
 
@@ -66,5 +73,12 @@ public class MatchQueueDispatcherImpl implements MatchQueueDispatcher {
       out.add(new Item(mq.getMatchId(), tier, mq.getPriority()));
     }
     return out;
+  }
+
+  private String toCollectionTier(Tier requestedTier) {
+    if (requestedTier == null || requestedTier == Tier.ALL_TIERS) {
+      return null;
+    }
+    return requestedTier.name();
   }
 }

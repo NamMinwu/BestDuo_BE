@@ -42,6 +42,7 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
       select mq.match_id
       from match_queue mq
       where mq.status = 'READY'
+        and (:collectionTier is null or mq.collection_tier = :collectionTier)
       order by mq.priority asc, mq.updated_at asc
       limit :limit
     )
@@ -51,9 +52,10 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
         updated_at = now()
     where mq.match_id in (select match_id from candidates)
       and mq.status = 'READY'
+      and (:collectionTier is null or mq.collection_tier = :collectionTier)
     returning mq.*
     """, nativeQuery = true)
-  List<MatchQueue> pickReadyAndLock(@Param("limit") int limit);
+  List<MatchQueue> pickReadyAndLock(@Param("limit") int limit, @Param("collectionTier") String collectionTier);
 
   // 3) ERROR 중 재시도 가능한 것만 pick&lock (cooldown + maxRetry)
   @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -64,6 +66,7 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
       where mq.status = 'ERROR'
         and mq.retry_count < :maxRetry
         and mq.updated_at <= now() - (:cooldownMinutes || ' minutes')::interval
+        and (:collectionTier is null or mq.collection_tier = :collectionTier)
       order by mq.priority asc, mq.updated_at asc
       limit :limit
     )
@@ -75,12 +78,14 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
       and mq.status = 'ERROR'
       and mq.retry_count < :maxRetry
       and mq.updated_at <= now() - (:cooldownMinutes || ' minutes')::interval
+      and (:collectionTier is null or mq.collection_tier = :collectionTier)
     returning mq.*
     """, nativeQuery = true)
   List<MatchQueue> pickRetryableErrorAndLock(
       @Param("limit") int limit,
       @Param("maxRetry") int maxRetry,
-      @Param("cooldownMinutes") int cooldownMinutes
+      @Param("cooldownMinutes") int cooldownMinutes,
+      @Param("collectionTier") String collectionTier
   );
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)

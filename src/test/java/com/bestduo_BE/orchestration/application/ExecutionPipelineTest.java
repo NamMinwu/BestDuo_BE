@@ -56,13 +56,13 @@ class ExecutionPipelineTest {
   @Test
   void executeRunsEnabledPhasesAndAggregatesCounts() {
     ExecutionPipeline.ExecutionCommand cmd = new ExecutionPipeline.ExecutionCommand(
-        20, 20, 80, true, true, 5, 10, 3, seedCommand
+        20, 20, 80, true, true, 5, 10, 3, seedCommand, Tier.GOLD
     );
     given(seedBootstrapExecutor.execute(seedCommand))
         .willReturn(new SeedBootstrapExecutor.SeedBootstrapResult(1, 2, 3, 4, 5));
-    given(refreshBatchExecutor.execute(5))
+    given(refreshBatchExecutor.execute(5, Tier.GOLD))
         .willReturn(new RefreshBatchExecutor.Result(2, 2, 0, 7));
-    given(matchIngestWorker.execute(10))
+    given(matchIngestWorker.execute(10, Tier.GOLD))
         .willReturn(
             new MatchIngestWorker.Result(0, 2, 5, 5, 0, 5),
             new MatchIngestWorker.Result(0, 0, 0, 0, 0, 0)
@@ -71,8 +71,8 @@ class ExecutionPipelineTest {
     ExecutionPipeline.Result result = useCase.execute(cmd);
 
     verify(seedBootstrapExecutor).execute(seedCommand);
-    verify(refreshBatchExecutor).execute(5);
-    verify(matchIngestWorker, times(2)).execute(10);
+    verify(refreshBatchExecutor).execute(5, Tier.GOLD);
+    verify(matchIngestWorker, times(2)).execute(10, Tier.GOLD);
     assertThat(result.status()).isEqualTo("DONE");
     assertThat(result.remainingBudget()).isEqualTo(120);
     assertThat(result.seedEnqueued()).isEqualTo(5);
@@ -88,9 +88,9 @@ class ExecutionPipelineTest {
   @Test
   void executeStopsWhenBudgetExhausted() {
     ExecutionPipeline.ExecutionCommand cmd = new ExecutionPipeline.ExecutionCommand(
-        0, 0, 50, false, false, 0, 10, 1, seedCommand
+        0, 0, 50, false, false, 0, 10, 1, seedCommand, Tier.ALL_TIERS
     );
-    given(matchIngestWorker.execute(10))
+    given(matchIngestWorker.execute(10, Tier.ALL_TIERS))
         .willThrow(new BudgetExhaustedException("budget gone"));
 
     ExecutionPipeline.Result result = useCase.execute(cmd);
@@ -107,9 +107,9 @@ class ExecutionPipelineTest {
   @Test
   void executeStopsWhenRateLimited() {
     ExecutionPipeline.ExecutionCommand cmd = new ExecutionPipeline.ExecutionCommand(
-        0, 0, 80, false, false, 0, 10, 1, seedCommand
+        0, 0, 80, false, false, 0, 10, 1, seedCommand, Tier.ALL_TIERS
     );
-    given(matchIngestWorker.execute(10))
+    given(matchIngestWorker.execute(10, Tier.ALL_TIERS))
         .willThrow(new RiotRateLimitedException("slow down"));
 
     ExecutionPipeline.Result result = useCase.execute(cmd);

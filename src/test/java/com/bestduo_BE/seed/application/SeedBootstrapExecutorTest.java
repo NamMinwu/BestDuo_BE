@@ -76,9 +76,7 @@ class SeedBootstrapExecutorTest {
 
     SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(command);
 
-    verify(summonerSeedRegistry).markSeedRunning("new-1");
     verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-1", "m-2"), Tier.MASTER, 50);
-    verify(summonerSeedRegistry).markSeedDone("new-1");
     verify(matchIdsFinder, never()).findRecentMatchIds(eq("existing"), anyInt());
 
     assertThat(result.pagesProcessed()).isEqualTo(1);
@@ -97,8 +95,6 @@ class SeedBootstrapExecutorTest {
 
     SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(command);
 
-    verify(summonerSeedRegistry).markSeedRunning("p-error");
-    verify(summonerSeedRegistry).markSeedError("p-error");
     assertThat(result.matchIdsFetched()).isZero();
     assertThat(result.matchIdsEnqueued()).isZero();
   }

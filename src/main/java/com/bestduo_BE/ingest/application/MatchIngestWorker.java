@@ -1,5 +1,6 @@
 package com.bestduo_BE.ingest.application;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.ingest.application.port.MatchQueueDispatcher;
 import com.bestduo_BE.common.infra.riot.budget.BudgetExhaustedException;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
@@ -27,6 +28,10 @@ public class MatchIngestWorker {
    * - Budget/429는 세션 종료 신호: unlockToReady 후 예외 전파
    */
   public Result execute(int limit) {
+    return execute(limit, Tier.ALL_TIERS);
+  }
+
+  public Result execute(int limit, Tier requestedTier) {
     int recovered = queue.recoverStaleRunning(STALE_MINUTES);
 
     int processed = 0;
@@ -34,7 +39,7 @@ public class MatchIngestWorker {
     int done = 0;
     int error = 0;
 
-    var items = queue.pickAndLock(limit, MAX_RETRY, ERROR_COOLDOWN_MINUTES);
+    var items = queue.pickAndLock(limit, MAX_RETRY, ERROR_COOLDOWN_MINUTES, requestedTier);
 
     for (MatchQueueDispatcher.Item item : items) {
       String matchId = item.matchId();

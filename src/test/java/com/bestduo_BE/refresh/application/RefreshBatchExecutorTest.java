@@ -35,14 +35,14 @@ class RefreshBatchExecutorTest {
   void aggregateSuccessAndFailureCounts() {
     List<Summoner> targets = List.of(summoner("p1"), summoner("p2"), summoner("p3"));
     given(summonerJpaRepository.findRefreshTargets(3)).willReturn(targets);
-    given(refreshSummonerMatches.execute("p1"))
+    given(refreshSummonerMatches.execute("p1", Tier.GOLD))
         .willReturn(new RefreshSummonerMatches.Result("p1", 2, Tier.GOLD, 1L));
-    given(refreshSummonerMatches.execute("p2"))
+    given(refreshSummonerMatches.execute("p2", Tier.GOLD))
         .willReturn(new RefreshSummonerMatches.Result("p2", 5, Tier.SILVER, 2L));
-    given(refreshSummonerMatches.execute("p3"))
+    given(refreshSummonerMatches.execute("p3", Tier.GOLD))
         .willThrow(new IllegalStateException("down"));
 
-    RefreshBatchExecutor.Result result = useCase.execute(3);
+    RefreshBatchExecutor.Result result = useCase.execute(3, Tier.GOLD);
 
     verify(summonerJpaRepository).findRefreshTargets(3);
     assertThat(result.processed()).isEqualTo(3);
@@ -55,7 +55,7 @@ class RefreshBatchExecutorTest {
   void returnZerosWhenNoTargetsFound() {
     given(summonerJpaRepository.findRefreshTargets(5)).willReturn(List.of());
 
-    RefreshBatchExecutor.Result result = useCase.execute(5);
+    RefreshBatchExecutor.Result result = useCase.execute(5, Tier.ALL_TIERS);
 
     assertThat(result.processed()).isZero();
     assertThat(result.success()).isZero();
@@ -63,13 +63,35 @@ class RefreshBatchExecutorTest {
     assertThat(result.matchIdsEnqueued()).isZero();
   }
 
+  @Test
+  void defaultExecuteUsesAllTiers() {
+    given(summonerJpaRepository.findRefreshTargets(1)).willReturn(List.of(summoner("p1")));
+    given(refreshSummonerMatches.execute("p1", Tier.ALL_TIERS))
+        .willReturn(new RefreshSummonerMatches.Result("p1", 1, Tier.GOLD, 1L));
+
+    RefreshBatchExecutor.Result result = useCase.execute(1);
+
+    verify(refreshSummonerMatches).execute("p1", Tier.ALL_TIERS);
+    assertThat(result.matchIdsEnqueued()).isEqualTo(1);
+  }
+
+  @Test
+  void stillForwardsRequestedTierToRefreshWorker() {
+    given(summonerJpaRepository.findRefreshTargets(2)).willReturn(List.of(summoner("p1")));
+    given(refreshSummonerMatches.execute("p1", Tier.EMERALD))
+        .willReturn(new RefreshSummonerMatches.Result("p1", 1, Tier.EMERALD, 1L));
+
+    RefreshBatchExecutor.Result result = useCase.execute(2, Tier.EMERALD);
+
+    verify(summonerJpaRepository).findRefreshTargets(2);
+    verify(refreshSummonerMatches).execute("p1", Tier.EMERALD);
+    assertThat(result.success()).isEqualTo(1);
+  }
+
   private Summoner summoner(String puuid) {
     OffsetDateTime now = OffsetDateTime.now();
     return Summoner.builder()
         .puuid(puuid)
-        .seedStatus("READY")
-        .expandStatus("READY")
-        .refreshStatus("READY")
         .createdAt(now)
         .updatedAt(now)
         .build();

@@ -112,13 +112,9 @@ public class SeedBootstrapExecutor {
   }
 
   private void processRegisteredPuuid(String puuid, SeedBootstrapCommand cmd, SeedBootstrapProgress progress) {
-    summonerSeedRegistry.markSeedRunning(puuid);
-
     try {
       enqueueRecentMatches(puuid, cmd, progress);
-      summonerSeedRegistry.markSeedDone(puuid);
-    } catch (Exception ex) {
-      summonerSeedRegistry.markSeedError(puuid);
+    } catch (Exception ignored) {
     }
   }
 
