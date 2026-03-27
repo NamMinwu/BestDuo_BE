@@ -25,12 +25,12 @@ class BottomDuoStatAggregatorImplTest {
   }
 
   @Test
-  void aggregateAllDelegatesToRepository() {
-    when(repository.upsertAllFromRaw()).thenReturn(42);
+  void aggregateDelegatesScopedPatchAndTierToRepository() {
+    when(repository.upsertFromRawByScope("14.10", "EMERALD")).thenReturn(42);
 
-    int updatedRows = aggregator.aggregateAll();
+    int updatedRows = aggregator.aggregate("14.10", "EMERALD");
 
     assertThat(updatedRows).isEqualTo(42);
-    verify(repository).upsertAllFromRaw();
+    verify(repository).upsertFromRawByScope("14.10", "EMERALD");
   }
 }
