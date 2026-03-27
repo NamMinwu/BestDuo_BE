@@ -3,6 +3,8 @@ package com.bestduo_BE.aggregate.infra.persistence.repository;
 import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAggregate;
 import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAggregateId;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +12,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface BottomDuoStatAggregateJpaRepository extends JpaRepository<BottomDuoStatAggregate, BottomDuoStatAggregateId> {
+  Pattern PATCH_VERSION_PATTERN = Pattern.compile("^(\\d+)\\.(\\d+)$");
+
   // ✅ Phase3 집계: raw -> agg upsert
   @Modifying
   @Transactional
@@ -54,6 +58,8 @@ public interface BottomDuoStatAggregateJpaRepository extends JpaRepository<Botto
         now(),
         now()
       from bottom_duo_raw r
+      where coalesce(r.patch, 'UNKNOWN') = :patchVersion
+        and (:tier is null or r.collection_tier = :tier)
       group by
         coalesce(r.patch, 'UNKNOWN'),
         r.adc_champion_id,
@@ -70,7 +76,10 @@ public interface BottomDuoStatAggregateJpaRepository extends JpaRepository<Botto
         ranking_status = excluded.ranking_status,
         updated_at = now()
       """, nativeQuery = true)
-  int upsertAllFromRaw();
+  int upsertFromRawByScope(
+      @Param("patchVersion") String patchVersion,
+      @Param("tier") String tier
+  );
 
   @Query(value = """
       select coalesce(sum(games), 0)
@@ -83,24 +92,60 @@ public interface BottomDuoStatAggregateJpaRepository extends JpaRepository<Botto
       @Param("patchVersion") String patchVersion,
       @Param("tier") String tier);
 
-  @Query(value = """
-      select patch_version
-      from bottom_duo_stat_agg
-      order by updated_at desc
-      limit 1
-      """, nativeQuery = true)
-  String findLatestPatchVersion();
+  @Query("""
+      select distinct b.patchVersion
+      from BottomDuoStatAggregate b
+      where b.patchVersion is not null
+        and b.patchVersion <> 'UNKNOWN'
+      """)
+  List<String> findCandidatePatchVersions();
 
-  @Query(value = """
-      select patch_version
-      from bottom_duo_stat_agg
-      where patch_version < :currentPatch
-      order by patch_version desc
-      limit 1
-      """, nativeQuery = true)
-  String findPreviousPatchVersion(@Param("currentPatch") String currentPatch);
+  default String findLatestPatchVersion() {
+    return findCandidatePatchVersions().stream()
+        .filter(BottomDuoStatAggregateJpaRepository::isParseablePatchVersion)
+        .max(BottomDuoStatAggregateJpaRepository::comparePatchVersion)
+        .orElse(null);
+  }
+
+  default String findPreviousPatchVersion(@Param("currentPatch") String currentPatch) {
+    if (!isParseablePatchVersion(currentPatch)) {
+      return null;
+    }
+
+    return findCandidatePatchVersions().stream()
+        .filter(BottomDuoStatAggregateJpaRepository::isParseablePatchVersion)
+        .filter(candidate -> comparePatchVersion(candidate, currentPatch) < 0)
+        .max(BottomDuoStatAggregateJpaRepository::comparePatchVersion)
+        .orElse(null);
+  }
 
   List<BottomDuoStatAggregate> findByPatchVersion(String patchVersion);
+
+  List<BottomDuoStatAggregate> findByPatchVersionAndTier(String patchVersion, String tier);
+
+  private static boolean isParseablePatchVersion(String raw) {
+    return raw != null && PATCH_VERSION_PATTERN.matcher(raw.trim()).matches();
+  }
+
+  private static int comparePatchVersion(String left, String right) {
+    int byMajor = Integer.compare(patchMajor(left), patchMajor(right));
+    if (byMajor != 0) {
+      return byMajor;
+    }
+    return Integer.compare(patchMinor(left), patchMinor(right));
+  }
+
+  private static int patchMajor(String raw) {
+    Matcher matcher = PATCH_VERSION_PATTERN.matcher(raw.trim());
+    matcher.matches();
+    return Integer.parseInt(matcher.group(1));
+  }
+
+  private static int patchMinor(String raw) {
+    Matcher matcher = PATCH_VERSION_PATTERN.matcher(raw.trim());
+    matcher.matches();
+    return Integer.parseInt(matcher.group(2));
+  }
 
   // ✅ WINRATE DESC
   @Query(value = """
