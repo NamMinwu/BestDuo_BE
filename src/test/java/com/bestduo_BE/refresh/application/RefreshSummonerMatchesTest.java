@@ -77,6 +77,7 @@ class RefreshSummonerMatchesTest {
     RefreshSummonerMatches.Result result = useCase.execute("p-new", Tier.EMERALD);
     long after = Instant.now().getEpochSecond();
 
+    verify(summonerRefreshStatusUpdater).syncResolvedTier(org.mockito.ArgumentMatchers.eq("p-new"), org.mockito.ArgumentMatchers.eq(Tier.EMERALD), org.mockito.ArgumentMatchers.any(OffsetDateTime.class));
     verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-1", "m-2"), Tier.EMERALD, 10);
     assertThat(result.matchIdsEnqueued()).isEqualTo(2);
     assertThat(result.collectionTier()).isEqualTo(Tier.EMERALD);
@@ -125,6 +126,7 @@ class RefreshSummonerMatchesTest {
 
     RefreshSummonerMatches.Result result = useCase.execute("p-miss", Tier.GOLD);
 
+    verify(summonerRefreshStatusUpdater).syncResolvedTier(org.mockito.ArgumentMatchers.eq("p-miss"), org.mockito.ArgumentMatchers.eq(Tier.EMERALD), org.mockito.ArgumentMatchers.any(OffsetDateTime.class));
     verify(summonerRefreshStatusUpdater).syncRefreshCursor("p-miss", 777L);
     verifyNoInteractions(matchIdsFinder, matchQueueEnqueuer);
     assertThat(result.matchIdsEnqueued()).isZero();
