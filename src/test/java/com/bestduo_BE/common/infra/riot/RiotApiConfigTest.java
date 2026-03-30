@@ -21,8 +21,10 @@ class RiotApiConfigTest {
 
     RiotKeyPool keyPool = config.riotKeyPool(properties);
 
-    try (KeyLease first = keyPool.lease(); KeyLease second = keyPool.lease()) {
+    try (KeyLease first = keyPool.lease()) {
       assertThat(first.apiKey()).isEqualTo("single-key");
+    }
+    try (KeyLease second = keyPool.lease()) {
       assertThat(second.apiKey()).isEqualTo("single-key");
     }
   }
@@ -36,8 +38,10 @@ class RiotApiConfigTest {
 
     RiotKeyPool keyPool = config.riotKeyPool(properties);
 
-    try (KeyLease first = keyPool.lease(); KeyLease second = keyPool.lease()) {
+    try (KeyLease first = keyPool.lease()) {
       assertThat(first.apiKey()).isEqualTo("key-a");
+    }
+    try (KeyLease second = keyPool.lease()) {
       assertThat(second.apiKey()).isEqualTo("key-b");
     }
   }
@@ -51,8 +55,10 @@ class RiotApiConfigTest {
 
     RiotKeyPool keyPool = config.riotKeyPool(properties);
 
-    try (KeyLease first = keyPool.lease(); KeyLease second = keyPool.lease()) {
+    try (KeyLease first = keyPool.lease()) {
       assertThat(first.apiKey()).isEqualTo("single-key");
+    }
+    try (KeyLease second = keyPool.lease()) {
       assertThat(second.apiKey()).isEqualTo("single-key");
     }
   }

@@ -22,7 +22,7 @@ public class RiotRateLimitInterceptor implements ClientHttpRequestInterceptor {
   ) throws IOException {
 
     RiotRequestBudget.consume(1);
-    try (KeyLease lease = keyPool.lease()) {
+    try (KeyLease lease = keyPool.leaseForRequest()) {
       request.getHeaders().set("X-Riot-Token", lease.apiKey());
       lease.acquire();
 

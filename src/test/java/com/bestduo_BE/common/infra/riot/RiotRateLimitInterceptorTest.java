@@ -39,7 +39,7 @@ class RiotRateLimitInterceptorTest {
   void acquireCalledAndResponseReturnedWhenRequestSucceeds() throws Exception {
     ClientHttpRequestExecution execution = mock(ClientHttpRequestExecution.class);
     ClientHttpResponse ok = new MockClientHttpResponse(new byte[0], HttpStatus.OK);
-    when(keyPool.lease()).thenReturn(keyLease);
+    when(keyPool.leaseForRequest()).thenReturn(keyLease);
     when(keyLease.apiKey()).thenReturn("key-a");
     when(execution.execute(any(), any())).thenReturn(ok);
 
@@ -58,8 +58,7 @@ class RiotRateLimitInterceptorTest {
     headers.set("Retry-After", "10");
     when(tooMany.getStatusCode()).thenReturn(HttpStatus.TOO_MANY_REQUESTS);
     when(tooMany.getHeaders()).thenReturn(headers);
-    tooMany.getHeaders().set("Retry-After", "10");
-    when(keyPool.lease()).thenReturn(keyLease);
+    when(keyPool.leaseForRequest()).thenReturn(keyLease);
     when(keyLease.apiKey()).thenReturn("key-a");
     when(execution.execute(any(), any())).thenReturn(tooMany);
 
@@ -77,7 +76,7 @@ class RiotRateLimitInterceptorTest {
   void doesNotMarkRateLimitedWhenRequestSucceeds() throws Exception {
     ClientHttpRequestExecution execution = mock(ClientHttpRequestExecution.class);
     ClientHttpResponse ok = new MockClientHttpResponse(new byte[0], HttpStatus.OK);
-    when(keyPool.lease()).thenReturn(keyLease);
+    when(keyPool.leaseForRequest()).thenReturn(keyLease);
     when(keyLease.apiKey()).thenReturn("key-a");
     when(execution.execute(any(), any())).thenReturn(ok);
 
