@@ -35,12 +35,35 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
       """, nativeQuery = true)
   int insertIfAbsent(@Param("puuid") String puuid, @Param("now") OffsetDateTime now);
 
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = """
+      update summoner
+      set last_known_tier = :lastKnownTier,
+          tier_observed_at = :tierObservedAt,
+          updated_at = now()
+      where puuid = :puuid
+      """, nativeQuery = true)
+  int updateTierMetadata(
+      @Param("puuid") String puuid,
+      @Param("lastKnownTier") String lastKnownTier,
+      @Param("tierObservedAt") OffsetDateTime tierObservedAt
+  );
+
   @Query(value = """
       select s.*
       from summoner s
-      order by s.updated_at asc
+      order by
+        case
+          when :requestedTier = 'ALL_TIERS' then 0
+          when s.last_known_tier = :requestedTier then 0
+          when s.last_known_tier is null then 1
+          else 2
+        end asc,
+        case when s.tier_observed_at is null then 0 else 1 end asc,
+        s.tier_observed_at asc,
+        s.updated_at asc
       limit :limit
       """, nativeQuery = true)
-  List<Summoner> findRefreshTargets(@Param("limit") int limit);
+  List<Summoner> findRefreshTargets(@Param("limit") int limit, @Param("requestedTier") String requestedTier);
 
 }
