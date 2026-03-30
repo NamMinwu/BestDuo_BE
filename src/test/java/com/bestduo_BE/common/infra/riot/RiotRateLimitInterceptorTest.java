@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -52,7 +53,11 @@ class RiotRateLimitInterceptorTest {
   @Test
   void throwsRiotRateLimitedExceptionOnTooManyRequests() throws Exception {
     ClientHttpRequestExecution execution = mock(ClientHttpRequestExecution.class);
-    MockClientHttpResponse tooMany = new MockClientHttpResponse(new byte[0], HttpStatus.TOO_MANY_REQUESTS);
+    ClientHttpResponse tooMany = mock(ClientHttpResponse.class);
+    var headers = new org.springframework.http.HttpHeaders();
+    headers.set("Retry-After", "10");
+    when(tooMany.getStatusCode()).thenReturn(HttpStatus.TOO_MANY_REQUESTS);
+    when(tooMany.getHeaders()).thenReturn(headers);
     tooMany.getHeaders().set("Retry-After", "10");
     when(keyPool.lease()).thenReturn(keyLease);
     when(keyLease.apiKey()).thenReturn("key-a");
@@ -65,5 +70,19 @@ class RiotRateLimitInterceptorTest {
 
     verify(keyLease).acquire();
     verify(keyLease).markRateLimited(Duration.ofSeconds(10));
+    verify(tooMany).close();
+  }
+
+  @Test
+  void doesNotMarkRateLimitedWhenRequestSucceeds() throws Exception {
+    ClientHttpRequestExecution execution = mock(ClientHttpRequestExecution.class);
+    ClientHttpResponse ok = new MockClientHttpResponse(new byte[0], HttpStatus.OK);
+    when(keyPool.lease()).thenReturn(keyLease);
+    when(keyLease.apiKey()).thenReturn("key-a");
+    when(execution.execute(any(), any())).thenReturn(ok);
+
+    interceptor.intercept(request, new byte[0], execution);
+
+    verify(keyLease, never()).markRateLimited(any());
   }
 }

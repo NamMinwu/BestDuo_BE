@@ -49,6 +49,21 @@ class RiotKeyPoolTest {
         .hasMessageContaining("All Riot API keys are cooling down");
   }
 
+  @Test
+  void longerCooldownIsNotShortenedByLaterShorterRetryAfter() {
+    MutableClock clock = new MutableClock(Instant.parse("2026-03-30T00:00:00Z"));
+    RiotKeyState state = new RiotKeyState("key-a", new DualWindowRateLimiter(10, Duration.ofMillis(1), 60, Duration.ofMinutes(2)), clock);
+
+    state.markRateLimited(Duration.ofSeconds(30));
+    clock.advance(Duration.ofSeconds(5));
+    state.markRateLimited(Duration.ofSeconds(1));
+    clock.advance(Duration.ofSeconds(20));
+
+    assertThat(state.isAvailable()).isFalse();
+    clock.advance(Duration.ofSeconds(5));
+    assertThat(state.isAvailable()).isTrue();
+  }
+
   private static final class MutableClock extends Clock {
     private Instant instant;
 
@@ -69,6 +84,10 @@ class RiotKeyPoolTest {
     @Override
     public Instant instant() {
       return instant;
+    }
+
+    private void advance(Duration duration) {
+      this.instant = this.instant.plus(duration);
     }
   }
 }

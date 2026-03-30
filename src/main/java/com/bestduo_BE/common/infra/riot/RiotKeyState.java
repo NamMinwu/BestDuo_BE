@@ -32,6 +32,9 @@ public class RiotKeyState {
 
   public synchronized void markRateLimited(Duration retryAfter) {
     Duration cooldown = retryAfter == null || retryAfter.isNegative() ? Duration.ofSeconds(10) : retryAfter;
-    this.cooldownUntil = clock.instant().plus(cooldown);
+    Instant candidateCooldownUntil = clock.instant().plus(cooldown);
+    if (candidateCooldownUntil.isAfter(this.cooldownUntil)) {
+      this.cooldownUntil = candidateCooldownUntil;
+    }
   }
 }

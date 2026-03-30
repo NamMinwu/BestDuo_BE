@@ -21,6 +21,7 @@ public class RiotApiProperties {
   public List<String> resolvedApiKeys() {
     List<String> sanitizedKeys = apiKeys == null ? List.of() : apiKeys.stream()
           .filter(key -> key != null && !key.isBlank())
+          .map(String::trim)
           .distinct()
           .toList();
 
@@ -32,6 +33,6 @@ public class RiotApiProperties {
       return List.of();
     }
 
-    return List.of(apiKey);
+    return List.of(apiKey.trim());
   }
 }

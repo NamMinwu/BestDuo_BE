@@ -26,4 +26,24 @@ class RiotApiPropertiesTest {
 
     assertThat(properties.resolvedApiKeys()).containsExactly("key-a", "key-b");
   }
+
+  @Test
+  void resolvedApiKeysTrimsAndDeduplicatesConfiguredKeys() {
+    RiotApiProperties properties = new RiotApiProperties();
+    properties.setApiKey("  single-key  ");
+    properties.setApiKeys(List.of(" key-a ", "key-a", " key-b "));
+    properties.setMultiKeyEnabled(true);
+
+    assertThat(properties.resolvedApiKeys()).containsExactly("key-a", "key-b");
+  }
+
+  @Test
+  void resolvedApiKeysTrimsSingleKeyFallback() {
+    RiotApiProperties properties = new RiotApiProperties();
+    properties.setApiKey("  single-key  ");
+    properties.setApiKeys(List.of(" ", ""));
+    properties.setMultiKeyEnabled(true);
+
+    assertThat(properties.resolvedApiKeys()).containsExactly("single-key");
+  }
 }

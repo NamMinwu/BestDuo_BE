@@ -33,6 +33,7 @@ public class RiotRateLimitInterceptor implements ClientHttpRequestInterceptor {
         lease.markRateLimited(parseRetryAfter(retryAfter));
         String msg = "Riot API rate limited (429). retry-after=" + retryAfter
             + ", uri=" + request.getURI();
+        response.close();
 
         throw new RiotRateLimitedException(msg);
       }
