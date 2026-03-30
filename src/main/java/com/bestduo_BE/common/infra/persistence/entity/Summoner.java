@@ -1,7 +1,10 @@
 package com.bestduo_BE.common.infra.persistence.entity;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
@@ -26,6 +29,16 @@ public class Summoner {
   @Column(name = "last_match_start_time")
   private Long lastMatchStartTime; // epoch seconds
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "last_known_tier")
+  private Tier lastKnownTier;
+
+  @Column(name = "tier_observed_at")
+  private OffsetDateTime tierObservedAt;
+
+  @Column(name = "last_seen_patch")
+  private String lastSeenPatch;
+
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
 
@@ -37,9 +50,18 @@ public class Summoner {
     return Summoner.builder()
         .puuid(puuid)
         .lastMatchStartTime(null)
+        .lastKnownTier(null)
+        .tierObservedAt(null)
+        .lastSeenPatch(null)
         .createdAt(now)
         .updatedAt(now)
         .build();
+  }
+
+  public void observeTier(Tier tier, OffsetDateTime observedAt) {
+    this.lastKnownTier = tier;
+    this.tierObservedAt = observedAt;
+    this.updatedAt = OffsetDateTime.now();
   }
 
   public void advanceLastMatchStartTime(Long newLastMatchStartTimeOrNull) {
