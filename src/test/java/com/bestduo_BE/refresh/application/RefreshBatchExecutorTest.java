@@ -34,7 +34,7 @@ class RefreshBatchExecutorTest {
   @Test
   void aggregateSuccessAndFailureCounts() {
     List<Summoner> targets = List.of(summoner("p1"), summoner("p2"), summoner("p3"));
-    given(summonerJpaRepository.findRefreshTargets(3)).willReturn(targets);
+    given(summonerJpaRepository.findRefreshTargets(3, Tier.GOLD.name())).willReturn(targets);
     given(refreshSummonerMatches.execute("p1", Tier.GOLD))
         .willReturn(new RefreshSummonerMatches.Result("p1", 2, Tier.GOLD, 1L));
     given(refreshSummonerMatches.execute("p2", Tier.GOLD))
@@ -44,7 +44,7 @@ class RefreshBatchExecutorTest {
 
     RefreshBatchExecutor.Result result = useCase.execute(3, Tier.GOLD);
 
-    verify(summonerJpaRepository).findRefreshTargets(3);
+    verify(summonerJpaRepository).findRefreshTargets(3, Tier.GOLD.name());
     assertThat(result.processed()).isEqualTo(3);
     assertThat(result.success()).isEqualTo(2);
     assertThat(result.failed()).isEqualTo(1);
@@ -53,7 +53,7 @@ class RefreshBatchExecutorTest {
 
   @Test
   void returnZerosWhenNoTargetsFound() {
-    given(summonerJpaRepository.findRefreshTargets(5)).willReturn(List.of());
+    given(summonerJpaRepository.findRefreshTargets(5, Tier.ALL_TIERS.name())).willReturn(List.of());
 
     RefreshBatchExecutor.Result result = useCase.execute(5, Tier.ALL_TIERS);
 
@@ -65,7 +65,7 @@ class RefreshBatchExecutorTest {
 
   @Test
   void defaultExecuteUsesAllTiers() {
-    given(summonerJpaRepository.findRefreshTargets(1)).willReturn(List.of(summoner("p1")));
+    given(summonerJpaRepository.findRefreshTargets(1, Tier.ALL_TIERS.name())).willReturn(List.of(summoner("p1")));
     given(refreshSummonerMatches.execute("p1", Tier.ALL_TIERS))
         .willReturn(new RefreshSummonerMatches.Result("p1", 1, Tier.GOLD, 1L));
 
@@ -77,13 +77,13 @@ class RefreshBatchExecutorTest {
 
   @Test
   void stillForwardsRequestedTierToRefreshWorker() {
-    given(summonerJpaRepository.findRefreshTargets(2)).willReturn(List.of(summoner("p1")));
+    given(summonerJpaRepository.findRefreshTargets(2, Tier.EMERALD.name())).willReturn(List.of(summoner("p1")));
     given(refreshSummonerMatches.execute("p1", Tier.EMERALD))
         .willReturn(new RefreshSummonerMatches.Result("p1", 1, Tier.EMERALD, 1L));
 
     RefreshBatchExecutor.Result result = useCase.execute(2, Tier.EMERALD);
 
-    verify(summonerJpaRepository).findRefreshTargets(2);
+    verify(summonerJpaRepository).findRefreshTargets(2, Tier.EMERALD.name());
     verify(refreshSummonerMatches).execute("p1", Tier.EMERALD);
     assertThat(result.success()).isEqualTo(1);
   }

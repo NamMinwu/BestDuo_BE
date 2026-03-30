@@ -2,6 +2,8 @@ package com.bestduo_BE.common.infra.persistence.entity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.bestduo_BE.common.domain.model.Tier;
+import java.time.OffsetDateTime;
 import org.junit.jupiter.api.Test;
 
 class SummonerTest {
@@ -12,8 +14,22 @@ class SummonerTest {
 
     assertThat(summoner.getPuuid()).isEqualTo("p-1");
     assertThat(summoner.getLastMatchStartTime()).isNull();
+    assertThat(summoner.getLastKnownTier()).isNull();
+    assertThat(summoner.getTierObservedAt()).isNull();
+    assertThat(summoner.getLastSeenPatch()).isNull();
     assertThat(summoner.getCreatedAt()).isNotNull();
     assertThat(summoner.getUpdatedAt()).isNotNull();
+  }
+
+  @Test
+  void observeTierStoresLatestTierMetadata() {
+    Summoner summoner = Summoner.create("p-tier");
+    OffsetDateTime observedAt = OffsetDateTime.now().minusMinutes(1);
+
+    summoner.observeTier(Tier.MASTER, observedAt);
+
+    assertThat(summoner.getLastKnownTier()).isEqualTo(Tier.MASTER);
+    assertThat(summoner.getTierObservedAt()).isEqualTo(observedAt);
   }
 
   @Test

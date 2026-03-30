@@ -8,6 +8,7 @@ import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,8 @@ public class RefreshSummonerMatches {
         summonerRefreshStatusUpdater.syncRefreshCursor(puuid, summoner.getLastMatchStartTime());
         return new Result(puuid, 0, collectionTier, summoner.getLastMatchStartTime());
       }
+
+      summonerRefreshStatusUpdater.syncResolvedTier(puuid, collectionTier, OffsetDateTime.now());
 
       if (requestedTier != null && requestedTier != Tier.ALL_TIERS && requestedTier != collectionTier) {
         summonerRefreshStatusUpdater.syncRefreshCursor(puuid, summoner.getLastMatchStartTime());

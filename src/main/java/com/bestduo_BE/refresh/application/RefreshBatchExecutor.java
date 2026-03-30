@@ -19,7 +19,7 @@ public class RefreshBatchExecutor {
   }
 
   public Result execute(int limit, Tier requestedTier) {
-    var targets = summonerJpaRepository.findRefreshTargets(limit);
+    var targets = summonerJpaRepository.findRefreshTargets(limit, requestedTier.name());
 
     int processed = 0;
     int success = 0;
