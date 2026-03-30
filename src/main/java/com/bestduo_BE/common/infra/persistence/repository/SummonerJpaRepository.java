@@ -1,5 +1,6 @@
 package com.bestduo_BE.common.infra.persistence.repository;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -65,5 +66,15 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
       limit :limit
       """, nativeQuery = true)
   List<Summoner> findRefreshTargets(@Param("limit") int limit, @Param("requestedTier") String requestedTier);
+
+  long countByLastKnownTier(Tier tier);
+
+  @Query(value = """
+      select count(*)
+      from summoner s
+      where (s.last_known_tier = :requestedTier or s.last_known_tier is null)
+        and s.tier_observed_at is null
+      """, nativeQuery = true)
+  long countUnverifiedCandidates(@Param("requestedTier") String requestedTier);
 
 }
