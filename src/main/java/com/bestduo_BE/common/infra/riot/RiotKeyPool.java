@@ -11,6 +11,7 @@ public class RiotKeyPool {
 
   private final List<RiotKeyState> keyStates;
   private final AtomicInteger nextIndex = new AtomicInteger();
+  private final ThreadLocal<RiotKeyState> workerLease = new ThreadLocal<>();
 
   public RiotKeyPool(List<RiotKeyState> keyStates) {
     this.keyStates = List.copyOf(keyStates);
@@ -26,7 +27,28 @@ public class RiotKeyPool {
         .toList());
   }
 
+  public KeyLease leaseForWorker() {
+    KeyLease lease = selectAvailableLease();
+    workerLease.set(keyStates.stream()
+        .filter(state -> state.apiKey().equals(lease.apiKey()))
+        .findFirst()
+        .orElseThrow());
+    return lease;
+  }
+
+  public KeyLease leaseForRequest() {
+    RiotKeyState reserved = workerLease.get();
+    if (reserved != null) {
+      return new KeyLease(reserved, false);
+    }
+    return selectAvailableLease();
+  }
+
   public KeyLease lease() {
+    return leaseForRequest();
+  }
+
+  private KeyLease selectAvailableLease() {
     if (keyStates.isEmpty()) {
       throw new IllegalStateException("No Riot API keys configured");
     }
@@ -34,7 +56,7 @@ public class RiotKeyPool {
     int start = Math.floorMod(nextIndex.getAndIncrement(), keyStates.size());
     for (int offset = 0; offset < keyStates.size(); offset++) {
       RiotKeyState state = keyStates.get((start + offset) % keyStates.size());
-      if (state.isAvailable()) {
+      if (state.tryLease()) {
         return new KeyLease(state);
       }
     }
@@ -44,5 +66,9 @@ public class RiotKeyPool {
 
   public Duration defaultRetryAfter() {
     return DEFAULT_RETRY_AFTER;
+  }
+
+  public void clearWorkerLease() {
+    workerLease.remove();
   }
 }

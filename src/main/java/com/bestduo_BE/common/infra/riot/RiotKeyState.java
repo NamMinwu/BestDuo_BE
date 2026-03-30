@@ -10,12 +10,14 @@ public class RiotKeyState {
   private final DualWindowRateLimiter rateLimiter;
   private final Clock clock;
   private Instant cooldownUntil;
+  private boolean leased;
 
   public RiotKeyState(String apiKey, DualWindowRateLimiter rateLimiter, Clock clock) {
     this.apiKey = apiKey;
     this.rateLimiter = rateLimiter;
     this.clock = clock;
     this.cooldownUntil = Instant.EPOCH;
+    this.leased = false;
   }
 
   public String apiKey() {
@@ -27,7 +29,19 @@ public class RiotKeyState {
   }
 
   public synchronized boolean isAvailable() {
-    return !clock.instant().isBefore(cooldownUntil);
+    return !leased && !clock.instant().isBefore(cooldownUntil);
+  }
+
+  public synchronized boolean tryLease() {
+    if (!isAvailable()) {
+      return false;
+    }
+    this.leased = true;
+    return true;
+  }
+
+  public synchronized void releaseLease() {
+    this.leased = false;
   }
 
   public synchronized void markRateLimited(Duration retryAfter) {

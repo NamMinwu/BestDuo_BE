@@ -64,6 +64,20 @@ class RiotKeyPoolTest {
     assertThat(state.isAvailable()).isTrue();
   }
 
+  @Test
+  void leaseForWorkerReleasesKeyOnClose() {
+    RiotKeyPool keyPool = RiotKeyPool.fromKeys(List.of("key-a"), Clock.systemUTC());
+
+    try (KeyLease ignored = keyPool.leaseForWorker()) {
+      assertThatThrownBy(keyPool::leaseForWorker)
+          .isInstanceOf(IllegalStateException.class);
+    }
+
+    try (KeyLease ignored = keyPool.leaseForWorker()) {
+      assertThat(ignored.apiKey()).isEqualTo("key-a");
+    }
+  }
+
   private static final class MutableClock extends Clock {
     private Instant instant;
 
