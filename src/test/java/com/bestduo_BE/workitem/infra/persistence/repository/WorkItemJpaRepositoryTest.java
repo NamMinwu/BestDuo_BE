@@ -48,4 +48,14 @@ class WorkItemJpaRepositoryTest {
     assertThat(count).isEqualTo(2L);
   }
 
+  @Test
+  void findFirstByStatusOrderByPriorityAscCreatedAtAscReturnsHighestPriorityReadyItem() {
+    repository.save(WorkItem.ready(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 5, 10));
+    WorkItem expected = repository.save(WorkItem.ready(1L, "15.7", Tier.MASTER, WorkItemType.REFRESH_SUMMONERS, 1, 10));
+
+    WorkItem next = repository.findFirstByStatusOrderByPriorityAscCreatedAtAsc(WorkItemStatus.READY).orElseThrow();
+
+    assertThat(next.getId()).isEqualTo(expected.getId());
+  }
+
 }

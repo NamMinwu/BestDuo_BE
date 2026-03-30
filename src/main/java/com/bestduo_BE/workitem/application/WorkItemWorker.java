@@ -4,10 +4,10 @@ import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.KeyLease;
 import com.bestduo_BE.common.infra.riot.RiotKeyPool;
-import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketJpaRepository;
 import com.bestduo_BE.ingest.application.MatchIngestWorker;
 import com.bestduo_BE.refresh.application.RefreshBatchExecutor;
 import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
+import com.bestduo_BE.workitem.domain.model.WorkItemStatus;
 import com.bestduo_BE.workitem.domain.model.WorkItemType;
 import com.bestduo_BE.workitem.infra.persistence.entity.WorkItem;
 import com.bestduo_BE.workitem.infra.persistence.repository.WorkItemJpaRepository;
@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class WorkItemWorker {
 
   private final WorkItemJpaRepository workItemJpaRepository;
-  private final CoverageBucketJpaRepository coverageBucketJpaRepository;
   private final SeedBootstrapExecutor seedBootstrapExecutor;
   private final RefreshBatchExecutor refreshBatchExecutor;
   private final MatchIngestWorker matchIngestWorker;
@@ -47,15 +46,15 @@ public class WorkItemWorker {
         ));
       }
       item.markDone();
-      return new WorkerResult(workItemId, item.getType(), "DONE");
+      return new WorkerResult(workItemId, item.getType(), WorkItemStatus.DONE);
     } catch (Exception e) {
       item.markError();
-      return new WorkerResult(workItemId, item.getType(), "ERROR");
+      return new WorkerResult(workItemId, item.getType(), WorkItemStatus.ERROR);
     } finally {
       riotKeyPool.clearWorkerLease();
     }
   }
 
-  public record WorkerResult(Long workItemId, WorkItemType type, String status) {
+  public record WorkerResult(Long workItemId, WorkItemType type, WorkItemStatus status) {
   }
 }

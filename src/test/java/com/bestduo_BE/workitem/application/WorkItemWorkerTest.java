@@ -7,10 +7,10 @@ import static org.mockito.Mockito.verify;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.KeyLease;
 import com.bestduo_BE.common.infra.riot.RiotKeyPool;
-import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketJpaRepository;
 import com.bestduo_BE.ingest.application.MatchIngestWorker;
 import com.bestduo_BE.refresh.application.RefreshBatchExecutor;
 import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
+import com.bestduo_BE.workitem.domain.model.WorkItemStatus;
 import com.bestduo_BE.workitem.domain.model.WorkItemType;
 import com.bestduo_BE.workitem.infra.persistence.entity.WorkItem;
 import com.bestduo_BE.workitem.infra.persistence.repository.WorkItemJpaRepository;
@@ -25,7 +25,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class WorkItemWorkerTest {
 
   @Mock private WorkItemJpaRepository workItemJpaRepository;
-  @Mock private CoverageBucketJpaRepository coverageBucketJpaRepository;
   @Mock private SeedBootstrapExecutor seedBootstrapExecutor;
   @Mock private RefreshBatchExecutor refreshBatchExecutor;
   @Mock private MatchIngestWorker matchIngestWorker;
@@ -38,7 +37,6 @@ class WorkItemWorkerTest {
   void setUp() {
     worker = new WorkItemWorker(
         workItemJpaRepository,
-        coverageBucketJpaRepository,
         seedBootstrapExecutor,
         refreshBatchExecutor,
         matchIngestWorker,
@@ -57,7 +55,7 @@ class WorkItemWorkerTest {
 
     verify(refreshBatchExecutor).execute(10, Tier.MASTER);
     verify(riotKeyPool).clearWorkerLease();
-    assertThat(result.status()).isEqualTo("DONE");
-    assertThat(item.getStatus().name()).isEqualTo("DONE");
+    assertThat(result.status()).isEqualTo(WorkItemStatus.DONE);
+    assertThat(item.getStatus()).isEqualTo(WorkItemStatus.DONE);
   }
 }
