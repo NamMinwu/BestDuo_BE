@@ -18,6 +18,8 @@ public interface WorkItemDispatcher {
 
   void markError(Long workItemId, String message);
 
+  void markPending(Long workItemId);
+
   long countByTypePatchTierStatus(WorkItemType type, String patch, Tier tier, WorkItemStatus status);
 
   long countByTypePatchTierStatuses(WorkItemType type, String patch, Tier tier, List<WorkItemStatus> statuses);

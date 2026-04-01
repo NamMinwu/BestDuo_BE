@@ -24,6 +24,8 @@ public class WorkerPool {
 
   @PostConstruct
   void start() {
+    // 서버 재시작 시 이전 RUNNING 아이템을 PENDING으로 복구
+    workItemDispatcher.recoverStaleRunning(workItemProperties.getStaleMinutes());
     executorService = Executors.newVirtualThreadPerTaskExecutor();
     for (int i = 0; i < workItemProperties.getPoolSize(); i++) {
       executorService.submit(this::runLoop);
@@ -33,7 +35,6 @@ public class WorkerPool {
   private void runLoop() {
     while (!Thread.currentThread().isInterrupted()) {
       try {
-        workItemDispatcher.recoverStaleRunning(workItemProperties.getStaleMinutes());
         var picked = workItemDispatcher.pickAndLock(1);
         if (picked.isEmpty()) {
           Thread.sleep(workItemProperties.getPollingIntervalMs());

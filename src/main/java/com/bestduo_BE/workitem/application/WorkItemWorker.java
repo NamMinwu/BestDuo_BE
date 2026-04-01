@@ -2,6 +2,8 @@ package com.bestduo_BE.workitem.application;
 
 import com.bestduo_BE.common.infra.riot.KeyLease;
 import com.bestduo_BE.common.infra.riot.RiotKeyPool;
+import com.bestduo_BE.common.infra.riot.budget.BudgetExhaustedException;
+import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.workitem.application.port.WorkItemDispatcher;
 import com.bestduo_BE.workitem.application.worker.WorkerContract;
 import com.bestduo_BE.workitem.domain.model.WorkItemStatus;
@@ -42,6 +44,10 @@ public class WorkItemWorker {
       worker.execute(item, ignored);
       workItemDispatcher.markDone(item.getId());
       return new WorkerResult(item.getId(), item.getType(), WorkItemStatus.DONE);
+    } catch (BudgetExhaustedException | RiotRateLimitedException e) {
+      // key 소진/rate limit — 실패가 아니라 세션 일시 중단. PENDING으로 복구해 다음 주기에 재시도.
+      workItemDispatcher.markPending(item.getId());
+      throw e;
     } catch (Exception e) {
       workItemDispatcher.markError(item.getId(), e.getMessage());
       return new WorkerResult(item.getId(), item.getType(), WorkItemStatus.ERROR);

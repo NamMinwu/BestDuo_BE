@@ -20,6 +20,9 @@ public class VerifySummonerWorker implements WorkerContract {
 
   @Override
   public void execute(WorkItem workItem, KeyLease keyLease) {
+    // RefreshBatchExecutor는 findRefreshTargets를 tier_observed_at IS NULL 우선으로 정렬하므로,
+    // 미검증 소환사(tier_observed_at = null)가 자동으로 먼저 처리된다.
+    // tier 갱신 전용 executor가 별도로 생기면 그쪽으로 교체 예정.
     refreshBatchExecutor.execute(workItem.getBatchLimit(), workItem.getTier());
   }
 }

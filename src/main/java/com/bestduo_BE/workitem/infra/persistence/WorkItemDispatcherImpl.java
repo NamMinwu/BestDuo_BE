@@ -52,6 +52,13 @@ public class WorkItemDispatcherImpl implements WorkItemDispatcher {
   }
 
   @Override
+  @Transactional
+  public void markPending(Long workItemId) {
+    WorkItem item = repository.findById(workItemId).orElseThrow();
+    item.markPending();
+  }
+
+  @Override
   public long countByTypePatchTierStatus(WorkItemType type, String patch, Tier tier, WorkItemStatus status) {
     return repository.countByTypeAndPatchAndTierAndStatus(type, patch, tier, status);
   }
