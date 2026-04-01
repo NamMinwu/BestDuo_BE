@@ -1,55 +1,50 @@
 package com.bestduo_BE.workitem.application;
 
-import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
-import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.KeyLease;
 import com.bestduo_BE.common.infra.riot.RiotKeyPool;
-import com.bestduo_BE.ingest.application.MatchIngestWorker;
-import com.bestduo_BE.refresh.application.RefreshBatchExecutor;
-import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
+import com.bestduo_BE.workitem.application.port.WorkItemDispatcher;
+import com.bestduo_BE.workitem.application.worker.WorkerContract;
 import com.bestduo_BE.workitem.domain.model.WorkItemStatus;
 import com.bestduo_BE.workitem.domain.model.WorkItemType;
 import com.bestduo_BE.workitem.infra.persistence.entity.WorkItem;
-import com.bestduo_BE.workitem.infra.persistence.repository.WorkItemJpaRepository;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class WorkItemWorker {
 
-  private final WorkItemJpaRepository workItemJpaRepository;
-  private final SeedBootstrapExecutor seedBootstrapExecutor;
-  private final RefreshBatchExecutor refreshBatchExecutor;
-  private final MatchIngestWorker matchIngestWorker;
+  private final WorkItemDispatcher workItemDispatcher;
   private final RiotKeyPool riotKeyPool;
+  private final Map<WorkItemType, WorkerContract> workers;
 
-  @Transactional
-  public WorkerResult execute(Long workItemId) {
-    WorkItem item = workItemJpaRepository.findById(workItemId).orElseThrow();
-    item.markRunning();
+  public WorkItemWorker(
+      WorkItemDispatcher workItemDispatcher,
+      RiotKeyPool riotKeyPool,
+      List<WorkerContract> workers
+  ) {
+    this.workItemDispatcher = workItemDispatcher;
+    this.riotKeyPool = riotKeyPool;
+    this.workers = new EnumMap<>(WorkItemType.class);
+    workers.forEach(worker -> this.workers.put(worker.type(), worker));
+  }
+
+  public WorkerResult execute(WorkItem item) {
+    WorkerContract worker = workers.get(item.getType());
+    if (worker == null) {
+      workItemDispatcher.markError(item.getId(), "No worker registered for type=" + item.getType());
+      return new WorkerResult(item.getId(), item.getType(), WorkItemStatus.ERROR);
+    }
 
     try (KeyLease ignored = riotKeyPool.leaseForWorker()) {
-      switch (item.getType()) {
-        case VERIFY_SUMMONERS, REFRESH_SUMMONERS -> refreshBatchExecutor.execute(item.getBatchLimit(), item.getTier());
-        case INGEST_MATCH_DETAIL -> matchIngestWorker.execute(item.getBatchLimit(), item.getTier());
-        case SEED_SUMMONERS -> seedBootstrapExecutor.execute(new SeedBootstrapCommand(
-            "RANKED_SOLO_5x5",
-            item.getTier().name(),
-            "I",
-            item.getTier(),
-            1,
-            1,
-            20,
-            item.getBatchLimit() == null ? 0 : item.getBatchLimit()
-        ));
-      }
-      item.markDone();
-      return new WorkerResult(workItemId, item.getType(), WorkItemStatus.DONE);
+      worker.execute(item, ignored);
+      workItemDispatcher.markDone(item.getId());
+      return new WorkerResult(item.getId(), item.getType(), WorkItemStatus.DONE);
     } catch (Exception e) {
-      item.markError();
-      return new WorkerResult(workItemId, item.getType(), WorkItemStatus.ERROR);
+      workItemDispatcher.markError(item.getId(), e.getMessage());
+      return new WorkerResult(item.getId(), item.getType(), WorkItemStatus.ERROR);
     } finally {
       riotKeyPool.clearWorkerLease();
     }
