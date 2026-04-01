@@ -27,12 +27,12 @@ class WorkItemJpaRepositoryTest {
 
   @Test
   void existsByCoverageBucketIdAndTypeAndStatusInDetectsPendingWork() {
-    repository.save(WorkItem.ready(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 1, 10));
+    repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 1, 10, null));
 
     boolean exists = repository.existsByCoverageBucketIdAndTypeAndStatusIn(
         1L,
         WorkItemType.VERIFY_SUMMONERS,
-        List.of(WorkItemStatus.READY, WorkItemStatus.RUNNING)
+        List.of(WorkItemStatus.PENDING, WorkItemStatus.RUNNING)
     );
 
     assertThat(exists).isTrue();
@@ -40,20 +40,20 @@ class WorkItemJpaRepositoryTest {
 
   @Test
   void countByPatchAndTierAndStatusCountsMatchingRows() {
-    repository.save(WorkItem.ready(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 1, 10));
-    repository.save(WorkItem.ready(1L, "15.7", Tier.MASTER, WorkItemType.REFRESH_SUMMONERS, 1, 10));
+    repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 1, 10, null));
+    repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.REFRESH_SUMMONERS, 1, 10, null));
 
-    long count = repository.countByPatchAndTierAndStatus("15.7", Tier.MASTER, WorkItemStatus.READY);
+    long count = repository.countByPatchAndTierAndStatus("15.7", Tier.MASTER, WorkItemStatus.PENDING);
 
     assertThat(count).isEqualTo(2L);
   }
 
   @Test
-  void findFirstByStatusOrderByPriorityAscCreatedAtAscReturnsHighestPriorityReadyItem() {
-    repository.save(WorkItem.ready(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 5, 10));
-    WorkItem expected = repository.save(WorkItem.ready(1L, "15.7", Tier.MASTER, WorkItemType.REFRESH_SUMMONERS, 1, 10));
+  void findFirstByStatusOrderByPriorityAscCreatedAtAscReturnsHighestPriorityPendingItem() {
+    repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 5, 10, null));
+    WorkItem expected = repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.REFRESH_SUMMONERS, 1, 10, null));
 
-    WorkItem next = repository.findFirstByStatusOrderByPriorityAscCreatedAtAsc(WorkItemStatus.READY).orElseThrow();
+    WorkItem next = repository.findFirstByStatusOrderByPriorityAscCreatedAtAsc(WorkItemStatus.PENDING).orElseThrow();
 
     assertThat(next.getId()).isEqualTo(expected.getId());
   }

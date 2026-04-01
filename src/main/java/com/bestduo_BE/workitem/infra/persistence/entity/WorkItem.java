@@ -44,6 +44,9 @@ public class WorkItem {
   @Column(name = "coverage_bucket_id", nullable = false)
   private Long coverageBucketId;
 
+  @Column(length = 2000)
+  private String payload;
+
   @Column(nullable = false)
   private String patch;
 
@@ -57,22 +60,43 @@ public class WorkItem {
   @Column(name = "batch_limit")
   private Integer batchLimit;
 
+  @Column(name = "retry_count", nullable = false)
+  private int retryCount;
+
+  @Column(name = "last_error", length = 512)
+  private String lastError;
+
+  @Column(name = "locked_at")
+  private OffsetDateTime lockedAt;
+
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
 
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
 
-  public static WorkItem ready(Long coverageBucketId, String patch, Tier tier, WorkItemType type, int priority, Integer batchLimit) {
+  public static WorkItem pending(
+      Long coverageBucketId,
+      String patch,
+      Tier tier,
+      WorkItemType type,
+      int priority,
+      Integer batchLimit,
+      String payload
+  ) {
     OffsetDateTime now = OffsetDateTime.now();
     return WorkItem.builder()
         .coverageBucketId(coverageBucketId)
         .patch(patch)
         .tier(tier)
         .type(type)
-        .status(WorkItemStatus.READY)
+        .status(WorkItemStatus.PENDING)
         .priority(priority)
         .batchLimit(batchLimit)
+        .payload(payload)
+        .retryCount(0)
+        .lastError(null)
+        .lockedAt(null)
         .createdAt(now)
         .updatedAt(now)
         .build();
@@ -80,16 +104,28 @@ public class WorkItem {
 
   public void markRunning() {
     this.status = WorkItemStatus.RUNNING;
+    this.lockedAt = OffsetDateTime.now();
     this.updatedAt = OffsetDateTime.now();
   }
 
   public void markDone() {
     this.status = WorkItemStatus.DONE;
+    this.lockedAt = null;
+    this.lastError = null;
     this.updatedAt = OffsetDateTime.now();
   }
 
-  public void markError() {
+  public void markError(String errorMessage) {
     this.status = WorkItemStatus.ERROR;
+    this.lockedAt = null;
+    this.retryCount += 1;
+    this.lastError = errorMessage == null ? null : errorMessage.substring(0, Math.min(errorMessage.length(), 512));
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  public void markPending() {
+    this.status = WorkItemStatus.PENDING;
+    this.lockedAt = null;
     this.updatedAt = OffsetDateTime.now();
   }
 }
