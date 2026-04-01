@@ -1,18 +1,20 @@
 package com.bestduo_BE.coverage.application;
 
+import com.bestduo_BE.config.WorkItemProperties;
 import com.bestduo_BE.coverage.domain.model.CoverageBucketStatus;
 import com.bestduo_BE.coverage.infra.persistence.entity.CoverageBucket;
 import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketCountJpaRepository;
 import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketJpaRepository;
 import com.bestduo_BE.common.infra.persistence.repository.IngestQueueStatsJpaRepository;
 import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
+import com.bestduo_BE.workitem.application.port.WorkItemDispatcher;
 import com.bestduo_BE.workitem.domain.model.WorkItemStatus;
 import com.bestduo_BE.workitem.domain.model.WorkItemType;
 import com.bestduo_BE.workitem.infra.persistence.entity.WorkItem;
-import com.bestduo_BE.workitem.infra.persistence.repository.WorkItemJpaRepository;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,16 +22,17 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CoverageScheduler {
 
-  private static final long MIN_VERIFIED_POOL = 10L;
-  private static final long MIN_UNVERIFIED_BACKLOG = 5L;
-  private static final long MIN_READY_MATCH_QUEUE = 20L;
-  private static final long MIN_RECENT_INGEST = 5L;
-
   private final CoverageBucketJpaRepository coverageBucketRepository;
   private final CoverageBucketCountJpaRepository coverageBucketCountRepository;
   private final SummonerJpaRepository summonerJpaRepository;
   private final IngestQueueStatsJpaRepository ingestQueueStatsJpaRepository;
-  private final WorkItemJpaRepository workItemJpaRepository;
+  private final WorkItemDispatcher workItemDispatcher;
+  private final WorkItemProperties workItemProperties;
+
+  @Scheduled(fixedDelayString = "${work-item.scheduler-fixed-delay-ms:30000}")
+  public void scheduledRun() {
+    schedule();
+  }
 
   @Transactional
   public ScheduleResult schedule() {
@@ -50,17 +53,14 @@ public class CoverageScheduler {
         continue;
       }
 
-      created.add(workItemJpaRepository.save(WorkItem.ready(
+      created.add(workItemDispatcher.emit(WorkItem.pending(
           bucket.getId(),
           bucket.getPatch(),
           bucket.getTier(),
           nextType,
           bucket.getPriority(),
-          switch (nextType) {
-            case INGEST_MATCH_DETAIL -> 20;
-            case REFRESH_SUMMONERS, VERIFY_SUMMONERS -> 10;
-            case SEED_SUMMONERS -> 1;
-          }
+          batchLimit(nextType),
+          payloadFor(bucket, nextType)
       )));
     }
 
@@ -69,22 +69,34 @@ public class CoverageScheduler {
 
   private WorkItemType determineNextWorkItem(CoverageBucket bucket) {
     long verifiedPool = summonerJpaRepository.countByLastKnownTier(bucket.getTier());
-    if (verifiedPool < MIN_VERIFIED_POOL) {
+    if (verifiedPool < workItemProperties.getThreshold().getVerifiedPool()) {
       return WorkItemType.VERIFY_SUMMONERS;
     }
 
     long queuedMatchIds = ingestQueueStatsJpaRepository.countReadyByTier(bucket.getTier().name());
-    if (queuedMatchIds < MIN_READY_MATCH_QUEUE) {
+    if (queuedMatchIds < workItemProperties.getThreshold().getReadyMatchQueue()) {
       return WorkItemType.REFRESH_SUMMONERS;
     }
 
-    long recentIngested = ingestQueueStatsJpaRepository.countDoneInLastMinutesByTier(30, bucket.getTier().name());
-    if (recentIngested < MIN_RECENT_INGEST) {
+    long unverifiedBacklog = summonerJpaRepository.countUnverifiedCandidates(bucket.getTier().name());
+    if (unverifiedBacklog > 0) {
+      return WorkItemType.VERIFY_SUMMONERS;
+    }
+
+    if (queuedMatchIds > 0) {
       return WorkItemType.INGEST_MATCH_DETAIL;
     }
 
-    long unverifiedBacklog = summonerJpaRepository.countUnverifiedCandidates(bucket.getTier().name());
-    if (unverifiedBacklog < MIN_UNVERIFIED_BACKLOG) {
+    long recentIngested = ingestQueueStatsJpaRepository.countDoneInLastMinutesByTier(
+        workItemProperties.getThreshold().getIngestWindowMinutes(),
+        bucket.getTier().name()
+    );
+    if (recentIngested < workItemProperties.getThreshold().getRecentIngest()) {
+      return WorkItemType.INGEST_MATCH_DETAIL;
+    }
+
+    if (verifiedPool < workItemProperties.getThreshold().getMinSeedTrigger()
+        || unverifiedBacklog < workItemProperties.getThreshold().getUnverifiedBacklog()) {
       return WorkItemType.SEED_SUMMONERS;
     }
 
@@ -92,11 +104,30 @@ public class CoverageScheduler {
   }
 
   private boolean hasPending(CoverageBucket bucket, WorkItemType type) {
-    return workItemJpaRepository.existsByCoverageBucketIdAndTypeAndStatusIn(
-        bucket.getId(),
+    return workItemDispatcher.countByTypePatchTierStatuses(
         type,
-        List.of(WorkItemStatus.READY, WorkItemStatus.RUNNING)
-    );
+        bucket.getPatch(),
+        bucket.getTier(),
+        List.of(WorkItemStatus.PENDING, WorkItemStatus.RUNNING)
+    )
+        >= workItemProperties.getDuplicatePendingLimit();
+  }
+
+  private int batchLimit(WorkItemType type) {
+    return switch (type) {
+      case INGEST_MATCH_DETAIL -> workItemProperties.getBatch().getIngest();
+      case REFRESH_SUMMONERS -> workItemProperties.getBatch().getRefresh();
+      case VERIFY_SUMMONERS -> workItemProperties.getBatch().getVerify();
+      case SEED_SUMMONERS -> workItemProperties.getBatch().getSeed();
+    };
+  }
+
+  private String payloadFor(CoverageBucket bucket, WorkItemType type) {
+    if (type != WorkItemType.SEED_SUMMONERS) {
+      return null;
+    }
+    return "{\"queue\":\"RANKED_SOLO_5x5\",\"division\":\"I\",\"page\":1,\"tier\":\"%s\"}"
+        .formatted(bucket.getTier().name());
   }
 
   public record ScheduleResult(int createdCount, List<WorkItem> workItems) {
