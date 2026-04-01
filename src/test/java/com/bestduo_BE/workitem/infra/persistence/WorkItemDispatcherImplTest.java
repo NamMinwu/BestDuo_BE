@@ -62,4 +62,16 @@ class WorkItemDispatcherImplTest {
     assertThat(item.getLastError()).isEqualTo("boom");
     verify(repository).findById(1L);
   }
+
+  @Test
+  void markPendingTransitionsRunningItemBackToPending() {
+    WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.INGEST_MATCH_DETAIL, 1, 10, null);
+    item.markRunning();
+    given(repository.findById(1L)).willReturn(Optional.of(item));
+
+    dispatcher.markPending(1L);
+
+    assertThat(item.getStatus()).isEqualTo(WorkItemStatus.PENDING);
+    assertThat(item.getLockedAt()).isNull();
+  }
 }
