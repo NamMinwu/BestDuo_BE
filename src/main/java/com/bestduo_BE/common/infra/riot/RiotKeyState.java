@@ -44,6 +44,10 @@ public class RiotKeyState {
     this.leased = false;
   }
 
+  public synchronized Instant cooldownUntil() {
+    return cooldownUntil;
+  }
+
   public synchronized void markRateLimited(Duration retryAfter) {
     Duration cooldown = retryAfter == null || retryAfter.isNegative() ? Duration.ofSeconds(10) : retryAfter;
     Instant candidateCooldownUntil = clock.instant().plus(cooldown);

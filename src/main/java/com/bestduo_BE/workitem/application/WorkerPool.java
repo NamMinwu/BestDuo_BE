@@ -1,5 +1,6 @@
 package com.bestduo_BE.workitem.application;
 
+import com.bestduo_BE.common.infra.riot.RiotKeyPool;
 import com.bestduo_BE.config.WorkItemProperties;
 import com.bestduo_BE.workitem.application.port.WorkItemDispatcher;
 import jakarta.annotation.PostConstruct;
@@ -19,6 +20,7 @@ public class WorkerPool {
   private final WorkItemProperties workItemProperties;
   private final WorkItemDispatcher workItemDispatcher;
   private final WorkItemWorker workItemWorker;
+  private final RiotKeyPool riotKeyPool;
 
   private ExecutorService executorService;
 
@@ -35,6 +37,13 @@ public class WorkerPool {
   private void runLoop() {
     while (!Thread.currentThread().isInterrupted()) {
       try {
+        // key cooling 중이면 실제 남은 시간만큼 sleep → 공회전 방지
+        Duration keyWait = riotKeyPool.durationUntilAnyAvailable();
+        if (!keyWait.isZero()) {
+          Thread.sleep(keyWait.toMillis() + 200);
+          continue;
+        }
+
         var picked = workItemDispatcher.pickAndLock(1);
         if (picked.isEmpty()) {
           Thread.sleep(workItemProperties.getPollingIntervalMs());
@@ -45,7 +54,7 @@ public class WorkerPool {
         Thread.currentThread().interrupt();
       } catch (Exception e) {
         try {
-          Thread.sleep(Duration.ofMillis(workItemProperties.getPollingIntervalMs()).toMillis());
+          Thread.sleep(workItemProperties.getPollingIntervalMs());
         } catch (InterruptedException interruptedException) {
           Thread.currentThread().interrupt();
         }

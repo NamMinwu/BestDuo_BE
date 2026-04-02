@@ -3,6 +3,7 @@ package com.bestduo_BE.common.infra.riot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -45,7 +46,7 @@ class RiotKeyPoolTest {
     first.markRateLimited(Duration.ofSeconds(30));
 
     assertThatThrownBy(keyPool::lease)
-        .isInstanceOf(IllegalStateException.class)
+        .isInstanceOf(RiotRateLimitedException.class)
         .hasMessageContaining("All Riot API keys are cooling down");
   }
 
@@ -70,12 +71,49 @@ class RiotKeyPoolTest {
 
     try (KeyLease ignored = keyPool.leaseForWorker()) {
       assertThatThrownBy(keyPool::leaseForWorker)
-          .isInstanceOf(IllegalStateException.class);
+          .isInstanceOf(RiotRateLimitedException.class);
     }
 
     try (KeyLease ignored = keyPool.leaseForWorker()) {
       assertThat(ignored.apiKey()).isEqualTo("key-a");
     }
+  }
+
+  @Test
+  void durationUntilAnyAvailableIsZeroWhenKeyFree() {
+    Clock clock = Clock.fixed(Instant.parse("2026-03-30T00:00:00Z"), ZoneOffset.UTC);
+    RiotKeyPool keyPool = RiotKeyPool.fromKeys(List.of("key-a"), clock);
+
+    assertThat(keyPool.durationUntilAnyAvailable()).isEqualTo(Duration.ZERO);
+  }
+
+  @Test
+  void durationUntilAnyAvailableReturnsShortestCooldownWhenAllCooling() {
+    MutableClock clock = new MutableClock(Instant.parse("2026-03-30T00:00:00Z"));
+    RiotKeyState keyA = new RiotKeyState("key-a", new DualWindowRateLimiter(10, Duration.ofMillis(1), 60, Duration.ofMinutes(2)), clock);
+    RiotKeyState keyB = new RiotKeyState("key-b", new DualWindowRateLimiter(10, Duration.ofMillis(1), 60, Duration.ofMinutes(2)), clock);
+    RiotKeyPool keyPool = new RiotKeyPool(List.of(keyA, keyB), clock); // 같은 clock 주입
+
+    keyA.markRateLimited(Duration.ofSeconds(30));
+    keyB.markRateLimited(Duration.ofSeconds(10)); // keyB가 더 빨리 회복
+
+    Duration wait = keyPool.durationUntilAnyAvailable();
+
+    assertThat(wait).isGreaterThan(Duration.ofSeconds(9));
+    assertThat(wait).isLessThanOrEqualTo(Duration.ofSeconds(10));
+  }
+
+  @Test
+  void durationUntilAnyAvailableIsZeroWhenOneKeyFreeAmongCooling() {
+    MutableClock clock = new MutableClock(Instant.parse("2026-03-30T00:00:00Z"));
+    RiotKeyState keyA = new RiotKeyState("key-a", new DualWindowRateLimiter(10, Duration.ofMillis(1), 60, Duration.ofMinutes(2)), clock);
+    RiotKeyState keyB = new RiotKeyState("key-b", new DualWindowRateLimiter(10, Duration.ofMillis(1), 60, Duration.ofMinutes(2)), clock);
+    RiotKeyPool keyPool = new RiotKeyPool(List.of(keyA, keyB), clock);
+
+    keyA.markRateLimited(Duration.ofSeconds(30)); // keyA는 cooling
+    // keyB는 free
+
+    assertThat(keyPool.durationUntilAnyAvailable()).isEqualTo(Duration.ZERO);
   }
 
   private static final class MutableClock extends Clock {
