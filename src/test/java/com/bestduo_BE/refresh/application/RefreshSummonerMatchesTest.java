@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.bestduo_BE.config.WorkItemProperties;
 import com.bestduo_BE.refresh.application.port.LeagueEntriesRefreshLoader;
 import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
@@ -38,6 +39,10 @@ class RefreshSummonerMatchesTest {
   @Mock
   private SummonerRefreshStatusUpdater summonerRefreshStatusUpdater;
 
+  // 실제 인스턴스 사용 — 기본값(tierCacheTtlHours=12)으로 충분하며, 테스트 내 summoner는
+  // 모두 tierObservedAt=null 이므로 캐시가 활성화되지 않아 기존 동작이 보존됨
+  private final WorkItemProperties workItemProperties = new WorkItemProperties();
+
   private RefreshSummonerMatches useCase;
 
   @BeforeEach
@@ -46,7 +51,8 @@ class RefreshSummonerMatchesTest {
         leagueEntriesRefreshLoader,
         matchIdsFinder,
         matchQueueEnqueuer,
-        summonerRefreshStatusUpdater
+        summonerRefreshStatusUpdater,
+        workItemProperties
     );
   }
 

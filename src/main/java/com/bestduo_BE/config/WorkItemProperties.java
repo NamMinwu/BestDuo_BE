@@ -30,6 +30,8 @@ public class WorkItemProperties {
     private long unverifiedBacklog = 5L;
     private long minSeedTrigger = 3L;
     private int ingestWindowMinutes = 30;
+    /** REFRESH에서 league-v4 tier 재조회를 생략할 tierObservedAt 캐시 유효 시간 (시간 단위) */
+    private int tierCacheTtlHours = 12;
   }
 
   @Getter
@@ -39,5 +41,7 @@ public class WorkItemProperties {
     private int refresh = 10;
     private int ingest = 20;
     private int seed = 1;
+    /** SEED에서 한 division을 소진 처리할 최대 페이지 수 (초과 시 다음 division으로 rotation) */
+    private int seedMaxPagesPerDivision = 10;
   }
 }

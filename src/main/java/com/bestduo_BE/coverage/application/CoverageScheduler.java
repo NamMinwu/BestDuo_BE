@@ -53,6 +53,7 @@ public class CoverageScheduler {
         continue;
       }
 
+      String payload = payloadFor(bucket, nextType);
       created.add(workItemDispatcher.emit(WorkItem.pending(
           bucket.getId(),
           bucket.getPatch(),
@@ -60,8 +61,13 @@ public class CoverageScheduler {
           nextType,
           bucket.getPriority(),
           batchLimit(nextType),
-          payloadFor(bucket, nextType)
+          payload
       )));
+      // SEED 발행 직후 다음 실행을 위해 페이지/division 전진
+      // @Transactional 범위 내이므로 emit 실패 시 함께 롤백됨
+      if (nextType == WorkItemType.SEED_SUMMONERS) {
+        bucket.advanceSeedState(workItemProperties.getBatch().getSeedMaxPagesPerDivision());
+      }
     }
 
     return new ScheduleResult(created.size(), created);
@@ -124,8 +130,11 @@ public class CoverageScheduler {
     if (type != WorkItemType.SEED_SUMMONERS) {
       return null;
     }
-    return "{\"queue\":\"RANKED_SOLO_5x5\",\"division\":\"I\",\"page\":1,\"tier\":\"%s\"}"
-        .formatted(bucket.getTier().name());
+    // seedPage/seedDivision은 버킷에 저장된 현재 진행 상태를 사용한다.
+    // 이 메서드 호출 이후 advanceSeedState()가 상태를 전진시키므로,
+    // 다음 SEED WorkItem은 다른 페이지/division을 가리키게 된다.
+    return "{\"queue\":\"RANKED_SOLO_5x5\",\"division\":\"%s\",\"page\":%d,\"tier\":\"%s\"}"
+        .formatted(bucket.getSeedDivision(), bucket.getSeedPage(), bucket.getTier().name());
   }
 
   public record ScheduleResult(int createdCount, List<WorkItem> workItems) {
