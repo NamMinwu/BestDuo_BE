@@ -9,8 +9,6 @@ import com.bestduo_BE.workitem.application.port.WorkItemDispatcher;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.time.Duration;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -27,16 +25,13 @@ public class WorkerPool {
   private final WorkItemWorker workItemWorker;
   private final RiotKeyPool riotKeyPool;
 
-  private ExecutorService executorService;
+  private Thread workerThread;
 
   @PostConstruct
   void start() {
     // 서버 재시작 시 이전 RUNNING 아이템을 PENDING으로 복구
     workItemDispatcher.recoverStaleRunning(workItemProperties.getStaleMinutes());
-    executorService = Executors.newVirtualThreadPerTaskExecutor();
-    for (int i = 0; i < workItemProperties.getPoolSize(); i++) {
-      executorService.submit(this::runLoop);
-    }
+    workerThread = Thread.ofVirtual().name("work-item-worker").start(this::runLoop);
   }
 
   void runLoop() {
@@ -92,8 +87,8 @@ public class WorkerPool {
 
   @PreDestroy
   void stop() {
-    if (executorService != null) {
-      executorService.shutdownNow();
+    if (workerThread != null) {
+      workerThread.interrupt();
     }
   }
 }
