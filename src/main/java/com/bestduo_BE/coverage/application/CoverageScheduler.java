@@ -83,15 +83,13 @@ public class CoverageScheduler {
       return WorkItemType.VERIFY_SUMMONERS;
     }
 
-    if (queuedMatchIds > 0) {
-      return WorkItemType.INGEST_MATCH_DETAIL;
-    }
-
+    // recentIngested를 queuedMatchIds > 0 앞으로 fetch해 SEED 경로가 도달 가능하도록 수정
     long recentIngested = ingestQueueStatsJpaRepository.countDoneInLastMinutesByTier(
         workItemProperties.getThreshold().getIngestWindowMinutes(),
         bucket.getTier().name()
     );
-    if (recentIngested < workItemProperties.getThreshold().getRecentIngest()) {
+
+    if (queuedMatchIds > 0 || recentIngested < workItemProperties.getThreshold().getRecentIngest()) {
       return WorkItemType.INGEST_MATCH_DETAIL;
     }
 

@@ -33,24 +33,33 @@ public class WorkItemWorker {
     workers.forEach(worker -> this.workers.put(worker.type(), worker));
   }
 
-  public WorkerResult execute(WorkItem item) {
+  // WorkerPool 호출 경로: lease는 호출자가 관리 (TOCTOU 수정 후 사용)
+  public WorkerResult execute(WorkItem item, KeyLease lease) {
     WorkerContract worker = workers.get(item.getType());
     if (worker == null) {
       workItemDispatcher.markError(item.getId(), "No worker registered for type=" + item.getType());
       return new WorkerResult(item.getId(), item.getType(), WorkItemStatus.ERROR);
     }
-
-    try (KeyLease ignored = riotKeyPool.leaseForWorker()) {
-      worker.execute(item, ignored);
+    try {
+      worker.execute(item, lease);
       workItemDispatcher.markDone(item.getId());
       return new WorkerResult(item.getId(), item.getType(), WorkItemStatus.DONE);
     } catch (BudgetExhaustedException | RiotRateLimitedException e) {
-      // key 소진/rate limit — 실패가 아니라 세션 일시 중단. PENDING으로 복구해 다음 주기에 재시도.
+      // key 소진/rate limit — PENDING으로 복구해 다음 주기에 재시도
       workItemDispatcher.markPending(item.getId());
       throw e;
     } catch (Exception e) {
       workItemDispatcher.markError(item.getId(), e.getMessage());
       return new WorkerResult(item.getId(), item.getType(), WorkItemStatus.ERROR);
+    }
+    // lease 생명주기(close + clearWorkerLease)는 WorkerPool의 try-with-resources + finally가 담당
+  }
+
+  // WorkItemPoller / 테스트 호환 경로: lease를 내부에서 획득
+  // markPending / markError / markDone은 execute(item, lease)에서 처리 → 여기서 중복 호출 불필요
+  public WorkerResult execute(WorkItem item) {
+    try (KeyLease lease = riotKeyPool.leaseForWorker()) {
+      return execute(item, lease);
     } finally {
       riotKeyPool.clearWorkerLease();
     }

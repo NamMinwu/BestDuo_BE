@@ -77,9 +77,12 @@ public class CoverageBucket {
         .build();
   }
 
-  public void refreshCount(long currentMatchCount) {
-    this.currentMatchCount = currentMatchCount;
-    this.status = currentMatchCount >= targetMatchCount
+  public void refreshCount(long newCount) {
+    if (this.currentMatchCount == newCount) {
+      return; // 변경 없음 → JPA dirty check 불필요, 불필요한 UPDATE 방지
+    }
+    this.currentMatchCount = newCount;
+    this.status = newCount >= targetMatchCount
         ? CoverageBucketStatus.SUFFICIENT
         : CoverageBucketStatus.COLLECTING;
     this.lastEvaluatedAt = OffsetDateTime.now();
