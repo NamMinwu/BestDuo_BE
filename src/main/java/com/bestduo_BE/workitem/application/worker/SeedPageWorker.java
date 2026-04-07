@@ -1,7 +1,7 @@
 package com.bestduo_BE.workitem.application.worker;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.common.infra.riot.KeyLease;
 import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
