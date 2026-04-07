@@ -2,7 +2,7 @@ package com.bestduo_BE.workitem.application.worker;
 
 import static org.mockito.Mockito.verify;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.KeyLease;

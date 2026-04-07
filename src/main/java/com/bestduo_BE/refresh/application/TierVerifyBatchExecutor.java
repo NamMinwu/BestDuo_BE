@@ -52,6 +52,13 @@ public class TierVerifyBatchExecutor {
       } catch (Exception e) {
         failed++;
         log.warn("TierVerifyBatchExecutor failed. puuid={}", summoner.getPuuid(), e);
+        // tierObservedAt을 갱신해 이 소환사가 다음 주기에 즉시 재시도되지 않도록 한다.
+        // (갱신하지 않으면 findRefreshTargets가 tierObservedAt IS NULL 우선으로 계속 뽑아 무한 재시도 발생)
+        try {
+          summonerRefreshStatusUpdater.syncResolvedTier(summoner.getPuuid(), null, OffsetDateTime.now());
+        } catch (Exception ignored) {
+          // DB 갱신 실패는 무시 — 주 목적은 메인 루프 유지
+        }
       }
     }
     return new Result(processed, success, failed);
