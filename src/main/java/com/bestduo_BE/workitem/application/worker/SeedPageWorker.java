@@ -3,7 +3,6 @@ package com.bestduo_BE.workitem.application.worker;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
-import com.bestduo_BE.common.infra.riot.KeyLease;
 import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
 import com.bestduo_BE.workitem.domain.model.WorkItemType;
 import com.bestduo_BE.workitem.infra.persistence.entity.WorkItem;
@@ -23,7 +22,7 @@ public class SeedPageWorker implements WorkerContract {
   }
 
   @Override
-  public void execute(WorkItem workItem, KeyLease keyLease) {
+  public void execute(WorkItem workItem) {
     SeedPayload payload = parsePayload(workItem.getPayload());
     seedBootstrapExecutor.execute(new SeedBootstrapCommand(
         payload.queue(),

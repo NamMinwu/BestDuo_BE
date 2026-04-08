@@ -8,8 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.common.infra.riot.KeyLease;
-import com.bestduo_BE.common.infra.riot.RiotKeyPool;
 import com.bestduo_BE.common.infra.riot.budget.BudgetExhaustedException;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.workitem.application.port.WorkItemDispatcher;
@@ -28,8 +26,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class WorkItemWorkerTest {
 
   @Mock private WorkItemDispatcher workItemDispatcher;
-  @Mock private RiotKeyPool riotKeyPool;
-  @Mock private KeyLease keyLease;
   @Mock private WorkerContract workerContract;
 
   private WorkItemWorker worker;
@@ -37,40 +33,36 @@ class WorkItemWorkerTest {
   @BeforeEach
   void setUp() {
     given(workerContract.type()).willReturn(WorkItemType.REFRESH_SUMMONERS);
-    worker = new WorkItemWorker(workItemDispatcher, riotKeyPool, List.of(workerContract));
+    worker = new WorkItemWorker(workItemDispatcher, List.of(workerContract));
   }
 
   @Test
-  void executeRefreshWorkItemUsesWorkerLeaseAndMarksDone() {
+  void executeRefreshWorkItemMarksDone() {
     WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.REFRESH_SUMMONERS, 1, 10, null);
-    given(riotKeyPool.leaseForWorker()).willReturn(keyLease);
 
     WorkItemWorker.WorkerResult result = worker.execute(item);
 
-    verify(workerContract).execute(item, keyLease);
+    verify(workerContract).execute(item);
     verify(workItemDispatcher).markDone(item.getId());
-    verify(riotKeyPool).clearWorkerLease();
     assertThat(result.status()).isEqualTo(WorkItemStatus.DONE);
   }
 
   @Test
   void budgetExhaustedCallsMarkPendingAndPropagates() {
     WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.REFRESH_SUMMONERS, 1, 10, null);
-    given(riotKeyPool.leaseForWorker()).willReturn(keyLease);
-    willThrow(new BudgetExhaustedException("budget gone")).given(workerContract).execute(item, keyLease);
+    willThrow(new BudgetExhaustedException("budget gone")).given(workerContract).execute(item);
 
     assertThatThrownBy(() -> worker.execute(item))
         .isInstanceOf(BudgetExhaustedException.class);
 
     verify(workItemDispatcher).markPending(item.getId());
-    verifyNoMoreInteractions(workItemDispatcher); // markError가 호출되면 안 됨
+    verifyNoMoreInteractions(workItemDispatcher);
   }
 
   @Test
   void rateLimitedCallsMarkPendingAndPropagates() {
     WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.REFRESH_SUMMONERS, 1, 10, null);
-    given(riotKeyPool.leaseForWorker()).willReturn(keyLease);
-    willThrow(new RiotRateLimitedException("429")).given(workerContract).execute(item, keyLease);
+    willThrow(new RiotRateLimitedException("429")).given(workerContract).execute(item);
 
     assertThatThrownBy(() -> worker.execute(item))
         .isInstanceOf(RiotRateLimitedException.class);
@@ -82,8 +74,7 @@ class WorkItemWorkerTest {
   @Test
   void generalExceptionCallsMarkError() {
     WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.REFRESH_SUMMONERS, 1, 10, null);
-    given(riotKeyPool.leaseForWorker()).willReturn(keyLease);
-    willThrow(new RuntimeException("unexpected")).given(workerContract).execute(item, keyLease);
+    willThrow(new RuntimeException("unexpected")).given(workerContract).execute(item);
 
     WorkItemWorker.WorkerResult result = worker.execute(item);
 

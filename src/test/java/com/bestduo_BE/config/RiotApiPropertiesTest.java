@@ -2,48 +2,15 @@ package com.bestduo_BE.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class RiotApiPropertiesTest {
 
   @Test
-  void resolvedApiKeysFallsBackToSingleKeyWhenMultiKeyDisabled() {
+  void apiKeyIsReturnedAsConfigured() {
     RiotApiProperties properties = new RiotApiProperties();
-    properties.setApiKey("single-key");
-    properties.setApiKeys(List.of("key-a", "key-b"));
-    properties.setMultiKeyEnabled(false);
+    properties.setApiKey("my-key");
 
-    assertThat(properties.resolvedApiKeys()).containsExactly("single-key");
-  }
-
-  @Test
-  void resolvedApiKeysUsesConfiguredMultiKeysWhenEnabled() {
-    RiotApiProperties properties = new RiotApiProperties();
-    properties.setApiKey("single-key");
-    properties.setApiKeys(List.of("key-a", "key-b"));
-    properties.setMultiKeyEnabled(true);
-
-    assertThat(properties.resolvedApiKeys()).containsExactly("key-a", "key-b");
-  }
-
-  @Test
-  void resolvedApiKeysTrimsAndDeduplicatesConfiguredKeys() {
-    RiotApiProperties properties = new RiotApiProperties();
-    properties.setApiKey("  single-key  ");
-    properties.setApiKeys(List.of(" key-a ", "key-a", " key-b "));
-    properties.setMultiKeyEnabled(true);
-
-    assertThat(properties.resolvedApiKeys()).containsExactly("key-a", "key-b");
-  }
-
-  @Test
-  void resolvedApiKeysTrimsSingleKeyFallback() {
-    RiotApiProperties properties = new RiotApiProperties();
-    properties.setApiKey("  single-key  ");
-    properties.setApiKeys(List.of(" ", ""));
-    properties.setMultiKeyEnabled(true);
-
-    assertThat(properties.resolvedApiKeys()).containsExactly("single-key");
+    assertThat(properties.getApiKey()).isEqualTo("my-key");
   }
 }

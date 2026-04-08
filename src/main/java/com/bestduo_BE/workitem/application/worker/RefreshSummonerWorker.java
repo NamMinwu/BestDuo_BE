@@ -1,6 +1,5 @@
 package com.bestduo_BE.workitem.application.worker;
 
-import com.bestduo_BE.common.infra.riot.KeyLease;
 import com.bestduo_BE.refresh.application.RefreshBatchExecutor;
 import com.bestduo_BE.workitem.domain.model.WorkItemType;
 import com.bestduo_BE.workitem.infra.persistence.entity.WorkItem;
@@ -19,7 +18,7 @@ public class RefreshSummonerWorker implements WorkerContract {
   }
 
   @Override
-  public void execute(WorkItem workItem, KeyLease keyLease) {
+  public void execute(WorkItem workItem) {
     refreshBatchExecutor.execute(workItem.getBatchLimit(), workItem.getTier());
   }
 }

@@ -1,7 +1,6 @@
 package com.bestduo_BE.workitem.application;
 
-import com.bestduo_BE.common.infra.riot.KeyLease;
-import com.bestduo_BE.common.infra.riot.RiotKeyPool;
+import com.bestduo_BE.common.infra.riot.RiotRateLimitInterceptor;
 import com.bestduo_BE.common.infra.riot.budget.BudgetExhaustedException;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.config.WorkItemProperties;
@@ -23,7 +22,7 @@ public class WorkerPool {
   private final WorkItemProperties workItemProperties;
   private final WorkItemDispatcher workItemDispatcher;
   private final WorkItemWorker workItemWorker;
-  private final RiotKeyPool riotKeyPool;
+  private final RiotRateLimitInterceptor riotRateLimitInterceptor;
 
   private Thread workerThread;
 
@@ -37,33 +36,19 @@ public class WorkerPool {
   void runLoop() {
     while (!Thread.currentThread().isInterrupted()) {
       try {
-        // key cooling 중이면 실제 남은 시간만큼 sleep → 공회전 방지
-        Duration keyWait = riotKeyPool.durationUntilAnyAvailable();
+        // 429 cooling 중이면 실제 남은 시간만큼 sleep → 공회전 방지
+        Duration keyWait = riotRateLimitInterceptor.durationUntilAvailable();
         if (!keyWait.isZero()) {
           Thread.sleep(keyWait.toMillis() + 200);
           continue;
         }
 
-        // TOCTOU 수정: lease 먼저 획득한 뒤 pickAndLock
-        // lease 없이 pickAndLock 하면 다른 worker가 key를 선점한 경우 WorkItem이 RUNNING에 고착됨
-        KeyLease lease;
-        try {
-          lease = riotKeyPool.leaseForWorker();
-        } catch (RiotRateLimitedException e) {
+        var picked = workItemDispatcher.pickAndLock(1);
+        if (picked.isEmpty()) {
           Thread.sleep(workItemProperties.getPollingIntervalMs());
           continue;
         }
-
-        try (lease) {
-          var picked = workItemDispatcher.pickAndLock(1);
-          if (picked.isEmpty()) {
-            Thread.sleep(workItemProperties.getPollingIntervalMs());
-            continue;
-          }
-          workItemWorker.execute(picked.getFirst(), lease);
-        } finally {
-          riotKeyPool.clearWorkerLease();
-        }
+        workItemWorker.execute(picked.getFirst());
 
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();

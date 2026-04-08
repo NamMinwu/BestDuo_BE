@@ -5,7 +5,6 @@ import static org.mockito.Mockito.verify;
 import tools.jackson.databind.ObjectMapper;
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.common.infra.riot.KeyLease;
 import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
 import com.bestduo_BE.workitem.domain.model.WorkItemType;
 import com.bestduo_BE.workitem.infra.persistence.entity.WorkItem;
@@ -20,7 +19,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class SeedPageWorkerTest {
 
   @Mock private SeedBootstrapExecutor seedBootstrapExecutor;
-  @Mock private KeyLease keyLease;
 
   private SeedPageWorker worker;
 
@@ -41,7 +39,7 @@ class SeedPageWorkerTest {
         "{\"queue\":\"RANKED_SOLO_5x5\",\"division\":\"II\",\"page\":3,\"tier\":\"MASTER\"}"
     );
 
-    worker.execute(item, keyLease);
+    worker.execute(item);
 
     ArgumentCaptor<SeedBootstrapCommand> captor = ArgumentCaptor.forClass(SeedBootstrapCommand.class);
     verify(seedBootstrapExecutor).execute(captor.capture());
