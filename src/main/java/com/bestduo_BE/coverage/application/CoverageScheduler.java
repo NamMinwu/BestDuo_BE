@@ -75,8 +75,14 @@ public class CoverageScheduler {
 
   private WorkItemType determineNextWorkItem(CoverageBucket bucket) {
     long verifiedPool = summonerJpaRepository.countByLastKnownTier(bucket.getTier());
+    long unverifiedBacklog = summonerJpaRepository.countUnverifiedCandidates(bucket.getTier().name());
+
+    // verified pool이 부족할 때: 검증할 소환사가 있으면 VERIFY, 없으면 SEED
+    // 소환사가 전혀 없는 초기 상태에서 VERIFY 무한 루프 방지
     if (verifiedPool < workItemProperties.getThreshold().getVerifiedPool()) {
-      return WorkItemType.VERIFY_SUMMONERS;
+      return unverifiedBacklog > 0
+          ? WorkItemType.VERIFY_SUMMONERS
+          : WorkItemType.SEED_SUMMONERS;
     }
 
     long queuedMatchIds = ingestQueueStatsJpaRepository.countReadyByTier(bucket.getTier().name());
@@ -84,12 +90,10 @@ public class CoverageScheduler {
       return WorkItemType.REFRESH_SUMMONERS;
     }
 
-    long unverifiedBacklog = summonerJpaRepository.countUnverifiedCandidates(bucket.getTier().name());
     if (unverifiedBacklog > 0) {
       return WorkItemType.VERIFY_SUMMONERS;
     }
 
-    // recentIngested를 queuedMatchIds > 0 앞으로 fetch해 SEED 경로가 도달 가능하도록 수정
     long recentIngested = ingestQueueStatsJpaRepository.countDoneInLastMinutesByTier(
         workItemProperties.getThreshold().getIngestWindowMinutes(),
         bucket.getTier().name()

@@ -46,11 +46,35 @@ class CoverageSchedulerTest {
   }
 
   @Test
+  void scheduleCreatesSeedWhenNoSummonersExist() {
+    // 소환사가 전혀 없는 초기 상태 → VERIFY 무한 루프 없이 SEED 발행
+    CoverageBucket bucket = CoverageBucket.create("15.7", Tier.MASTER, 20_000L, 1);
+    given(coverageBucketJpaRepository.findAllByOrderByPriorityAscIdAsc()).willReturn(List.of(bucket));
+    given(coverageBucketCountRepository.countDistinctMatches("15.7", "MASTER")).willReturn(0L);
+    given(summonerJpaRepository.countByLastKnownTier(Tier.MASTER)).willReturn(0L);
+    given(summonerJpaRepository.countUnverifiedCandidates("MASTER")).willReturn(0L);
+    given(workItemDispatcher.countByTypePatchTierStatuses(WorkItemType.SEED_SUMMONERS, "15.7", Tier.MASTER,
+        List.of(WorkItemStatus.PENDING, WorkItemStatus.RUNNING)))
+        .willReturn(0L);
+    given(workItemDispatcher.emit(org.mockito.ArgumentMatchers.any(WorkItem.class)))
+        .willAnswer(invocation -> invocation.getArgument(0));
+
+    CoverageScheduler.ScheduleResult result = scheduler.schedule();
+
+    ArgumentCaptor<WorkItem> captor = ArgumentCaptor.forClass(WorkItem.class);
+    org.mockito.Mockito.verify(workItemDispatcher).emit(captor.capture());
+    assertThat(result.createdCount()).isEqualTo(1);
+    assertThat(captor.getValue().getType()).isEqualTo(WorkItemType.SEED_SUMMONERS);
+  }
+
+  @Test
   void scheduleCreatesVerifyWorkItemWhenVerifiedPoolIsLow() {
+    // verified pool 부족하지만 검증할 소환사(unverifiedBacklog)가 있으면 VERIFY
     CoverageBucket bucket = CoverageBucket.create("15.7", Tier.MASTER, 20_000L, 1);
     given(coverageBucketJpaRepository.findAllByOrderByPriorityAscIdAsc()).willReturn(List.of(bucket));
     given(coverageBucketCountRepository.countDistinctMatches("15.7", "MASTER")).willReturn(100L);
     given(summonerJpaRepository.countByLastKnownTier(Tier.MASTER)).willReturn(3L);
+    given(summonerJpaRepository.countUnverifiedCandidates("MASTER")).willReturn(5L);
     given(workItemDispatcher.countByTypePatchTierStatuses(WorkItemType.VERIFY_SUMMONERS, "15.7", Tier.MASTER,
         List.of(WorkItemStatus.PENDING, WorkItemStatus.RUNNING)))
         .willReturn(0L);
@@ -90,6 +114,7 @@ class CoverageSchedulerTest {
     given(coverageBucketJpaRepository.findAllByOrderByPriorityAscIdAsc()).willReturn(List.of(bucket));
     given(coverageBucketCountRepository.countDistinctMatches("15.7", "MASTER")).willReturn(100L);
     given(summonerJpaRepository.countByLastKnownTier(Tier.MASTER)).willReturn(3L);
+    given(summonerJpaRepository.countUnverifiedCandidates("MASTER")).willReturn(5L);
     given(workItemDispatcher.countByTypePatchTierStatuses(WorkItemType.VERIFY_SUMMONERS, "15.7", Tier.MASTER,
         List.of(WorkItemStatus.PENDING, WorkItemStatus.RUNNING)))
         .willReturn(1L);
@@ -106,6 +131,7 @@ class CoverageSchedulerTest {
     given(coverageBucketJpaRepository.findAllByOrderByPriorityAscIdAsc()).willReturn(List.of(bucket));
     given(coverageBucketCountRepository.countDistinctMatches("15.7", "MASTER")).willReturn(100L);
     given(summonerJpaRepository.countByLastKnownTier(Tier.MASTER)).willReturn(3L);
+    given(summonerJpaRepository.countUnverifiedCandidates("MASTER")).willReturn(5L);
     given(workItemDispatcher.countByTypePatchTierStatuses(WorkItemType.VERIFY_SUMMONERS, "15.7", Tier.MASTER,
         List.of(WorkItemStatus.PENDING, WorkItemStatus.RUNNING))).willReturn(1L);
 
