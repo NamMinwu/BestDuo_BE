@@ -31,7 +31,7 @@ class WorkItemDispatcherImplTest {
 
   @Test
   void pickAndLockMarksPendingItemsRunning() {
-    WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 1, 10, null);
+    WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.SEED_SUMMONERS, 1, 10, null);
     given(repository.pickPendingForUpdate(1)).willReturn(List.of(item));
 
     List<WorkItem> picked = dispatcher.pickAndLock(1);
@@ -41,7 +41,7 @@ class WorkItemDispatcherImplTest {
 
   @Test
   void markDoneTransitionsItemToDone() {
-    WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 1, 10, null);
+    WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.SEED_SUMMONERS, 1, 10, null);
     item.markRunning();
     given(repository.findById(1L)).willReturn(Optional.of(item));
 
@@ -52,7 +52,7 @@ class WorkItemDispatcherImplTest {
 
   @Test
   void markErrorTransitionsItemToErrorAndStoresMessage() {
-    WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 1, 10, null);
+    WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.SEED_SUMMONERS, 1, 10, null);
     item.markRunning();
     given(repository.findById(1L)).willReturn(Optional.of(item));
 

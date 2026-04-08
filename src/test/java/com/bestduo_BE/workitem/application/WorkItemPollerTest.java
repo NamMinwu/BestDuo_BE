@@ -31,7 +31,7 @@ class WorkItemPollerTest {
 
   @Test
   void pollOncePicksPendingWorkItemAndDelegatesToWorker() {
-    WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 1, 10, null);
+    WorkItem item = WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.SEED_SUMMONERS, 1, 10, null);
     item.markRunning();
     given(workItemDispatcher.pickAndLock(1)).willReturn(List.of(item));
     given(workItemWorker.execute(item)).willReturn(new WorkItemWorker.WorkerResult(item.getId(), item.getType(), WorkItemStatus.DONE));

@@ -26,7 +26,6 @@ public class WorkItemProperties {
     private long verifiedPool = 10L;
     private long readyMatchQueue = 20L;
     private long recentIngest = 5L;
-    private long unverifiedBacklog = 5L;
     private long minSeedTrigger = 3L;
     private int ingestWindowMinutes = 30;
     /** REFRESH에서 league-v4 tier 재조회를 생략할 tierObservedAt 캐시 유효 시간 (시간 단위) */
@@ -36,7 +35,6 @@ public class WorkItemProperties {
   @Getter
   @Setter
   public static class Batch {
-    private int verify = 10;
     private int refresh = 10;
     private int ingest = 20;
     private int seed = 1;

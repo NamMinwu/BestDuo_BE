@@ -1,6 +1,7 @@
 package com.bestduo_BE.seed.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -14,6 +15,7 @@ import com.bestduo_BE.seed.application.port.SummonerSeedRegistry;
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,8 +71,8 @@ class SeedBootstrapExecutorTest {
   void registerSeedsAndEnqueueMatchIdsWhenFirstSeen() {
     List<LeagueEntry> entries = List.of(entry("new-1"), entry("existing"));
     givenEntries(entries);
-    given(summonerSeedRegistry.registerIfAbsent("new-1")).willReturn(true);
-    given(summonerSeedRegistry.registerIfAbsent("existing")).willReturn(false);
+    given(summonerSeedRegistry.registerIfAbsent(eq("new-1"), any(Tier.class), any(OffsetDateTime.class))).willReturn(true);
+    given(summonerSeedRegistry.registerIfAbsent(eq("existing"), any(Tier.class), any(OffsetDateTime.class))).willReturn(false);
     given(matchIdsFinder.findRecentMatchIds("new-1", command.matchesPerPuuid()))
         .willReturn(List.of("m-1", "m-2"));
 
@@ -89,7 +91,7 @@ class SeedBootstrapExecutorTest {
   @Test
   void markSeedErrorWhenMatchLookupFails() {
     givenEntries(List.of(entry("p-error")));
-    given(summonerSeedRegistry.registerIfAbsent("p-error")).willReturn(true);
+    given(summonerSeedRegistry.registerIfAbsent(eq("p-error"), any(Tier.class), any(OffsetDateTime.class))).willReturn(true);
     given(matchIdsFinder.findRecentMatchIds("p-error", command.matchesPerPuuid()))
         .willThrow(new IllegalStateException("boom"));
 
@@ -108,14 +110,14 @@ class SeedBootstrapExecutorTest {
     given(leagueEntriesSeedLoader.loadEntries(
         limited.queue(), limited.tier(), limited.division(), 1
     )).willReturn(entries);
-    given(summonerSeedRegistry.registerIfAbsent("new-1")).willReturn(true);
+    given(summonerSeedRegistry.registerIfAbsent(eq("new-1"), any(Tier.class), any(OffsetDateTime.class))).willReturn(true);
     given(matchIdsFinder.findRecentMatchIds("new-1", limited.matchesPerPuuid()))
         .willReturn(List.of("m-1"));
 
     SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(limited);
 
-    verify(summonerSeedRegistry).registerIfAbsent("new-1");
-    verify(summonerSeedRegistry, never()).registerIfAbsent("new-2");
+    verify(summonerSeedRegistry).registerIfAbsent(eq("new-1"), any(Tier.class), any(OffsetDateTime.class));
+    verify(summonerSeedRegistry, never()).registerIfAbsent(eq("new-2"), any(Tier.class), any(OffsetDateTime.class));
     assertThat(result.entriesFetched()).isEqualTo(1);
     assertThat(result.puuidRegistered()).isEqualTo(1);
   }

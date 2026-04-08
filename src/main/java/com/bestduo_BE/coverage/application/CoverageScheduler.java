@@ -75,23 +75,15 @@ public class CoverageScheduler {
 
   private WorkItemType determineNextWorkItem(CoverageBucket bucket) {
     long verifiedPool = summonerJpaRepository.countByLastKnownTier(bucket.getTier());
-    long unverifiedBacklog = summonerJpaRepository.countUnverifiedCandidates(bucket.getTier().name());
 
-    // verified pool이 부족할 때: 검증할 소환사가 있으면 VERIFY, 없으면 SEED
-    // 소환사가 전혀 없는 초기 상태에서 VERIFY 무한 루프 방지
+    // verified pool 부족 → SEED로 소환사 추가 (SEED 시점에 tier가 즉시 저장됨)
     if (verifiedPool < workItemProperties.getThreshold().getVerifiedPool()) {
-      return unverifiedBacklog > 0
-          ? WorkItemType.VERIFY_SUMMONERS
-          : WorkItemType.SEED_SUMMONERS;
+      return WorkItemType.SEED_SUMMONERS;
     }
 
     long queuedMatchIds = ingestQueueStatsJpaRepository.countReadyByTier(bucket.getTier().name());
     if (queuedMatchIds < workItemProperties.getThreshold().getReadyMatchQueue()) {
       return WorkItemType.REFRESH_SUMMONERS;
-    }
-
-    if (unverifiedBacklog > 0) {
-      return WorkItemType.VERIFY_SUMMONERS;
     }
 
     long recentIngested = ingestQueueStatsJpaRepository.countDoneInLastMinutesByTier(
@@ -103,8 +95,7 @@ public class CoverageScheduler {
       return WorkItemType.INGEST_MATCH_DETAIL;
     }
 
-    if (verifiedPool < workItemProperties.getThreshold().getMinSeedTrigger()
-        || unverifiedBacklog < workItemProperties.getThreshold().getUnverifiedBacklog()) {
+    if (verifiedPool < workItemProperties.getThreshold().getMinSeedTrigger()) {
       return WorkItemType.SEED_SUMMONERS;
     }
 
@@ -125,7 +116,6 @@ public class CoverageScheduler {
     return switch (type) {
       case INGEST_MATCH_DETAIL -> workItemProperties.getBatch().getIngest();
       case REFRESH_SUMMONERS -> workItemProperties.getBatch().getRefresh();
-      case VERIFY_SUMMONERS -> workItemProperties.getBatch().getVerify();
       case SEED_SUMMONERS -> workItemProperties.getBatch().getSeed();
     };
   }

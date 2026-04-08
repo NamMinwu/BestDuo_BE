@@ -27,11 +27,11 @@ class WorkItemJpaRepositoryTest {
 
   @Test
   void existsByCoverageBucketIdAndTypeAndStatusInDetectsPendingWork() {
-    repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 1, 10, null));
+    repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.SEED_SUMMONERS, 1, 10, null));
 
     boolean exists = repository.existsByCoverageBucketIdAndTypeAndStatusIn(
         1L,
-        WorkItemType.VERIFY_SUMMONERS,
+        WorkItemType.SEED_SUMMONERS,
         List.of(WorkItemStatus.PENDING, WorkItemStatus.RUNNING)
     );
 
@@ -40,7 +40,7 @@ class WorkItemJpaRepositoryTest {
 
   @Test
   void countByPatchAndTierAndStatusCountsMatchingRows() {
-    repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 1, 10, null));
+    repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.SEED_SUMMONERS, 1, 10, null));
     repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.REFRESH_SUMMONERS, 1, 10, null));
 
     long count = repository.countByPatchAndTierAndStatus("15.7", Tier.MASTER, WorkItemStatus.PENDING);
@@ -50,7 +50,7 @@ class WorkItemJpaRepositoryTest {
 
   @Test
   void findFirstByStatusOrderByPriorityAscCreatedAtAscReturnsHighestPriorityPendingItem() {
-    repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.VERIFY_SUMMONERS, 5, 10, null));
+    repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.SEED_SUMMONERS, 5, 10, null));
     WorkItem expected = repository.save(WorkItem.pending(1L, "15.7", Tier.MASTER, WorkItemType.REFRESH_SUMMONERS, 1, 10, null));
 
     WorkItem next = repository.findFirstByStatusOrderByPriorityAscCreatedAtAsc(WorkItemStatus.PENDING).orElseThrow();

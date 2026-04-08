@@ -7,6 +7,7 @@ import com.bestduo_BE.seed.application.port.SummonerSeedRegistry;
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
+import java.time.OffsetDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -103,7 +104,8 @@ public class SeedBootstrapExecutor {
 
     progress.incrementProcessedEntries();
 
-    if (!summonerSeedRegistry.registerIfAbsent(puuid)) {
+    Tier tierToStore = parseTier(entry.tier(), cmd.seedTier());
+    if (!summonerSeedRegistry.registerIfAbsent(puuid, tierToStore, OffsetDateTime.now())) {
       return;
     }
 
@@ -128,6 +130,16 @@ public class SeedBootstrapExecutor {
     Tier tierLabel = cmd.seedTier();
     matchQueueEnqueuer.enqueueAllIdempotent(matchIds, tierLabel, PRIORITY_SEED);
     progress.addEnqueuedMatchIds(matchIds.size());
+  }
+
+  private static Tier parseTier(String tierStr, Tier fallback) {
+    if (tierStr != null && !tierStr.isBlank()) {
+      try {
+        return Tier.valueOf(tierStr.toUpperCase());
+      } catch (IllegalArgumentException ignored) {
+      }
+    }
+    return fallback;
   }
 
   private static final class SeedBootstrapProgress {

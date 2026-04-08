@@ -62,14 +62,12 @@ work-item:
     verified-pool: ${WORK_ITEM_THRESHOLD_VERIFIED_POOL:10}
     ready-match-queue: ${WORK_ITEM_THRESHOLD_READY_MATCH_QUEUE:20}
     recent-ingest: ${WORK_ITEM_THRESHOLD_RECENT_INGEST:5}
-    unverified-backlog: ${WORK_ITEM_THRESHOLD_UNVERIFIED_BACKLOG:5}
     min-seed-trigger: ${WORK_ITEM_THRESHOLD_MIN_SEED_TRIGGER:3}
     ingest-window-minutes: ${WORK_ITEM_THRESHOLD_INGEST_WINDOW_MINUTES:30}
   batch:
-    verify: ${WORK_ITEM_BATCH_VERIFY:10}
     refresh: ${WORK_ITEM_BATCH_REFRESH:10}
     ingest: ${WORK_ITEM_BATCH_INGEST:20}
-    seed: ${WORK_ITEM_BATCH_SEED:1}
+    seed: ${WORK_ITEM_BATCH_SEED:100}
 
 management:
   endpoints:

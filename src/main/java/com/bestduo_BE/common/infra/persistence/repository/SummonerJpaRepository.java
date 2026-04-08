@@ -69,12 +69,4 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
 
   long countByLastKnownTier(Tier tier);
 
-  @Query(value = """
-      select count(*)
-      from summoner s
-      where (s.last_known_tier = :requestedTier or s.last_known_tier is null)
-        and s.tier_observed_at is null
-      """, nativeQuery = true)
-  long countUnverifiedCandidates(@Param("requestedTier") String requestedTier);
-
 }
