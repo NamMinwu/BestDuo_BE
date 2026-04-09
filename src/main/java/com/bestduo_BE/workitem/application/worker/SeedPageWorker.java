@@ -7,8 +7,10 @@ import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
 import com.bestduo_BE.workitem.domain.model.WorkItemType;
 import com.bestduo_BE.workitem.infra.persistence.entity.WorkItem;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class SeedPageWorker implements WorkerContract {
@@ -49,6 +51,7 @@ public class SeedPageWorker implements WorkerContract {
           text(node, "tier", null)
       );
     } catch (Exception e) {
+      log.warn("SeedPageWorker: payload parse failed. payload={}", rawPayload, e);
       return new SeedPayload("RANKED_SOLO_5x5", "I", 1, null);
     }
   }

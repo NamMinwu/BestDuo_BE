@@ -40,21 +40,24 @@ public class WorkItemDispatcherImpl implements WorkItemDispatcher {
   @Override
   @Transactional
   public void markDone(Long workItemId) {
-    WorkItem item = repository.findById(workItemId).orElseThrow();
+    WorkItem item = repository.findById(workItemId)
+        .orElseThrow(() -> new IllegalStateException("WorkItem not found: id=" + workItemId));
     item.markDone();
   }
 
   @Override
   @Transactional
   public void markError(Long workItemId, String message) {
-    WorkItem item = repository.findById(workItemId).orElseThrow();
+    WorkItem item = repository.findById(workItemId)
+        .orElseThrow(() -> new IllegalStateException("WorkItem not found: id=" + workItemId));
     item.markError(message);
   }
 
   @Override
   @Transactional
   public void markPending(Long workItemId) {
-    WorkItem item = repository.findById(workItemId).orElseThrow();
+    WorkItem item = repository.findById(workItemId)
+        .orElseThrow(() -> new IllegalStateException("WorkItem not found: id=" + workItemId));
     item.markPending();
   }
 

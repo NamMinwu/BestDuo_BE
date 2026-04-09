@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Setter
 public class WorkItemProperties {
 
-  private boolean workerEnabled = false;
+  private boolean workerEnabled = true;
   private long pollingIntervalMs = 500L;
   private long schedulerFixedDelayMs = 30_000L;
   private int staleMinutes = 10;

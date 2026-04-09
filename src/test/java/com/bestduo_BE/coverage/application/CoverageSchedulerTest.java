@@ -2,7 +2,7 @@ package com.bestduo_BE.coverage.application;
 
 import static org.mockito.BDDMockito.then;
 
-import com.bestduo_BE.coverage.presentation.api.CoverageScheduler;
+import com.bestduo_BE.coverage.application.CoverageScheduler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

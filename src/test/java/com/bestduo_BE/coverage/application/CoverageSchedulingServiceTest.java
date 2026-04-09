@@ -10,7 +10,6 @@ import com.bestduo_BE.config.WorkItemProperties;
 import com.bestduo_BE.coverage.infra.persistence.entity.CoverageBucket;
 import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketCountJpaRepository;
 import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketJpaRepository;
-import com.bestduo_BE.coverage.presentation.api.CoverageScheduler;
 import com.bestduo_BE.workitem.application.port.WorkItemDispatcher;
 import com.bestduo_BE.workitem.domain.model.WorkItemStatus;
 import com.bestduo_BE.workitem.domain.model.WorkItemType;

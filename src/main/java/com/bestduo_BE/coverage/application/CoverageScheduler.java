@@ -1,6 +1,5 @@
-package com.bestduo_BE.coverage.presentation.api;
+package com.bestduo_BE.coverage.application;
 
-import com.bestduo_BE.coverage.application.CoverageSchedulingService;
 import com.bestduo_BE.workitem.infra.persistence.entity.WorkItem;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
