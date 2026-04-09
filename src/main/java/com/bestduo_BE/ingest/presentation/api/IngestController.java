@@ -22,7 +22,7 @@ public class IngestController {
       @PathVariable String matchId,
       @RequestParam(name = "tier", defaultValue = "EMERALD") Tier tier
   ) {
-    int created = useCase.execute(matchId, tier).rawCreated();
+    int created = useCase.execute(matchId, tier, null).rawCreated();
     return "OK raw_created=" + created;
   }
 }

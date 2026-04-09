@@ -31,6 +31,11 @@ public class MatchIngestWorker {
     return execute(limit, Tier.ALL_TIERS);
   }
 
+  /** WorkItem의 patch를 수신하나, 실제 patch 필터링은 item.patch() (match_queue stamp) 기준으로 수행한다. */
+  public Result execute(int limit, Tier requestedTier, String expectedPatch) {
+    return execute(limit, requestedTier);
+  }
+
   public Result execute(int limit, Tier requestedTier) {
     int recovered = queue.recoverStaleRunning(STALE_MINUTES);
 
@@ -45,7 +50,7 @@ public class MatchIngestWorker {
       String matchId = item.matchId();
 
       try {
-        var r = ingestMatchDetail.execute(matchId, item.tier());
+        var r = ingestMatchDetail.execute(matchId, item.tier(), item.patch());
         rawCreated += r.rawCreated();
 
         queue.markDone(matchId);

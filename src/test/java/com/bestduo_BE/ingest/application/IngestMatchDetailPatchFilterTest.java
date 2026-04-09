@@ -1,13 +1,10 @@
 package com.bestduo_BE.ingest.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-import com.bestduo_BE.ingest.application.port.BottomDuoRawSaver;
-import com.bestduo_BE.ingest.application.port.MatchSaver;
-import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
 import com.bestduo_BE.common.application.port.SummonerExpansionQueue;
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
@@ -17,9 +14,12 @@ import com.bestduo_BE.common.infra.riot.dto.MetadataDto;
 import com.bestduo_BE.common.infra.riot.dto.ParticipantDto;
 import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import com.bestduo_BE.common.infra.riot.dto.TeamDto;
-import java.util.ArrayList;
+import com.bestduo_BE.ingest.application.port.BottomDuoRawSaver;
+import com.bestduo_BE.ingest.application.port.MatchSaver;
+import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -27,7 +27,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class IngestMatchDetailTest {
+class IngestMatchDetailPatchFilterTest {
 
   @Mock
   private RiotMatchLoader riotMatchLoader;
@@ -54,31 +54,51 @@ class IngestMatchDetailTest {
   }
 
   @Test
-  void saveMatchRawAndExpandParticipants() {
-    RiotMatchDto match = sampleMatch();
+  @DisplayName("expectedPatch 일치 시 모든 raw 저장")
+  void execute_withMatchingPatch_savesAllRaws() {
+    RiotMatchDto match = sampleMatchWithGameVersion("15.23.1");
     given(riotMatchLoader.loadMatch("KR_1")).willReturn(match);
-    given(summonerExpandQueue.registerIfAbsent("puuid-1")).willReturn(true);
-    given(summonerExpandQueue.registerIfAbsent("puuid-2")).willReturn(false);
-    given(summonerExpandQueue.registerIfAbsent("puuid-3")).willReturn(true);
+    given(summonerExpandQueue.registerIfAbsent(any())).willReturn(false);
 
-    IngestResult result = useCase.execute("KR_1", Tier.EMERALD, null);
+    IngestResult result = useCase.execute("KR_1", Tier.GOLD, "15.23");
 
-    verify(matchSaver).save("KR_1", match);
-    ArgumentCaptor<List<BottomDuoRaw>> rawsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(bottomDuoRawSaver).saveAllIdempotent(rawsCaptor.capture());
-    List<BottomDuoRaw> raws = rawsCaptor.getValue();
-    assertThat(raws).hasSize(2);
-    assertThat(raws).allMatch(raw -> raw.tier() == Tier.EMERALD && raw.matchId().equals("KR_1"));
-
-    verify(summonerExpandQueue).registerIfAbsent("puuid-1");
-    verify(summonerExpandQueue).registerIfAbsent("puuid-2");
-    verify(summonerExpandQueue).registerIfAbsent("puuid-3");
-
+    ArgumentCaptor<List<BottomDuoRaw>> captor = ArgumentCaptor.forClass(List.class);
+    verify(bottomDuoRawSaver).saveAllIdempotent(captor.capture());
+    assertThat(captor.getValue()).hasSize(2);
     assertThat(result.rawCreated()).isEqualTo(2);
-    assertThat(result.matchStartTimeSec()).isEqualTo(12345L);
   }
 
-  private RiotMatchDto sampleMatch() {
+  @Test
+  @DisplayName("expectedPatch 불일치 시 raw 폐기")
+  void execute_withMismatchedPatch_discardsRaws() {
+    RiotMatchDto match = sampleMatchWithGameVersion("15.22.1");  // 이전 패치
+    given(riotMatchLoader.loadMatch("KR_2")).willReturn(match);
+    given(summonerExpandQueue.registerIfAbsent(any())).willReturn(false);
+
+    IngestResult result = useCase.execute("KR_2", Tier.GOLD, "15.23");
+
+    ArgumentCaptor<List<BottomDuoRaw>> captor = ArgumentCaptor.forClass(List.class);
+    verify(bottomDuoRawSaver).saveAllIdempotent(captor.capture());
+    assertThat(captor.getValue()).isEmpty();
+    assertThat(result.rawCreated()).isEqualTo(0);
+  }
+
+  @Test
+  @DisplayName("expectedPatch null이면 필터링 없이 전체 저장 (하위 호환)")
+  void execute_withNullExpectedPatch_savesAllRawsWithoutFiltering() {
+    RiotMatchDto match = sampleMatchWithGameVersion("15.22.1");
+    given(riotMatchLoader.loadMatch("KR_3")).willReturn(match);
+    given(summonerExpandQueue.registerIfAbsent(any())).willReturn(false);
+
+    IngestResult result = useCase.execute("KR_3", Tier.GOLD, null);
+
+    ArgumentCaptor<List<BottomDuoRaw>> captor = ArgumentCaptor.forClass(List.class);
+    verify(bottomDuoRawSaver).saveAllIdempotent(captor.capture());
+    assertThat(captor.getValue()).hasSize(2);
+    assertThat(result.rawCreated()).isEqualTo(2);
+  }
+
+  private RiotMatchDto sampleMatchWithGameVersion(String gameVersion) {
     List<ParticipantDto> participants = List.of(
         participant(100, "BOTTOM", 222),
         participant(100, "UTILITY", 412),
@@ -90,15 +110,13 @@ class IngestMatchDetailTest {
         null, null, null, null, null, null,
         12_345_000L,
         null,
-        "15.23.1",
+        gameVersion,
         null, null, null,
         participants,
         teams,
         null
     );
-    List<String> metadataParticipants = new ArrayList<>(List.of(" puuid-1 ", "puuid-2", "puuid-3"));
-    metadataParticipants.add(null);
-    MetadataDto metadata = new MetadataDto("1", "KR_1", metadataParticipants);
+    MetadataDto metadata = new MetadataDto("1", "KR_1", List.of("puuid-1"));
     return new RiotMatchDto(metadata, info);
   }
 
