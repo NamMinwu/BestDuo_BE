@@ -11,11 +11,13 @@ import com.bestduo_BE.common.domain.service.BottomDuoExtractor;
 import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class IngestMatchDetail {
 
   private final RiotMatchLoader riotMatchLoader;
@@ -27,10 +29,22 @@ public class IngestMatchDetail {
   private final BottomDuoExtractor extractor = new BottomDuoExtractor();
 
   @Transactional
-  public IngestResult execute(String matchId, Tier tier) {
+  public IngestResult execute(String matchId, Tier tier, String expectedPatch) {
     RiotMatchDto match = loadMatch(matchId);
     saveMatch(matchId, match);
     List<BottomDuoRaw> raws = extractBottomDuoRaws(matchId, match, tier);
+
+    if (expectedPatch != null) {
+      List<BottomDuoRaw> filtered = raws.stream()
+          .filter(r -> expectedPatch.equals(r.patch()))
+          .toList();
+      if (filtered.size() < raws.size()) {
+        log.warn("[PatchFilter] Discarded {} raws for matchId={} (expected={})",
+            raws.size() - filtered.size(), matchId, expectedPatch);
+      }
+      raws = filtered;
+    }
+
     saveBottomDuoRaws(raws);
     expandParticipants(match);
     Long startSec = extractMatchStartTimeSec(match);

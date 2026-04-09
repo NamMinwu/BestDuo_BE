@@ -19,6 +19,6 @@ public class IngestMatchDetailWorker implements WorkerContract {
 
   @Override
   public void execute(WorkItem workItem) {
-    matchIngestWorker.execute(workItem.getBatchLimit(), workItem.getTier());
+    matchIngestWorker.execute(workItem.getBatchLimit(), workItem.getTier(), workItem.getPatch());
   }
 }
