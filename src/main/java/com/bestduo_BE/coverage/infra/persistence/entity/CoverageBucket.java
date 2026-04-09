@@ -89,7 +89,6 @@ public class CoverageBucket {
         .currentMatchCount(0L)
         .status(CoverageBucketStatus.COLLECTING)
         .priority(priority)
-        // seedPage=1, seedDivision="I" 는 @Builder.Default로 자동 적용
         .lastEvaluatedAt(now)
         .createdAt(now)
         .updatedAt(now)

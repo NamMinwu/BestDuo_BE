@@ -1,12 +1,13 @@
 package com.bestduo_BE.coverage.application;
 
+import com.bestduo_BE.common.infra.persistence.repository.IngestQueueStatsJpaRepository;
+import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
 import com.bestduo_BE.config.WorkItemProperties;
 import com.bestduo_BE.coverage.domain.model.CoverageBucketStatus;
 import com.bestduo_BE.coverage.infra.persistence.entity.CoverageBucket;
 import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketCountJpaRepository;
 import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketJpaRepository;
-import com.bestduo_BE.common.infra.persistence.repository.IngestQueueStatsJpaRepository;
-import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
+import com.bestduo_BE.coverage.presentation.api.CoverageScheduler;
 import com.bestduo_BE.workitem.application.port.WorkItemDispatcher;
 import com.bestduo_BE.workitem.domain.model.WorkItemStatus;
 import com.bestduo_BE.workitem.domain.model.WorkItemType;
@@ -14,13 +15,12 @@ import com.bestduo_BE.workitem.infra.persistence.entity.WorkItem;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class CoverageScheduler {
+public class CoverageSchedulingService {
 
   private final CoverageBucketJpaRepository coverageBucketRepository;
   private final CoverageBucketCountJpaRepository coverageBucketCountRepository;
@@ -29,13 +29,8 @@ public class CoverageScheduler {
   private final WorkItemDispatcher workItemDispatcher;
   private final WorkItemProperties workItemProperties;
 
-  @Scheduled(fixedDelayString = "${work-item.scheduler-fixed-delay-ms:30000}")
-  public void scheduledRun() {
-    schedule();
-  }
-
   @Transactional
-  public ScheduleResult schedule() {
+  public CoverageScheduler.ScheduleResult schedule() {
     List<WorkItem> created = new ArrayList<>();
 
     for (CoverageBucket bucket : coverageBucketRepository.findAllByOrderByPriorityAscIdAsc()) {
@@ -63,20 +58,17 @@ public class CoverageScheduler {
           batchLimit(nextType),
           payload
       )));
-      // SEED 발행 직후 다음 실행을 위해 페이지/division 전진
-      // @Transactional 범위 내이므로 emit 실패 시 함께 롤백됨
       if (nextType == WorkItemType.SEED_SUMMONERS) {
         bucket.advanceSeedState(workItemProperties.getBatch().getSeedMaxPagesPerDivision());
       }
     }
 
-    return new ScheduleResult(created.size(), created);
+    return new CoverageScheduler.ScheduleResult(created.size(), created);
   }
 
   private WorkItemType determineNextWorkItem(CoverageBucket bucket) {
     long verifiedPool = summonerJpaRepository.countByLastKnownTier(bucket.getTier());
 
-    // verified pool 부족 → SEED로 소환사 추가 (SEED 시점에 tier가 즉시 저장됨)
     if (verifiedPool < workItemProperties.getThreshold().getVerifiedPool()) {
       return WorkItemType.SEED_SUMMONERS;
     }
@@ -124,13 +116,7 @@ public class CoverageScheduler {
     if (type != WorkItemType.SEED_SUMMONERS) {
       return null;
     }
-    // seedPage/seedDivision은 버킷에 저장된 현재 진행 상태를 사용한다.
-    // 이 메서드 호출 이후 advanceSeedState()가 상태를 전진시키므로,
-    // 다음 SEED WorkItem은 다른 페이지/division을 가리키게 된다.
     return "{\"queue\":\"RANKED_SOLO_5x5\",\"division\":\"%s\",\"page\":%d,\"tier\":\"%s\"}"
         .formatted(bucket.getSeedDivision(), bucket.getSeedPage(), bucket.getTier().name());
-  }
-
-  public record ScheduleResult(int createdCount, List<WorkItem> workItems) {
   }
 }
