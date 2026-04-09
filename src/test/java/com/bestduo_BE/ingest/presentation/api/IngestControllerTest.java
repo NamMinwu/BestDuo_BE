@@ -33,9 +33,8 @@ import org.springframework.test.web.servlet.MockMvc;
     "spring.datasource.username=sa",
     "spring.datasource.password=",
     "spring.datasource.driver-class-name=org.h2.Driver",
-    "spring.jpa.hibernate.ddl-auto=create",
+    "spring.jpa.hibernate.ddl-auto=create-drop",
     "spring.jpa.show-sql=false",
-    "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect",
     "external.riot.api-key=dummy"
 })
 class IngestControllerTest {

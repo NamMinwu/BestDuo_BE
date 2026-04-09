@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.seed.application.port.LeagueEntriesSeedLoader;
+import com.bestduo_BE.common.application.PatchVersionService;
 import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
 import com.bestduo_BE.seed.application.port.SummonerSeedRegistry;
@@ -38,6 +39,9 @@ class SeedBootstrapExecutorTest {
   @Mock
   private SummonerSeedRegistry summonerSeedRegistry;
 
+  @Mock
+  private PatchVersionService patchVersionService;
+
   private SeedBootstrapExecutor useCase;
 
   private final SeedBootstrapCommand command = new SeedBootstrapCommand(
@@ -50,7 +54,8 @@ class SeedBootstrapExecutorTest {
         leagueEntriesSeedLoader,
         matchIdsFinder,
         matchQueueEnqueuer,
-        summonerSeedRegistry
+        summonerSeedRegistry,
+        patchVersionService
     );
   }
 
@@ -73,12 +78,14 @@ class SeedBootstrapExecutorTest {
     givenEntries(entries);
     given(summonerSeedRegistry.registerIfAbsent(eq("new-1"), any(Tier.class), any(OffsetDateTime.class))).willReturn(true);
     given(summonerSeedRegistry.registerIfAbsent(eq("existing"), any(Tier.class), any(OffsetDateTime.class))).willReturn(false);
-    given(matchIdsFinder.findRecentMatchIds("new-1", command.matchesPerPuuid()))
+    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(java.util.Optional.of(1700000000L));
+    given(patchVersionService.currentPatchVersion()).willReturn(java.util.Optional.of("15.23"));
+    given(matchIdsFinder.findMatchIdsSince("new-1", 1700000000L, command.matchesPerPuuid()))
         .willReturn(List.of("m-1", "m-2"));
 
     SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(command);
 
-    verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-1", "m-2"), Tier.MASTER, 50);
+    verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-1", "m-2"), Tier.MASTER, 50, "15.23");
     verify(matchIdsFinder, never()).findRecentMatchIds(eq("existing"), anyInt());
 
     assertThat(result.pagesProcessed()).isEqualTo(1);
@@ -92,7 +99,8 @@ class SeedBootstrapExecutorTest {
   void markSeedErrorWhenMatchLookupFails() {
     givenEntries(List.of(entry("p-error")));
     given(summonerSeedRegistry.registerIfAbsent(eq("p-error"), any(Tier.class), any(OffsetDateTime.class))).willReturn(true);
-    given(matchIdsFinder.findRecentMatchIds("p-error", command.matchesPerPuuid()))
+    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(java.util.Optional.of(1700000000L));
+    given(matchIdsFinder.findMatchIdsSince("p-error", 1700000000L, command.matchesPerPuuid()))
         .willThrow(new IllegalStateException("boom"));
 
     SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(command);
@@ -111,7 +119,8 @@ class SeedBootstrapExecutorTest {
         limited.queue(), limited.tier(), limited.division(), 1
     )).willReturn(entries);
     given(summonerSeedRegistry.registerIfAbsent(eq("new-1"), any(Tier.class), any(OffsetDateTime.class))).willReturn(true);
-    given(matchIdsFinder.findRecentMatchIds("new-1", limited.matchesPerPuuid()))
+    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(java.util.Optional.of(1700000000L));
+    given(matchIdsFinder.findMatchIdsSince("new-1", 1700000000L, limited.matchesPerPuuid()))
         .willReturn(List.of("m-1"));
 
     SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(limited);
@@ -120,6 +129,20 @@ class SeedBootstrapExecutorTest {
     verify(summonerSeedRegistry, never()).registerIfAbsent(eq("new-2"), any(Tier.class), any(OffsetDateTime.class));
     assertThat(result.entriesFetched()).isEqualTo(1);
     assertThat(result.puuidRegistered()).isEqualTo(1);
+  }
+
+  @Test
+  void fallBackToRecentMatchesWhenPatchStartTimeIsMissing() {
+    givenEntries(List.of(entry("new-1")));
+    given(summonerSeedRegistry.registerIfAbsent(eq("new-1"), any(Tier.class), any(OffsetDateTime.class))).willReturn(true);
+    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(java.util.Optional.empty());
+    given(patchVersionService.currentPatchVersion()).willReturn(java.util.Optional.empty());
+    given(matchIdsFinder.findRecentMatchIds("new-1", command.matchesPerPuuid())).willReturn(List.of("m-9"));
+
+    useCase.execute(command);
+
+    verify(matchIdsFinder).findRecentMatchIds("new-1", command.matchesPerPuuid());
+    verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-9"), Tier.MASTER, 50, null);
   }
 
   private void givenEntries(List<LeagueEntry> entries) {

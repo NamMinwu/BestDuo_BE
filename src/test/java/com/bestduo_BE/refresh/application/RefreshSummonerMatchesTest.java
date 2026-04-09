@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.bestduo_BE.config.WorkItemProperties;
 import com.bestduo_BE.refresh.application.port.LeagueEntriesRefreshLoader;
+import com.bestduo_BE.common.application.PatchVersionService;
 import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
 import com.bestduo_BE.refresh.application.port.SummonerRefreshStatusUpdater;
@@ -39,6 +40,9 @@ class RefreshSummonerMatchesTest {
   @Mock
   private SummonerRefreshStatusUpdater summonerRefreshStatusUpdater;
 
+  @Mock
+  private PatchVersionService patchVersionService;
+
   // 실제 인스턴스 사용 — 기본값(tierCacheTtlHours=12)으로 충분하며, 테스트 내 summoner는
   // 모두 tierObservedAt=null 이므로 캐시가 활성화되지 않아 기존 동작이 보존됨
   private final WorkItemProperties workItemProperties = new WorkItemProperties();
@@ -52,6 +56,7 @@ class RefreshSummonerMatchesTest {
         matchIdsFinder,
         matchQueueEnqueuer,
         summonerRefreshStatusUpdater,
+        patchVersionService,
         workItemProperties
     );
   }
@@ -77,6 +82,8 @@ class RefreshSummonerMatchesTest {
     given(summonerRefreshStatusUpdater.findOrCreate("p-new")).willReturn(summoner);
     given(leagueEntriesRefreshLoader.loadEntriesByPuuid("p-new"))
         .willReturn(List.of(new LeagueEntry("p-new", "EMERALD", "RANKED_SOLO_5x5", "I", 200L)));
+    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(java.util.Optional.empty());
+    given(patchVersionService.currentPatchVersion()).willReturn(java.util.Optional.of("15.23"));
     given(matchIdsFinder.findRecentMatchIds("p-new", 50)).willReturn(List.of("m-1", "m-2"));
 
     long before = Instant.now().getEpochSecond();
@@ -84,7 +91,7 @@ class RefreshSummonerMatchesTest {
     long after = Instant.now().getEpochSecond();
 
     verify(summonerRefreshStatusUpdater).syncResolvedTier(org.mockito.ArgumentMatchers.eq("p-new"), org.mockito.ArgumentMatchers.eq(Tier.EMERALD), org.mockito.ArgumentMatchers.any(OffsetDateTime.class));
-    verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-1", "m-2"), Tier.EMERALD, 10);
+    verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-1", "m-2"), Tier.EMERALD, 10, "15.23");
     assertThat(result.matchIdsEnqueued()).isEqualTo(2);
     assertThat(result.collectionTier()).isEqualTo(Tier.EMERALD);
     assertThat(result.lastMatchStartTimeSec()).isBetween(before, after);
@@ -96,14 +103,32 @@ class RefreshSummonerMatchesTest {
     given(summonerRefreshStatusUpdater.findOrCreate("p-mid")).willReturn(summoner);
     given(leagueEntriesRefreshLoader.loadEntriesByPuuid("p-mid"))
         .willReturn(List.of(new LeagueEntry("p-mid", "DIAMOND", "RANKED_SOLO_5x5", "I", 30L)));
+    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(java.util.Optional.of(1234L));
+    given(patchVersionService.currentPatchVersion()).willReturn(java.util.Optional.of("15.23"));
     given(matchIdsFinder.findMatchIdsSince("p-mid", 5678L, 50)).willReturn(List.of("m-42"));
 
     long before = Instant.now().getEpochSecond();
     RefreshSummonerMatches.Result result = useCase.execute("p-mid", Tier.DIAMOND);
     long after = Instant.now().getEpochSecond();
 
-    verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-42"), Tier.DIAMOND, 10);
+    verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-42"), Tier.DIAMOND, 10, "15.23");
     assertThat(result.lastMatchStartTimeSec()).isBetween(before, after);
+  }
+
+  @Test
+  void usePatchStartTimeWhenItIsNewerThanCursor() {
+    Summoner summoner = summoner("p-fresh", 1000L);
+    given(summonerRefreshStatusUpdater.findOrCreate("p-fresh")).willReturn(summoner);
+    given(leagueEntriesRefreshLoader.loadEntriesByPuuid("p-fresh"))
+        .willReturn(List.of(new LeagueEntry("p-fresh", "DIAMOND", "RANKED_SOLO_5x5", "I", 30L)));
+    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(java.util.Optional.of(2000L));
+    given(patchVersionService.currentPatchVersion()).willReturn(java.util.Optional.of("15.23"));
+    given(matchIdsFinder.findMatchIdsSince("p-fresh", 2000L, 50)).willReturn(List.of("m-77"));
+
+    useCase.execute("p-fresh", Tier.DIAMOND);
+
+    verify(matchIdsFinder).findMatchIdsSince("p-fresh", 2000L, 50);
+    verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-77"), Tier.DIAMOND, 10, "15.23");
   }
 
   @Test
@@ -112,10 +137,12 @@ class RefreshSummonerMatchesTest {
     given(summonerRefreshStatusUpdater.findOrCreate("p-err")).willReturn(summoner);
     given(leagueEntriesRefreshLoader.loadEntriesByPuuid("p-err"))
         .willReturn(List.of(new LeagueEntry("p-err", "MASTER", "RANKED_SOLO_5x5", "I", 300L)));
+    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(java.util.Optional.empty());
+    given(patchVersionService.currentPatchVersion()).willReturn(java.util.Optional.of("15.23"));
     given(matchIdsFinder.findRecentMatchIds("p-err", 50)).willReturn(List.of("m-err"));
     willThrow(new IllegalStateException("queue down"))
         .given(matchQueueEnqueuer)
-        .enqueueAllIdempotent(List.of("m-err"), Tier.MASTER, 10);
+        .enqueueAllIdempotent(List.of("m-err"), Tier.MASTER, 10, "15.23");
 
     IllegalStateException ex = assertThrows(IllegalStateException.class, () -> useCase.execute("p-err", Tier.MASTER));
     assertThat(ex).hasMessageContaining("queue down");

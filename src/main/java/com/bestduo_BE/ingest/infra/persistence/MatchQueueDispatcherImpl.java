@@ -70,7 +70,7 @@ public class MatchQueueDispatcherImpl implements MatchQueueDispatcher {
     List<Item> out = new ArrayList<>();
     for (MatchQueue mq : list) {
       Tier tier = Tier.valueOf(mq.getCollectionTier());
-      out.add(new Item(mq.getMatchId(), tier, mq.getPriority()));
+      out.add(new Item(mq.getMatchId(), tier, mq.getPriority(), mq.getPatch()));
     }
     return out;
   }

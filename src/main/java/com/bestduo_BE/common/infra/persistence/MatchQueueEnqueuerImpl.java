@@ -16,10 +16,10 @@ public class MatchQueueEnqueuerImpl implements MatchQueueEnqueuer {
 
   @Override
   @Transactional
-  public void enqueueAllIdempotent(List<String> matchIds, Tier tier, int priority) {
+  public void enqueueAllIdempotent(List<String> matchIds, Tier tier, int priority, String patch) {
     for (String matchId : matchIds) {
       if (repo.existsById(matchId)) continue; // ✅ 멱등
-      repo.save(MatchQueue.newReady(matchId, tier.name(), priority));
+      repo.save(MatchQueue.newReady(matchId, tier.name(), priority, patch));
     }
   }
 

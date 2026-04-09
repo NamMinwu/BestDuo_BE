@@ -31,7 +31,7 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
         updated_at = now()
     where status = 'RUNNING'
       and locked_at is not null
-      and locked_at <= now() - (:staleMinutes || ' minutes')::interval
+      and locked_at <= now() - (:staleMinutes * interval '1 minute')
     """, nativeQuery = true)
   int recoverStaleRunning(@Param("staleMinutes") int staleMinutes);
 
@@ -65,7 +65,7 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
       from match_queue mq
       where mq.status = 'ERROR'
         and mq.retry_count < :maxRetry
-        and mq.updated_at <= now() - (:cooldownMinutes || ' minutes')::interval
+        and mq.updated_at <= now() - (:cooldownMinutes * interval '1 minute')
         and (:collectionTier is null or mq.collection_tier = :collectionTier)
       order by mq.priority asc, mq.updated_at asc
       limit :limit

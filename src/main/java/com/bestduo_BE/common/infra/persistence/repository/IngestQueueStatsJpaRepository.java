@@ -23,7 +23,7 @@ public interface IngestQueueStatsJpaRepository extends Repository<MatchQueue, St
     from match_queue mq
     where mq.status = 'RUNNING'
       and mq.locked_at is not null
-      and mq.locked_at <= now() - (:staleMinutes || ' minutes')::interval
+      and mq.locked_at <= now() - (:staleMinutes * interval '1 minute')
     """, nativeQuery = true)
   long countStaleRunning(@Param("staleMinutes") int staleMinutes);
 
@@ -58,7 +58,7 @@ public interface IngestQueueStatsJpaRepository extends Repository<MatchQueue, St
     select count(*)
     from match_queue mq
     where mq.status = 'DONE'
-      and mq.updated_at >= now() - (:minutes || ' minutes')::interval
+      and mq.updated_at >= now() - (:minutes * interval '1 minute')
     """, nativeQuery = true)
   long countDoneInLastMinutes(@Param("minutes") int minutes);
 
@@ -74,7 +74,7 @@ public interface IngestQueueStatsJpaRepository extends Repository<MatchQueue, St
     select count(*)
     from match_queue mq
     where mq.status = 'DONE'
-      and mq.updated_at >= now() - (:minutes || ' minutes')::interval
+      and mq.updated_at >= now() - (:minutes * interval '1 minute')
       and (:collectionTier is null or mq.collection_tier = :collectionTier)
     """, nativeQuery = true)
   long countDoneInLastMinutesByTier(@Param("minutes") int minutes, @Param("collectionTier") String collectionTier);

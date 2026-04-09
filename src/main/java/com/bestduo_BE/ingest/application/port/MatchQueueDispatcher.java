@@ -29,5 +29,5 @@ public interface MatchQueueDispatcher {
    */
   void unlockToReady(String matchId);
 
-  record Item(String matchId, Tier tier, int priority) {}
+  record Item(String matchId, Tier tier, int priority, String patch) {}
 }

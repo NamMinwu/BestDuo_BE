@@ -32,7 +32,7 @@ class MatchIngestWorkerTest {
 
   @Test
   void executeForwardsRequestedTierToQueueLocking() {
-    MatchQueueDispatcher.Item item = new MatchQueueDispatcher.Item("match-1", Tier.GOLD, 1);
+    MatchQueueDispatcher.Item item = new MatchQueueDispatcher.Item("match-1", Tier.GOLD, 1, "15.23");
     given(queue.recoverStaleRunning(10)).willReturn(0);
     given(queue.pickAndLock(3, 2, 10, Tier.GOLD)).willReturn(List.of(item));
     given(ingestMatchDetail.execute("match-1", Tier.GOLD))

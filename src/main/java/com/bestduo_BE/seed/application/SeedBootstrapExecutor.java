@@ -1,6 +1,7 @@
 package com.bestduo_BE.seed.application;
 
 import com.bestduo_BE.seed.application.port.LeagueEntriesSeedLoader;
+import com.bestduo_BE.common.application.PatchVersionService;
 import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
 import com.bestduo_BE.seed.application.port.SummonerSeedRegistry;
@@ -22,6 +23,7 @@ public class SeedBootstrapExecutor {
   private final MatchIdsFinder matchIdsFinder;
   private final MatchQueueEnqueuer matchQueueEnqueuer;
   private final SummonerSeedRegistry summonerSeedRegistry;
+  private final PatchVersionService patchVersionService;
 
   public record SeedBootstrapResult(
       int pagesProcessed,
@@ -121,14 +123,23 @@ public class SeedBootstrapExecutor {
   }
 
   private void enqueueRecentMatches(String puuid, SeedBootstrapCommand cmd, SeedBootstrapProgress progress) {
-    List<String> matchIds = matchIdsFinder.findRecentMatchIds(puuid, cmd.matchesPerPuuid());
+    var patchStartTime = patchVersionService.currentPatchStartTimeEpochSeconds();
+    String currentPatch = patchVersionService.currentPatchVersion().orElse(null);
+
+    List<String> matchIds;
+    if (patchStartTime.isPresent()) {
+      matchIds = matchIdsFinder.findMatchIdsSince(puuid, patchStartTime.get(), cmd.matchesPerPuuid());
+    } else {
+      matchIds = matchIdsFinder.findRecentMatchIds(puuid, cmd.matchesPerPuuid());
+    }
+
     if (matchIds == null || matchIds.isEmpty()) {
       return;
     }
 
     progress.addFetchedMatchIds(matchIds.size());
     Tier tierLabel = cmd.seedTier();
-    matchQueueEnqueuer.enqueueAllIdempotent(matchIds, tierLabel, PRIORITY_SEED);
+    matchQueueEnqueuer.enqueueAllIdempotent(matchIds, tierLabel, PRIORITY_SEED, currentPatch);
     progress.addEnqueuedMatchIds(matchIds.size());
   }
 
