@@ -25,6 +25,11 @@ public class PatchVersionService {
         .map(PatchVersion::getPatch);
   }
 
+  /** 최신 PatchVersion 엔티티 반환. 데이터 없으면 Optional.empty() */
+  public Optional<PatchVersion> currentPatch() {
+    return patchVersionRepository.findTopByOrderByReleasedAtDesc();
+  }
+
   /** 새 패치 등록 (멱등: 이미 존재하면 false 반환) */
   public boolean registerIfAbsent(String patch, OffsetDateTime releasedAt) {
     if (patchVersionRepository.existsByPatch(patch)) {
