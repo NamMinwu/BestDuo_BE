@@ -61,4 +61,21 @@ public interface IngestQueueStatsJpaRepository extends Repository<MatchQueue, St
       and mq.updated_at >= now() - (:minutes || ' minutes')::interval
     """, nativeQuery = true)
   long countDoneInLastMinutes(@Param("minutes") int minutes);
+
+  @Query(value = """
+    select count(*)
+    from match_queue mq
+    where mq.status = 'READY'
+      and (:collectionTier is null or mq.collection_tier = :collectionTier)
+    """, nativeQuery = true)
+  long countReadyByTier(@Param("collectionTier") String collectionTier);
+
+  @Query(value = """
+    select count(*)
+    from match_queue mq
+    where mq.status = 'DONE'
+      and mq.updated_at >= now() - (:minutes || ' minutes')::interval
+      and (:collectionTier is null or mq.collection_tier = :collectionTier)
+    """, nativeQuery = true)
+  long countDoneInLastMinutesByTier(@Param("minutes") int minutes, @Param("collectionTier") String collectionTier);
 }

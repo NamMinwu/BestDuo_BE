@@ -38,3 +38,4 @@ out/
 
 ### Local env (secrets) ###
 .env
+riot.txt

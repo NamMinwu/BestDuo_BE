@@ -3,7 +3,6 @@ package com.bestduo_BE.common.infra.riot;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bestduo_BE.config.RiotApiProperties;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.web.client.RestTemplate;
@@ -13,57 +12,34 @@ class RiotApiConfigTest {
   private final RiotApiConfig config = new RiotApiConfig();
 
   @Test
-  void riotKeyPoolFallsBackToSingleKeyWhenMultiKeyDisabled() {
+  void riotRateLimitInterceptorUsesConfiguredApiKey() throws Exception {
     RiotApiProperties properties = new RiotApiProperties();
-    properties.setApiKey("single-key");
-    properties.setApiKeys(List.of("key-a", "key-b"));
-    properties.setMultiKeyEnabled(false);
+    properties.setApiKey("my-key");
 
-    RiotKeyPool keyPool = config.riotKeyPool(properties);
+    RiotRateLimitInterceptor interceptor = config.riotRateLimitInterceptor(properties);
 
-    try (KeyLease first = keyPool.lease(); KeyLease second = keyPool.lease()) {
-      assertThat(first.apiKey()).isEqualTo("single-key");
-      assertThat(second.apiKey()).isEqualTo("single-key");
-    }
+    // 헤더 주입 확인: mock execution으로 인터셉트 실행
+    var request = new org.springframework.mock.http.client.MockClientHttpRequest();
+    request.setURI(java.net.URI.create("https://kr.api.riotgames.com/test"));
+    var execution = org.mockito.Mockito.mock(
+        org.springframework.http.client.ClientHttpRequestExecution.class);
+    org.mockito.Mockito.when(execution.execute(org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any()))
+        .thenReturn(new org.springframework.mock.http.client.MockClientHttpResponse(
+            new byte[0], org.springframework.http.HttpStatus.OK));
+
+    interceptor.intercept(request, new byte[0], execution);
+
+    assertThat(request.getHeaders().getFirst("X-Riot-Token")).isEqualTo("my-key");
   }
 
   @Test
-  void riotKeyPoolUsesDistinctMultiKeysWhenEnabled() {
-    RiotApiProperties properties = new RiotApiProperties();
-    properties.setApiKey("single-key");
-    properties.setApiKeys(List.of("key-a", "key-a", "key-b"));
-    properties.setMultiKeyEnabled(true);
-
-    RiotKeyPool keyPool = config.riotKeyPool(properties);
-
-    try (KeyLease first = keyPool.lease(); KeyLease second = keyPool.lease()) {
-      assertThat(first.apiKey()).isEqualTo("key-a");
-      assertThat(second.apiKey()).isEqualTo("key-b");
-    }
-  }
-
-  @Test
-  void riotKeyPoolFallsBackToSingleKeyWhenMultiKeyListIsBlank() {
-    RiotApiProperties properties = new RiotApiProperties();
-    properties.setApiKey("single-key");
-    properties.setApiKeys(List.of(" ", ""));
-    properties.setMultiKeyEnabled(true);
-
-    RiotKeyPool keyPool = config.riotKeyPool(properties);
-
-    try (KeyLease first = keyPool.lease(); KeyLease second = keyPool.lease()) {
-      assertThat(first.apiKey()).isEqualTo("single-key");
-      assertThat(second.apiKey()).isEqualTo("single-key");
-    }
-  }
-
-  @Test
-  void restTemplateBeansAreStillCreatedWithExistingNames() {
+  void restTemplateBeansAreCreatedWithCorrectNames() {
     RiotApiProperties properties = new RiotApiProperties();
     properties.setPlatformBaseUrl("https://kr.api.riotgames.com");
     properties.setRegionalBaseUrl("https://asia.api.riotgames.com");
-    properties.setApiKey("single-key");
-    RiotRateLimitInterceptor interceptor = new RiotRateLimitInterceptor(config.riotKeyPool(properties));
+    properties.setApiKey("my-key");
+    RiotRateLimitInterceptor interceptor = config.riotRateLimitInterceptor(properties);
 
     RestTemplate platform = config.riotPlatformRestTemplate(new RestTemplateBuilder(), interceptor, properties);
     RestTemplate regional = config.riotRegionalRestTemplate(new RestTemplateBuilder(), interceptor, properties);

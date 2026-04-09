@@ -26,8 +26,6 @@ external:
     platform-base-url: https://kr.api.riotgames.com
     regional-base-url: https://asia.api.riotgames.com
     api-key: ${EXTERNAL_RIOT_API_KEY:}
-    api-keys: ${EXTERNAL_RIOT_API_KEYS:}
-    multi-key-enabled: ${EXTERNAL_RIOT_MULTI_KEY_ENABLED:false}
 
 collector:
   seed-puuids: [] # TODO populate with seed accounts to crawl
@@ -53,6 +51,23 @@ daily-run:
 execution-request:
   worker:
     enabled: ${EXECUTION_REQUEST_WORKER_ENABLED:false}
+
+work-item:
+  worker-enabled: ${WORK_ITEM_WORKER_ENABLED:true}
+  polling-interval-ms: ${WORK_ITEM_POLLING_INTERVAL_MS:500}
+  scheduler-fixed-delay-ms: ${WORK_ITEM_SCHEDULER_FIXED_DELAY_MS:30000}
+  stale-minutes: ${WORK_ITEM_STALE_MINUTES:10}
+  duplicate-pending-limit: ${WORK_ITEM_DUPLICATE_PENDING_LIMIT:1}
+  threshold:
+    verified-pool: ${WORK_ITEM_THRESHOLD_VERIFIED_POOL:10}
+    ready-match-queue: ${WORK_ITEM_THRESHOLD_READY_MATCH_QUEUE:20}
+    recent-ingest: ${WORK_ITEM_THRESHOLD_RECENT_INGEST:5}
+    min-seed-trigger: ${WORK_ITEM_THRESHOLD_MIN_SEED_TRIGGER:3}
+    ingest-window-minutes: ${WORK_ITEM_THRESHOLD_INGEST_WINDOW_MINUTES:30}
+  batch:
+    refresh: ${WORK_ITEM_BATCH_REFRESH:10}
+    ingest: ${WORK_ITEM_BATCH_INGEST:20}
+    seed: ${WORK_ITEM_BATCH_SEED:100}
 
 management:
   endpoints:

@@ -1,5 +1,6 @@
 package com.bestduo_BE.refresh.application;
 
+import com.bestduo_BE.config.WorkItemProperties;
 import com.bestduo_BE.refresh.application.port.LeagueEntriesRefreshLoader;
 import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
@@ -26,8 +27,8 @@ public class RefreshSummonerMatches {
   private final LeagueEntriesRefreshLoader leagueEntriesRefreshLoader;
   private final MatchIdsFinder matchIdsFinder;
   private final MatchQueueEnqueuer matchQueueEnqueuer;
-
   private final SummonerRefreshStatusUpdater summonerRefreshStatusUpdater;
+  private final WorkItemProperties workItemProperties;
 
   public Result execute(String puuid) {
     return execute(puuid, Tier.ALL_TIERS);
@@ -37,13 +38,13 @@ public class RefreshSummonerMatches {
     Summoner summoner = summonerRefreshStatusUpdater.findOrCreate(puuid);
 
     try {
-      Tier collectionTier = resolveCollectionTierBySolo(puuid);
+      // league-v4 호출 or 캐시 사용 (tierObservedAt이 TTL 이내면 API 스킵)
+      Tier collectionTier = resolveTier(puuid, summoner);
+
       if (collectionTier == null || collectionTier == Tier.ALL_TIERS) {
         summonerRefreshStatusUpdater.syncRefreshCursor(puuid, summoner.getLastMatchStartTime());
         return new Result(puuid, 0, collectionTier, summoner.getLastMatchStartTime());
       }
-
-      summonerRefreshStatusUpdater.syncResolvedTier(puuid, collectionTier, OffsetDateTime.now());
 
       if (requestedTier != null && requestedTier != Tier.ALL_TIERS && requestedTier != collectionTier) {
         summonerRefreshStatusUpdater.syncRefreshCursor(puuid, summoner.getLastMatchStartTime());
@@ -69,6 +70,30 @@ public class RefreshSummonerMatches {
       summonerRefreshStatusUpdater.syncRefreshCursor(puuid, summoner.getLastMatchStartTime());
       throw e;
     }
+  }
+
+  /**
+   * 소환사의 실제 tier를 반환한다. tierObservedAt이 TTL 이내면 league-v4 호출을 생략하고
+   * 캐시된 lastKnownTier를 재사용한다.
+   *
+   * <p>캐시 히트: league-v4 API 호출 없음, DB 갱신 없음 (재검증이 아니므로)
+   * <p>캐시 미스: league-v4 호출 후 유효한 tier이면 DB에 갱신
+   */
+  private Tier resolveTier(String puuid, Summoner summoner) {
+    int ttlHours = workItemProperties.getThreshold().getTierCacheTtlHours();
+    if (summoner.getTierObservedAt() != null
+        && summoner.getTierObservedAt().isAfter(OffsetDateTime.now().minusHours(ttlHours))) {
+      log.debug("Tier cache hit. puuid={} tier={} observedAt={}",
+          puuid, summoner.getLastKnownTier(), summoner.getTierObservedAt());
+      return summoner.getLastKnownTier();
+    }
+
+    // 캐시 만료 또는 미검증 → league-v4 호출
+    Tier resolved = resolveCollectionTierBySolo(puuid);
+    if (resolved != null && resolved != Tier.ALL_TIERS) {
+      summonerRefreshStatusUpdater.syncResolvedTier(puuid, resolved, OffsetDateTime.now());
+    }
+    return resolved;
   }
 
   private List<String> loadMatchIds(String puuid, Long lastMatchStartTimeSecOrNull) {

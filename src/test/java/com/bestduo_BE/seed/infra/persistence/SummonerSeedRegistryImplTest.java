@@ -2,13 +2,16 @@ package com.bestduo_BE.seed.infra.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
+import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,8 +36,9 @@ class SummonerSeedRegistryImplTest {
   @Test
   void registerIfAbsent_savesReadySummoner() {
     ArgumentCaptor<Summoner> captor = ArgumentCaptor.forClass(Summoner.class);
+    OffsetDateTime now = OffsetDateTime.now();
 
-    boolean isFirst = registry.registerIfAbsent("puuid-1");
+    boolean isFirst = registry.registerIfAbsent("puuid-1", Tier.DIAMOND, now);
 
     assertTrue(isFirst);
     then(repository).should().save(captor.capture());
@@ -44,10 +48,24 @@ class SummonerSeedRegistryImplTest {
   }
 
   @Test
+  void registerIfAbsent_storesTierForNewSummoner() {
+    ArgumentCaptor<Summoner> captor = ArgumentCaptor.forClass(Summoner.class);
+    OffsetDateTime now = OffsetDateTime.now();
+
+    boolean isFirst = registry.registerIfAbsent("puuid-1", Tier.DIAMOND, now);
+
+    assertTrue(isFirst);
+    then(repository).should().save(captor.capture());
+    Summoner saved = captor.getValue();
+    assertEquals(Tier.DIAMOND, saved.getLastKnownTier());
+    assertNotNull(saved.getTierObservedAt());
+  }
+
+  @Test
   void registerIfAbsent_returnsFalseWhenAlreadyExists() {
     given(repository.save(any(Summoner.class))).willThrow(new DataIntegrityViolationException("dup"));
 
-    boolean isFirst = registry.registerIfAbsent("puuid-2");
+    boolean isFirst = registry.registerIfAbsent("puuid-2", Tier.GOLD, OffsetDateTime.now());
 
     assertFalse(isFirst);
   }
