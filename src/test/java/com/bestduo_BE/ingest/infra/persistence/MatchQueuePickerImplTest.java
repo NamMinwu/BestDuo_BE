@@ -32,8 +32,8 @@ class MatchQueuePickerImplTest {
 
   @Test
   void pickMapsEntitiesToItems() {
-    MatchQueue ready = MatchQueue.newReady("m-1", Tier.EMERALD.name(), 20);
-    MatchQueue retry = MatchQueue.newReady("m-2", Tier.SILVER.name(), 30);
+    MatchQueue ready = MatchQueue.newReady("m-1", Tier.EMERALD.name(), 20, null);
+    MatchQueue retry = MatchQueue.newReady("m-2", Tier.SILVER.name(), 30, null);
     given(repository.pickReadyOrRetry(2)).willReturn(List.of(ready, retry));
 
     List<MatchQueueItem> items = picker.pick(2);
@@ -47,7 +47,7 @@ class MatchQueuePickerImplTest {
 
   @Test
   void markRunningUpdatesStatus() {
-    MatchQueue mq = MatchQueue.newReady("running", Tier.GOLD.name(), 10);
+    MatchQueue mq = MatchQueue.newReady("running", Tier.GOLD.name(), 10, null);
     given(repository.findById("running")).willReturn(Optional.of(mq));
 
     picker.markRunning("running");
@@ -58,7 +58,7 @@ class MatchQueuePickerImplTest {
 
   @Test
   void markDoneClearsLock() {
-    MatchQueue mq = MatchQueue.newReady("done", Tier.BRONZE.name(), 5);
+    MatchQueue mq = MatchQueue.newReady("done", Tier.BRONZE.name(), 5, null);
     given(repository.findById("done")).willReturn(Optional.of(mq));
 
     picker.markDone("done");
@@ -68,7 +68,7 @@ class MatchQueuePickerImplTest {
 
   @Test
   void markErrorRecordsFailureMessage() {
-    MatchQueue mq = MatchQueue.newReady("err", Tier.PLATINUM.name(), 1);
+    MatchQueue mq = MatchQueue.newReady("err", Tier.PLATINUM.name(), 1, null);
     given(repository.findById("err")).willReturn(Optional.of(mq));
 
     picker.markError("err", "boom");

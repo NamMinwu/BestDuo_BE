@@ -2,6 +2,7 @@ package com.bestduo_BE.refresh.application;
 
 import com.bestduo_BE.config.WorkItemProperties;
 import com.bestduo_BE.refresh.application.port.LeagueEntriesRefreshLoader;
+import com.bestduo_BE.common.application.PatchVersionService;
 import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
 import com.bestduo_BE.refresh.application.port.SummonerRefreshStatusUpdater;
@@ -28,6 +29,7 @@ public class RefreshSummonerMatches {
   private final MatchIdsFinder matchIdsFinder;
   private final MatchQueueEnqueuer matchQueueEnqueuer;
   private final SummonerRefreshStatusUpdater summonerRefreshStatusUpdater;
+  private final PatchVersionService patchVersionService;
   private final WorkItemProperties workItemProperties;
 
   public Result execute(String puuid) {
@@ -58,7 +60,8 @@ public class RefreshSummonerMatches {
         return new Result(puuid, 0, collectionTier, summoner.getLastMatchStartTime());
       }
 
-      matchQueueEnqueuer.enqueueAllIdempotent(matchIds, collectionTier, PRIORITY_REFRESH);
+      String currentPatch = patchVersionService.currentPatchVersion().orElse(null);
+      matchQueueEnqueuer.enqueueAllIdempotent(matchIds, collectionTier, PRIORITY_REFRESH, currentPatch);
 
       long newCursor = Instant.now().getEpochSecond();
       summonerRefreshStatusUpdater.syncRefreshCursor(puuid, newCursor);
@@ -97,10 +100,17 @@ public class RefreshSummonerMatches {
   }
 
   private List<String> loadMatchIds(String puuid, Long lastMatchStartTimeSecOrNull) {
-    if (lastMatchStartTimeSecOrNull == null) {
-      return matchIdsFinder.findRecentMatchIds(puuid, FETCH_COUNT);
+    long effectiveStartTime = patchVersionService.currentPatchStartTimeEpochSeconds().orElse(0L);
+
+    if (lastMatchStartTimeSecOrNull != null && lastMatchStartTimeSecOrNull > effectiveStartTime) {
+      effectiveStartTime = lastMatchStartTimeSecOrNull;
     }
-    return matchIdsFinder.findMatchIdsSince(puuid, lastMatchStartTimeSecOrNull, FETCH_COUNT);
+
+    if (effectiveStartTime > 0) {
+      return matchIdsFinder.findMatchIdsSince(puuid, effectiveStartTime, FETCH_COUNT);
+    }
+
+    return matchIdsFinder.findRecentMatchIds(puuid, FETCH_COUNT);
   }
 
   private Tier resolveCollectionTierBySolo(String puuid) {
