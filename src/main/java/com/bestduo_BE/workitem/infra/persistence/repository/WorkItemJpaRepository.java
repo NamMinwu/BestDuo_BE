@@ -39,7 +39,7 @@ public interface WorkItemJpaRepository extends JpaRepository<WorkItem, Long> {
           updated_at = now()
       where status = 'RUNNING'
         and locked_at is not null
-        and locked_at <= now() - (:staleMinutes || ' minutes')::interval
+        and locked_at <= now() - (:staleMinutes * interval '1 minute')
       """, nativeQuery = true)
   int recoverStaleRunning(@Param("staleMinutes") int staleMinutes);
 
