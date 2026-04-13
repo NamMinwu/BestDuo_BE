@@ -55,7 +55,6 @@ public class ExecutionRequestWorker {
   }
 
   private void logStart(ExecutionRequest request) {
-    // TODO Phase 2: refreshRatio, refreshLimit 파라미터 제거 시 로그에서도 삭제
     log.info(
         "Run started. requestId={} budgetTotal={} seedRatio={} ingestLimitPerCycle={} maxIngestCycles={} tier={}",
         request.getId(),
