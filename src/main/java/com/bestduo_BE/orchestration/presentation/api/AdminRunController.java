@@ -28,10 +28,10 @@ public class AdminRunController {
   public ExecutionRequestResponse run(
       @RequestParam(defaultValue = "200") int budgetTotal,
       @RequestParam(required = false) Double seedRatio,
-      @RequestParam(required = false) Double refreshRatio,
+      @RequestParam(required = false) Double refreshRatio, // TODO Phase 2: DB 마이그레이션 후 제거
       @RequestParam(defaultValue = "10") int ingestLimitPerCycle,
       @RequestParam(defaultValue = "20") int maxIngestCycles,
-      @RequestParam(required = false) Integer refreshLimit,
+      @RequestParam(required = false) Integer refreshLimit,  // TODO Phase 2: DB 마이그레이션 후 제거
       @RequestParam(required = false) Tier tier
   ) {
     try {

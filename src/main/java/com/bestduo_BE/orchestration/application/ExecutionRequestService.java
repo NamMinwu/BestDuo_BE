@@ -59,10 +59,12 @@ public class ExecutionRequestService {
     return request.seedRatio() != null ? request.seedRatio() : properties.getSeedRatio();
   }
 
+  // TODO Phase 2: refresh 제거 후 삭제 — ExecutionOrchestrator에서 실제로 사용하지 않음
   private double resolveRefreshRatio(ExecutionCreateRequest request) {
     return request.refreshRatio() != null ? request.refreshRatio() : properties.getRefreshRatio();
   }
 
+  // TODO Phase 2: refresh 제거 후 삭제 — ExecutionOrchestrator에서 실제로 사용하지 않음
   private int resolveRefreshLimit(ExecutionCreateRequest request) {
     return request.refreshLimit() != null ? request.refreshLimit() : properties.getRefreshLimit();
   }

@@ -55,15 +55,14 @@ public class ExecutionRequestWorker {
   }
 
   private void logStart(ExecutionRequest request) {
+    // TODO Phase 2: refreshRatio, refreshLimit 파라미터 제거 시 로그에서도 삭제
     log.info(
-        "Run started. requestId={} budgetTotal={} seedRatio={} refreshRatio={} ingestLimitPerCycle={} maxIngestCycles={} refreshLimit={} tier={}",
+        "Run started. requestId={} budgetTotal={} seedRatio={} ingestLimitPerCycle={} maxIngestCycles={} tier={}",
         request.getId(),
         request.getBudgetTotal(),
         request.getSeedRatio(),
-        request.getRefreshRatio(),
         request.getIngestLimitPerCycle(),
         request.getMaxIngestCycles(),
-        request.getRefreshLimit(),
         request.getTier()
     );
   }
@@ -86,12 +85,11 @@ public class ExecutionRequestWorker {
     executionRequestStatusUpdater.markDone(requestId, result);
 
     log.info(
-        "Execution request completed. requestId={} stopReason={} elapsedMs={} seedEnqueued={} refreshEnqueued={} picked={} done={} error={} rawCreated={}",
+        "Execution request completed. requestId={} stopReason={} elapsedMs={} seedEnqueued={} picked={} done={} error={} rawCreated={}",
         requestId,
         result.stopReason(),
         elapsedMillis,
         result.seedEnqueued(),
-        result.refreshEnqueued(),
         result.picked(),
         result.done(),
         result.error(),

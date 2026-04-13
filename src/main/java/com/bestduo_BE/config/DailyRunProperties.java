@@ -15,8 +15,10 @@ import org.springframework.stereotype.Component;
 public class DailyRunProperties {
 
   private boolean runSeed = true;
+  // TODO Phase 2: refresh 제거 후 삭제 (현재 ExecutionOrchestrator에서 사용하지 않음)
   private boolean runRefresh = true;
   private double seedRatio = 0.2;
+  // TODO Phase 2: refresh 제거 후 삭제 (DB/API 호환성 유지 목적으로만 보존)
   private double refreshRatio = 0.2;
   private int refreshLimit = 5;
   private Seed seed = new Seed();
