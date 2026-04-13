@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
@@ -67,6 +68,15 @@ public class CoverageBucket {
   private String seedDivision = "I";
   // ─────────────────────────────────────────────────────────────────────────
 
+  // ── 일일 Seed 완료 상태 ──────────────────────────────────────────────────────
+  @Builder.Default
+  @Column(name = "daily_seed_completed", nullable = false)
+  private boolean dailySeedCompleted = false;
+
+  @Column(name = "daily_seed_reset_at")
+  private OffsetDateTime dailySeedResetAt;
+  // ─────────────────────────────────────────────────────────────────────────
+
   @Column(name = "last_evaluated_at", nullable = false)
   private OffsetDateTime lastEvaluatedAt;
 
@@ -112,6 +122,29 @@ public class CoverageBucket {
     } else {
       this.seedPage++;
     }
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  /** 오늘 이 bucket의 seed를 완료했음을 기록한다. */
+  public void markDailySeedCompleted() {
+    this.dailySeedCompleted = true;
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  /**
+   * 자정 경계를 넘었으면 dailySeedCompleted를 리셋하고 dailySeedResetAt을 오늘 자정으로 기록한다.
+   *
+   * @param lastResetAt 마지막으로 리셋된 시점 (null이면 한 번도 리셋 안 함)
+   * @param today       오늘 날짜
+   */
+  public void resetDailySeedIfNeeded(OffsetDateTime lastResetAt, LocalDate today) {
+    boolean needsReset = lastResetAt == null
+        || lastResetAt.toLocalDate().isBefore(today);
+    if (!needsReset) {
+      return;
+    }
+    this.dailySeedCompleted = false;
+    this.dailySeedResetAt = today.atStartOfDay().atOffset(OffsetDateTime.now().getOffset());
     this.updatedAt = OffsetDateTime.now();
   }
 

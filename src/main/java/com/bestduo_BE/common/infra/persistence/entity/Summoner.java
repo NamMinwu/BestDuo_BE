@@ -39,6 +39,12 @@ public class Summoner {
   @Column(name = "last_seen_patch")
   private String lastSeenPatch;
 
+  @Column(name = "seeded_at")
+  private OffsetDateTime seededAt;
+
+  @Column(name = "match_ids_collected_at")
+  private OffsetDateTime matchIdsCollectedAt;
+
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
 
@@ -53,9 +59,39 @@ public class Summoner {
         .lastKnownTier(null)
         .tierObservedAt(null)
         .lastSeenPatch(null)
+        .seededAt(null)
+        .matchIdsCollectedAt(null)
         .createdAt(now)
         .updatedAt(now)
         .build();
+  }
+
+  public void markSeeded(OffsetDateTime seededAt) {
+    this.seededAt = seededAt;
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  public void markMatchIdsCollected(OffsetDateTime collectedAt) {
+    this.matchIdsCollectedAt = collectedAt;
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  /**
+   * matchIds 수집 대기 상태인지 판단한다.
+   * <ul>
+   *   <li>seededAt이 null이면 Stage 1을 거치지 않은 summoner → 대상 아님</li>
+   *   <li>matchIdsCollectedAt이 null이면 한 번도 수집 안 함 → 대상</li>
+   *   <li>matchIdsCollectedAt이 seededAt 이전이면 재수집 필요 → 대상</li>
+   * </ul>
+   */
+  public boolean needsMatchIdsCollection() {
+    if (seededAt == null) {
+      return false;
+    }
+    if (matchIdsCollectedAt == null) {
+      return true;
+    }
+    return matchIdsCollectedAt.isBefore(seededAt);
   }
 
   public void observeTier(Tier tier, OffsetDateTime observedAt) {
