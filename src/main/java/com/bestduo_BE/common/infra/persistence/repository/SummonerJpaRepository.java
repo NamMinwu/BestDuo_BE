@@ -69,4 +69,37 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
 
   long countByLastKnownTier(Tier tier);
 
+  /**
+   * matchIds 수집 대기 중인 summoner 조회.
+   * seededAt이 있고 matchIdsCollectedAt이 null이거나 seededAt보다 이전인 summoner를
+   * seededAt 최신 순으로 반환한다.
+   */
+  @Query(value = """
+      SELECT s.*
+      FROM summoner s
+      WHERE s.seeded_at IS NOT NULL
+        AND (s.match_ids_collected_at IS NULL OR s.match_ids_collected_at < s.seeded_at)
+      ORDER BY s.seeded_at DESC
+      LIMIT :limit
+      """, nativeQuery = true)
+  List<Summoner> findMatchIdsPendingSummoners(@Param("limit") int limit);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = """
+      UPDATE summoner
+      SET seeded_at = :seededAt,
+          updated_at = now()
+      WHERE puuid = :puuid
+      """, nativeQuery = true)
+  int markSeeded(@Param("puuid") String puuid, @Param("seededAt") OffsetDateTime seededAt);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = """
+      UPDATE summoner
+      SET match_ids_collected_at = :collectedAt,
+          updated_at = now()
+      WHERE puuid = :puuid
+      """, nativeQuery = true)
+  int markMatchIdsCollected(@Param("puuid") String puuid, @Param("collectedAt") OffsetDateTime collectedAt);
+
 }
