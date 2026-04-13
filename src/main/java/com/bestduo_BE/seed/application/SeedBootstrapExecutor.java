@@ -1,64 +1,59 @@
 package com.bestduo_BE.seed.application;
 
-import com.bestduo_BE.seed.application.port.LeagueEntriesSeedLoader;
-import com.bestduo_BE.common.application.PatchVersionService;
-import com.bestduo_BE.common.application.port.MatchIdsFinder;
-import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
-import com.bestduo_BE.seed.application.port.SummonerSeedRegistry;
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
+import com.bestduo_BE.seed.application.port.LeagueEntriesSeedLoader;
+import com.bestduo_BE.seed.application.port.SummonerSeedRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+/**
+ * Phase 3 이후: league entries → summoner upsert + seededAt 갱신.
+ * matchIds enqueue는 Stage 2(CollectMatchIdsRunner)가 담당한다.
+ */
 @Service
 @RequiredArgsConstructor
 public class SeedBootstrapExecutor {
 
-  private static final int PRIORITY_SEED = 50;
-
   private final LeagueEntriesSeedLoader leagueEntriesSeedLoader;
-  private final MatchIdsFinder matchIdsFinder;
-  private final MatchQueueEnqueuer matchQueueEnqueuer;
   private final SummonerSeedRegistry summonerSeedRegistry;
-  private final PatchVersionService patchVersionService;
 
   public record SeedBootstrapResult(
       int pagesProcessed,
       int entriesFetched,
-      int puuidRegistered,
+      int summonersSeeded,
+      /** 하위 호환: 항상 0 반환 (matchIds 수집은 Stage 2로 이관) */
       int matchIdsFetched,
+      /** 하위 호환: 항상 0 반환 (matchIds 수집은 Stage 2로 이관) */
       int matchIdsEnqueued
   ) {}
 
   /**
-   * Phase2A(Seed Bootstrap):
-   * - league entries에서 puuid 수집
-   * - summoner 등록 + seed 상태 전이
-   * - puuid의 matchIds를 "match_queue에 적재"까지만 수행
-   * - match detail 처리(Phase1)는 MatchIngestWorker가 수행
+   * 주어진 커맨드에 따라 league entries를 페이지 단위로 읽어
+   * 각 summoner를 upsert하고 seededAt을 기록한다.
    */
   public SeedBootstrapResult execute(SeedBootstrapCommand cmd) {
     SeedBootstrapProgress progress = new SeedBootstrapProgress(cmd.maxEntries());
 
     for (int page = cmd.startPage(); page <= cmd.endPage(); page++) {
-      List<LeagueEntry> entries = loadEntriesForPage(cmd, page);
+      List<LeagueEntry> entries = leagueEntriesSeedLoader.loadEntries(
+          cmd.queue(), cmd.tier(), cmd.division(), page);
 
       if (entries == null || entries.isEmpty()) {
         break;
       }
 
-      List<LeagueEntry> entriesToProcess = selectEntriesToProcess(entries, progress);
-
-      if (entriesToProcess.isEmpty()) {
+      List<LeagueEntry> toProcess = selectEntriesToProcess(entries, progress);
+      if (toProcess.isEmpty()) {
         break;
       }
 
-      progress.recordPage(entriesToProcess.size());
+      progress.recordPage(toProcess.size());
 
-      for (LeagueEntry entry : entriesToProcess) {
+      for (LeagueEntry entry : toProcess) {
         processEntry(entry, cmd, progress);
         if (progress.reachedLimit()) {
           break;
@@ -73,74 +68,31 @@ public class SeedBootstrapExecutor {
     return progress.toResult();
   }
 
-  private List<LeagueEntry> loadEntriesForPage(SeedBootstrapCommand cmd, int page) {
-    return leagueEntriesSeedLoader.loadEntries(cmd.queue(), cmd.tier(), cmd.division(), page);
-  }
-
-  private List<LeagueEntry> selectEntriesToProcess(List<LeagueEntry> entries, SeedBootstrapProgress progress) {
+  private List<LeagueEntry> selectEntriesToProcess(List<LeagueEntry> entries,
+      SeedBootstrapProgress progress) {
     if (!progress.limitEnabled()) {
       return entries;
     }
-
-    int remainingSlots = progress.remainingSlots();
-    if (remainingSlots <= 0) {
+    int remaining = progress.remainingSlots();
+    if (remaining <= 0) {
       return List.of();
     }
-
-    if (entries.size() <= remainingSlots) {
-      return entries;
-    }
-
-    return entries.subList(0, remainingSlots);
+    return entries.size() <= remaining ? entries : entries.subList(0, remaining);
   }
 
-  private void processEntry(LeagueEntry entry, SeedBootstrapCommand cmd, SeedBootstrapProgress progress) {
+  private void processEntry(LeagueEntry entry, SeedBootstrapCommand cmd,
+      SeedBootstrapProgress progress) {
     if (entry == null) {
       return;
     }
-
     String puuid = entry.puuid();
     if (puuid == null || puuid.isBlank()) {
       return;
     }
 
-    progress.incrementProcessedEntries();
-
-    Tier tierToStore = parseTier(entry.tier(), cmd.seedTier());
-    if (!summonerSeedRegistry.registerIfAbsent(puuid, tierToStore, OffsetDateTime.now())) {
-      return;
-    }
-
-    progress.incrementRegisteredPuuids();
-    processRegisteredPuuid(puuid, cmd, progress);
-  }
-
-  private void processRegisteredPuuid(String puuid, SeedBootstrapCommand cmd, SeedBootstrapProgress progress) {
-    try {
-      enqueueRecentMatches(puuid, cmd, progress);
-    } catch (Exception ignored) {
-    }
-  }
-
-  private void enqueueRecentMatches(String puuid, SeedBootstrapCommand cmd, SeedBootstrapProgress progress) {
-    var patchStartTime = patchVersionService.currentPatchStartTimeEpochSeconds();
-    String currentPatch = patchVersionService.currentPatchVersion().orElse(null);
-
-    List<String> matchIds;
-    if (patchStartTime.isPresent()) {
-      matchIds = matchIdsFinder.findMatchIdsSince(puuid, patchStartTime.get(), cmd.matchesPerPuuid());
-    } else {
-      matchIds = matchIdsFinder.findRecentMatchIds(puuid, cmd.matchesPerPuuid());
-    }
-
-    if (matchIds == null || matchIds.isEmpty()) {
-      return;
-    }
-
-    progress.addFetchedMatchIds(matchIds.size());
-    Tier tierLabel = cmd.seedTier();
-    matchQueueEnqueuer.enqueueAllIdempotent(matchIds, tierLabel, PRIORITY_SEED, currentPatch);
-    progress.addEnqueuedMatchIds(matchIds.size());
+    Tier tier = parseTier(entry.tier(), cmd.seedTier());
+    summonerSeedRegistry.upsertSeeded(puuid, tier, OffsetDateTime.now());
+    progress.incrementSeeded();
   }
 
   private static Tier parseTier(String tierStr, Tier fallback) {
@@ -154,13 +106,12 @@ public class SeedBootstrapExecutor {
   }
 
   private static final class SeedBootstrapProgress {
+
     private final boolean limitEnabled;
     private final int maxEntries;
     private int pagesProcessed;
     private int entriesFetched;
-    private int puuidRegistered;
-    private int matchIdsFetched;
-    private int matchIdsEnqueued;
+    private int summonersSeeded;
     private int processedEntries;
 
     private SeedBootstrapProgress(int maxEntries) {
@@ -185,30 +136,13 @@ public class SeedBootstrapExecutor {
       entriesFetched += entryCount;
     }
 
-    void incrementProcessedEntries() {
+    void incrementSeeded() {
       processedEntries++;
-    }
-
-    void incrementRegisteredPuuids() {
-      puuidRegistered++;
-    }
-
-    void addFetchedMatchIds(int count) {
-      matchIdsFetched += count;
-    }
-
-    void addEnqueuedMatchIds(int count) {
-      matchIdsEnqueued += count;
+      summonersSeeded++;
     }
 
     SeedBootstrapResult toResult() {
-      return new SeedBootstrapResult(
-          pagesProcessed,
-          entriesFetched,
-          puuidRegistered,
-          matchIdsFetched,
-          matchIdsEnqueued
-      );
+      return new SeedBootstrapResult(pagesProcessed, entriesFetched, summonersSeeded, 0, 0);
     }
   }
 }
