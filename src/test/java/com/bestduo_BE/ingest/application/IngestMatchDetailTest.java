@@ -3,12 +3,10 @@ package com.bestduo_BE.ingest.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.bestduo_BE.ingest.application.port.BottomDuoRawSaver;
 import com.bestduo_BE.ingest.application.port.MatchSaver;
 import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
-import com.bestduo_BE.common.application.port.SummonerExpansionQueue;
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;
@@ -17,9 +15,9 @@ import com.bestduo_BE.common.infra.riot.dto.MetadataDto;
 import com.bestduo_BE.common.infra.riot.dto.ParticipantDto;
 import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import com.bestduo_BE.common.infra.riot.dto.TeamDto;
-import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -38,28 +36,18 @@ class IngestMatchDetailTest {
   @Mock
   private BottomDuoRawSaver bottomDuoRawSaver;
 
-  @Mock
-  private SummonerExpansionQueue summonerExpandQueue;
-
   private IngestMatchDetail useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new IngestMatchDetail(
-        riotMatchLoader,
-        matchSaver,
-        bottomDuoRawSaver,
-        summonerExpandQueue
-    );
+    useCase = new IngestMatchDetail(riotMatchLoader, matchSaver, bottomDuoRawSaver);
   }
 
   @Test
-  void saveMatchRawAndExpandParticipants() {
+  @DisplayName("match 저장, bottom duo raw 저장, 결과 반환")
+  void saveMatchAndBottomDuoRaws() {
     RiotMatchDto match = sampleMatch();
     given(riotMatchLoader.loadMatch("KR_1")).willReturn(match);
-    given(summonerExpandQueue.registerIfAbsent("puuid-1")).willReturn(true);
-    given(summonerExpandQueue.registerIfAbsent("puuid-2")).willReturn(false);
-    given(summonerExpandQueue.registerIfAbsent("puuid-3")).willReturn(true);
 
     IngestResult result = useCase.execute("KR_1", Tier.EMERALD, null);
 
@@ -69,10 +57,6 @@ class IngestMatchDetailTest {
     List<BottomDuoRaw> raws = rawsCaptor.getValue();
     assertThat(raws).hasSize(2);
     assertThat(raws).allMatch(raw -> raw.tier() == Tier.EMERALD && raw.matchId().equals("KR_1"));
-
-    verify(summonerExpandQueue).registerIfAbsent("puuid-1");
-    verify(summonerExpandQueue).registerIfAbsent("puuid-2");
-    verify(summonerExpandQueue).registerIfAbsent("puuid-3");
 
     assertThat(result.rawCreated()).isEqualTo(2);
     assertThat(result.matchStartTimeSec()).isEqualTo(12345L);
@@ -96,9 +80,7 @@ class IngestMatchDetailTest {
         teams,
         null
     );
-    List<String> metadataParticipants = new ArrayList<>(List.of(" puuid-1 ", "puuid-2", "puuid-3"));
-    metadataParticipants.add(null);
-    MetadataDto metadata = new MetadataDto("1", "KR_1", metadataParticipants);
+    MetadataDto metadata = new MetadataDto("1", "KR_1", List.of("puuid-1", "puuid-2", "puuid-3"));
     return new RiotMatchDto(metadata, info);
   }
 

@@ -8,7 +8,6 @@ import com.bestduo_BE.common.infra.riot.budget.RiotRequestBudget;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.monitoring.QueryCountMonitor;
 import com.bestduo_BE.monitoring.QueryCountMonitor.QueryStats;
-import com.bestduo_BE.refresh.application.RefreshBatchExecutor;
 import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
@@ -22,12 +21,10 @@ public class ExecutionPipeline {
 
   private enum Phase {
     SEED,
-    REFRESH,
     INGEST
   }
 
   private final SeedBootstrapExecutor seedBootstrapExecutor;
-  private final RefreshBatchExecutor refreshBatchExecutor;
   private final MatchIngestWorker matchIngestWorker;
   private final QueryCountMonitor queryCountMonitor;
 
@@ -54,11 +51,6 @@ public class ExecutionPipeline {
     if (cmd.runSeed()) {
       runSeedPhase(cmd, state);
     }
-
-    if (cmd.runRefresh()) {
-      runRefreshPhase(cmd, state);
-    }
-
     runIngestPhase(cmd, state);
   }
 
@@ -94,13 +86,6 @@ public class ExecutionPipeline {
     });
   }
 
-  private void runRefreshPhase(ExecutionCommand cmd, ExecutionState state) {
-    executePhase(Phase.REFRESH, cmd.refreshBudget(), state, () -> {
-      var refreshResult = refreshBatchExecutor.execute(cmd.refreshLimit(), cmd.requestedTier());
-      state.addRefreshEnqueued(refreshResult.matchIdsEnqueued());
-    });
-  }
-
   private void runIngestPhase(ExecutionCommand cmd, ExecutionState state) {
     executePhase(Phase.INGEST, cmd.ingestBudget(), state, () -> {
       for (int i = 0; i < cmd.maxIngestCycles(); i++) {
@@ -131,27 +116,22 @@ public class ExecutionPipeline {
   private void logTimings(Result result, long runStartedAt, ExecutionState state) {
     long totalMillis = Duration.ofNanos(System.nanoTime() - runStartedAt).toMillis();
     PhaseProfiling seedProfiling = state.seedProfiling();
-    PhaseProfiling refreshProfiling = state.refreshProfiling();
     PhaseProfiling ingestProfiling = state.ingestProfiling();
 
     QueryStats seedSql = seedProfiling.queryStats();
-    QueryStats refreshSql = refreshProfiling.queryStats();
     QueryStats ingestSql = ingestProfiling.queryStats();
 
     log.info(
-        "ExecutionPipeline summary status={} message={} totalMs={} seedMs={} refreshMs={} ingestMs={} seedSql={} refreshSql={} ingestSql={} queueProcessed={} seedEnqueued={} refreshEnqueued={} picked={} done={} error={} rawCreated={}",
+        "ExecutionPipeline summary status={} message={} totalMs={} seedMs={} ingestMs={} seedSql={} ingestSql={} queueProcessed={} seedEnqueued={} picked={} done={} error={} rawCreated={}",
         result.status(),
         result.message(),
         totalMillis,
         seedProfiling.durationMillis(),
-        refreshProfiling.durationMillis(),
         ingestProfiling.durationMillis(),
         seedSql.total(),
-        refreshSql.total(),
         ingestSql.total(),
         result.queueProcessed(),
         result.seedEnqueued(),
-        result.refreshEnqueued(),
         result.picked(),
         result.done(),
         result.error(),
@@ -160,11 +140,8 @@ public class ExecutionPipeline {
 
   public record ExecutionCommand(
       int seedBudget,
-      int refreshBudget,
       int ingestBudget,
       boolean runSeed,
-      boolean runRefresh,
-      int refreshLimit,
       int ingestBatchSize,
       int maxIngestCycles,
       SeedBootstrapCommand seedCommand,
@@ -174,7 +151,6 @@ public class ExecutionPipeline {
   public record Result(
       int remainingBudget,
       int seedEnqueued,
-      int refreshEnqueued,
       int queueProcessed,
       int picked,
       int done,
@@ -186,32 +162,24 @@ public class ExecutionPipeline {
 
   private static final class ExecutionState {
     private int seedEnqueued;
-    private int refreshEnqueued;
     private int queueProcessed;
     private int picked;
     private int done;
     private int error;
     private int rawCreated;
     private int remainingSeedBudget;
-    private int remainingRefreshBudget;
     private int remainingIngestBudget;
     private Phase currentPhase;
     private PhaseProfiling seedProfiling = PhaseProfiling.empty();
-    private PhaseProfiling refreshProfiling = PhaseProfiling.empty();
     private PhaseProfiling ingestProfiling = PhaseProfiling.empty();
 
     ExecutionState(ExecutionCommand command) {
       this.remainingSeedBudget = command.seedBudget();
-      this.remainingRefreshBudget = command.refreshBudget();
       this.remainingIngestBudget = command.ingestBudget();
     }
 
     void addSeedEnqueued(int value) {
       seedEnqueued += value;
-    }
-
-    void addRefreshEnqueued(int value) {
-      refreshEnqueued += value;
     }
 
     void recordQueueProcessing(MatchIngestWorker.Result result) {
@@ -229,7 +197,6 @@ public class ExecutionPipeline {
     void finishPhase(Phase phase, int remainingBudget) {
       switch (phase) {
         case SEED -> remainingSeedBudget = remainingBudget;
-        case REFRESH -> remainingRefreshBudget = remainingBudget;
         case INGEST -> remainingIngestBudget = remainingBudget;
       }
       currentPhase = null;
@@ -239,7 +206,6 @@ public class ExecutionPipeline {
       PhaseProfiling profiling = PhaseProfiling.of(durationNanos, queryStats);
       switch (phase) {
         case SEED -> seedProfiling = profiling;
-        case REFRESH -> refreshProfiling = profiling;
         case INGEST -> ingestProfiling = profiling;
       }
     }
@@ -248,23 +214,16 @@ public class ExecutionPipeline {
       if (currentPhase == null) {
         return;
       }
-
       switch (currentPhase) {
         case SEED -> remainingSeedBudget = snapshot;
-        case REFRESH -> remainingRefreshBudget = snapshot;
         case INGEST -> remainingIngestBudget = snapshot;
       }
     }
 
     Result toResult(String status, String message) {
-      return toResult(status, message, totalRemainingBudget());
-    }
-
-    Result toResult(String status, String message, int remainingBudgetOverride) {
       return new Result(
-          remainingBudgetOverride,
+          Math.max(0, remainingSeedBudget + remainingIngestBudget),
           seedEnqueued,
-          refreshEnqueued,
           queueProcessed,
           picked,
           done,
@@ -275,17 +234,8 @@ public class ExecutionPipeline {
       );
     }
 
-    private int totalRemainingBudget() {
-      int total = remainingSeedBudget + remainingRefreshBudget + remainingIngestBudget;
-      return Math.max(0, total);
-    }
-
     PhaseProfiling seedProfiling() {
       return seedProfiling;
-    }
-
-    PhaseProfiling refreshProfiling() {
-      return refreshProfiling;
     }
 
     PhaseProfiling ingestProfiling() {
@@ -311,5 +261,4 @@ public class ExecutionPipeline {
       return Duration.ofNanos(durationNanos).toMillis();
     }
   }
-
 }

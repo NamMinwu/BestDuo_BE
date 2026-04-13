@@ -1,11 +1,9 @@
 package com.bestduo_BE.ingest.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
-import com.bestduo_BE.common.application.port.SummonerExpansionQueue;
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;
@@ -38,19 +36,11 @@ class IngestMatchDetailPatchFilterTest {
   @Mock
   private BottomDuoRawSaver bottomDuoRawSaver;
 
-  @Mock
-  private SummonerExpansionQueue summonerExpandQueue;
-
   private IngestMatchDetail useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new IngestMatchDetail(
-        riotMatchLoader,
-        matchSaver,
-        bottomDuoRawSaver,
-        summonerExpandQueue
-    );
+    useCase = new IngestMatchDetail(riotMatchLoader, matchSaver, bottomDuoRawSaver);
   }
 
   @Test
@@ -58,7 +48,6 @@ class IngestMatchDetailPatchFilterTest {
   void execute_withMatchingPatch_savesAllRaws() {
     RiotMatchDto match = sampleMatchWithGameVersion("15.23.1");
     given(riotMatchLoader.loadMatch("KR_1")).willReturn(match);
-    given(summonerExpandQueue.registerIfAbsent(any())).willReturn(false);
 
     IngestResult result = useCase.execute("KR_1", Tier.GOLD, "15.23");
 
@@ -73,7 +62,6 @@ class IngestMatchDetailPatchFilterTest {
   void execute_withMismatchedPatch_discardsRaws() {
     RiotMatchDto match = sampleMatchWithGameVersion("15.22.1");  // 이전 패치
     given(riotMatchLoader.loadMatch("KR_2")).willReturn(match);
-    given(summonerExpandQueue.registerIfAbsent(any())).willReturn(false);
 
     IngestResult result = useCase.execute("KR_2", Tier.GOLD, "15.23");
 
@@ -88,7 +76,6 @@ class IngestMatchDetailPatchFilterTest {
   void execute_withNullExpectedPatch_savesAllRawsWithoutFiltering() {
     RiotMatchDto match = sampleMatchWithGameVersion("15.22.1");
     given(riotMatchLoader.loadMatch("KR_3")).willReturn(match);
-    given(summonerExpandQueue.registerIfAbsent(any())).willReturn(false);
 
     IngestResult result = useCase.execute("KR_3", Tier.GOLD, null);
 
