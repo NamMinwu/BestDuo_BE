@@ -29,5 +29,15 @@ public interface MatchQueueDispatcher {
    */
   void unlockToReady(String matchId);
 
+  /**
+   * Phase 5: patch+tier 우선순위 READY pick&lock.
+   * READY를 patch/tier 우선순위로 pick한 뒤 남는 자리를 ERROR 재시도로 채운다.
+   *
+   * @param requestedTier null 또는 ALL_TIERS이면 전체 tier 대상
+   * @param currentPatch  현재 패치 문자열 (null이면 patch 우선순위 없이 tier 순서만 적용)
+   */
+  List<Item> pickAndLockWithPriority(int limit, int maxRetry, int errorCooldownMinutes,
+      Tier requestedTier, String currentPatch);
+
   record Item(String matchId, Tier tier, int priority, String patch) {}
 }

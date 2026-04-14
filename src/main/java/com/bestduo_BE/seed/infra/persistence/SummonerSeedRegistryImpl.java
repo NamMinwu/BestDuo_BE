@@ -30,4 +30,11 @@ public class SummonerSeedRegistryImpl implements SummonerSeedRegistry {
       return false; // already exists — tier 덮어쓰지 않음
     }
   }
+
+  @Override
+  @Transactional
+  public void upsertSeeded(String puuid, Tier tier, OffsetDateTime seededAt) {
+    String tierName = tier != null ? tier.name() : null;
+    repository.upsertSeeded(puuid, tierName, seededAt);
+  }
 }

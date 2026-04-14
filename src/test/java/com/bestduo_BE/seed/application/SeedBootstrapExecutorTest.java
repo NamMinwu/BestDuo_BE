@@ -2,23 +2,21 @@ package com.bestduo_BE.seed.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.bestduo_BE.seed.application.port.LeagueEntriesSeedLoader;
-import com.bestduo_BE.common.application.PatchVersionService;
-import com.bestduo_BE.common.application.port.MatchIdsFinder;
-import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
-import com.bestduo_BE.seed.application.port.SummonerSeedRegistry;
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
+import com.bestduo_BE.seed.application.port.LeagueEntriesSeedLoader;
+import com.bestduo_BE.seed.application.port.SummonerSeedRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -31,124 +29,112 @@ class SeedBootstrapExecutorTest {
   private LeagueEntriesSeedLoader leagueEntriesSeedLoader;
 
   @Mock
-  private MatchIdsFinder matchIdsFinder;
-
-  @Mock
-  private MatchQueueEnqueuer matchQueueEnqueuer;
-
-  @Mock
   private SummonerSeedRegistry summonerSeedRegistry;
-
-  @Mock
-  private PatchVersionService patchVersionService;
 
   private SeedBootstrapExecutor useCase;
 
   private final SeedBootstrapCommand command = new SeedBootstrapCommand(
-      "RANKED_SOLO_5x5", "DIAMOND", "I", Tier.MASTER, 1, 1, 2, 0
+      "RANKED_SOLO_5x5", "DIAMOND", "I", Tier.MASTER, 1, 1, 0, 0
   );
 
   @BeforeEach
   void setUp() {
-    useCase = new SeedBootstrapExecutor(
-        leagueEntriesSeedLoader,
-        matchIdsFinder,
-        matchQueueEnqueuer,
-        summonerSeedRegistry,
-        patchVersionService
-    );
+    useCase = new SeedBootstrapExecutor(leagueEntriesSeedLoader, summonerSeedRegistry);
   }
 
   @Test
+  @DisplayName("빈 응답이면 결과 카운터가 모두 0")
   void returnZerosWhenLoaderReturnsEmptyList() {
-    givenEntries(List.of());
+    given(leagueEntriesSeedLoader.loadEntries(
+        command.queue(), command.tier(), command.division(), 1))
+        .willReturn(List.of());
 
     SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(command);
 
     assertThat(result.pagesProcessed()).isZero();
     assertThat(result.entriesFetched()).isZero();
-    assertThat(result.puuidRegistered()).isZero();
+    assertThat(result.summonersSeeded()).isZero();
     assertThat(result.matchIdsFetched()).isZero();
     assertThat(result.matchIdsEnqueued()).isZero();
   }
 
   @Test
-  void registerSeedsAndEnqueueMatchIdsWhenFirstSeen() {
-    List<LeagueEntry> entries = List.of(entry("new-1"), entry("existing"));
-    givenEntries(entries);
-    given(summonerSeedRegistry.registerIfAbsent(eq("new-1"), any(Tier.class), any(OffsetDateTime.class))).willReturn(true);
-    given(summonerSeedRegistry.registerIfAbsent(eq("existing"), any(Tier.class), any(OffsetDateTime.class))).willReturn(false);
-    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(java.util.Optional.of(1700000000L));
-    given(patchVersionService.currentPatchVersion()).willReturn(java.util.Optional.of("15.23"));
-    given(matchIdsFinder.findMatchIdsSince("new-1", 1700000000L, command.matchesPerPuuid()))
-        .willReturn(List.of("m-1", "m-2"));
-
-    SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(command);
-
-    verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-1", "m-2"), Tier.MASTER, 50, "15.23");
-    verify(matchIdsFinder, never()).findRecentMatchIds(eq("existing"), anyInt());
-
-    assertThat(result.pagesProcessed()).isEqualTo(1);
-    assertThat(result.entriesFetched()).isEqualTo(2);
-    assertThat(result.puuidRegistered()).isEqualTo(1);
-    assertThat(result.matchIdsFetched()).isEqualTo(2);
-    assertThat(result.matchIdsEnqueued()).isEqualTo(2);
-  }
-
-  @Test
-  void markSeedErrorWhenMatchLookupFails() {
-    givenEntries(List.of(entry("p-error")));
-    given(summonerSeedRegistry.registerIfAbsent(eq("p-error"), any(Tier.class), any(OffsetDateTime.class))).willReturn(true);
-    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(java.util.Optional.of(1700000000L));
-    given(matchIdsFinder.findMatchIdsSince("p-error", 1700000000L, command.matchesPerPuuid()))
-        .willThrow(new IllegalStateException("boom"));
-
-    SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(command);
-
-    assertThat(result.matchIdsFetched()).isZero();
-    assertThat(result.matchIdsEnqueued()).isZero();
-  }
-
-  @Test
-  void limitNumberOfEntriesWhenMaxEntriesConfigured() {
-    SeedBootstrapCommand limited = new SeedBootstrapCommand(
-        "RANKED_SOLO_5x5", "MASTER", "I", Tier.MASTER, 1, 1, 2, 1
-    );
-    List<LeagueEntry> entries = List.of(entry("new-1"), entry("new-2"));
+  @DisplayName("엔트리마다 upsertSeeded 호출")
+  void upsertSeededCalledForEachEntry() {
     given(leagueEntriesSeedLoader.loadEntries(
-        limited.queue(), limited.tier(), limited.division(), 1
-    )).willReturn(entries);
-    given(summonerSeedRegistry.registerIfAbsent(eq("new-1"), any(Tier.class), any(OffsetDateTime.class))).willReturn(true);
-    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(java.util.Optional.of(1700000000L));
-    given(matchIdsFinder.findMatchIdsSince("new-1", 1700000000L, limited.matchesPerPuuid()))
-        .willReturn(List.of("m-1"));
-
-    SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(limited);
-
-    verify(summonerSeedRegistry).registerIfAbsent(eq("new-1"), any(Tier.class), any(OffsetDateTime.class));
-    verify(summonerSeedRegistry, never()).registerIfAbsent(eq("new-2"), any(Tier.class), any(OffsetDateTime.class));
-    assertThat(result.entriesFetched()).isEqualTo(1);
-    assertThat(result.puuidRegistered()).isEqualTo(1);
-  }
-
-  @Test
-  void fallBackToRecentMatchesWhenPatchStartTimeIsMissing() {
-    givenEntries(List.of(entry("new-1")));
-    given(summonerSeedRegistry.registerIfAbsent(eq("new-1"), any(Tier.class), any(OffsetDateTime.class))).willReturn(true);
-    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(java.util.Optional.empty());
-    given(patchVersionService.currentPatchVersion()).willReturn(java.util.Optional.empty());
-    given(matchIdsFinder.findRecentMatchIds("new-1", command.matchesPerPuuid())).willReturn(List.of("m-9"));
+        command.queue(), command.tier(), command.division(), 1))
+        .willReturn(List.of(entry("p1"), entry("p2")));
 
     useCase.execute(command);
 
-    verify(matchIdsFinder).findRecentMatchIds("new-1", command.matchesPerPuuid());
-    verify(matchQueueEnqueuer).enqueueAllIdempotent(List.of("m-9"), Tier.MASTER, 50, null);
+    verify(summonerSeedRegistry, times(2)).upsertSeeded(any(), any(), any(OffsetDateTime.class));
   }
 
-  private void givenEntries(List<LeagueEntry> entries) {
+  @Test
+  @DisplayName("기존 registerIfAbsent는 호출되지 않음")
+  void registerIfAbsentNeverCalled() {
     given(leagueEntriesSeedLoader.loadEntries(
-        command.queue(), command.tier(), command.division(), 1
-    )).willReturn(entries);
+        command.queue(), command.tier(), command.division(), 1))
+        .willReturn(List.of(entry("p1")));
+
+    useCase.execute(command);
+
+    verify(summonerSeedRegistry, never()).registerIfAbsent(any(), any(), any());
+  }
+
+  @Test
+  @DisplayName("matchIdsFetched, matchIdsEnqueued는 항상 0 (하위 호환)")
+  void matchIdsFieldsAlwaysZero() {
+    given(leagueEntriesSeedLoader.loadEntries(
+        command.queue(), command.tier(), command.division(), 1))
+        .willReturn(List.of(entry("p1")));
+
+    SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(command);
+
+    assertThat(result.matchIdsFetched()).isZero();
+    assertThat(result.matchIdsEnqueued()).isZero();
+  }
+
+  @Test
+  @DisplayName("maxEntries 제한 준수")
+  void limitNumberOfEntriesWhenMaxEntriesConfigured() {
+    SeedBootstrapCommand limited = new SeedBootstrapCommand(
+        "RANKED_SOLO_5x5", "MASTER", "I", Tier.MASTER, 1, 1, 0, 1
+    );
+    given(leagueEntriesSeedLoader.loadEntries(
+        limited.queue(), limited.tier(), limited.division(), 1))
+        .willReturn(List.of(entry("p1"), entry("p2")));
+
+    SeedBootstrapExecutor.SeedBootstrapResult result = useCase.execute(limited);
+
+    verify(summonerSeedRegistry, times(1)).upsertSeeded(any(), any(), any());
+    assertThat(result.summonersSeeded()).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("엔트리의 tier 문자열로 Tier 파싱")
+  void usesTierFromEntry() {
+    LeagueEntry grandmasterEntry = new LeagueEntry("gm-puuid", "GRANDMASTER", "RANKED_SOLO_5x5", "I", 100L);
+    given(leagueEntriesSeedLoader.loadEntries(
+        command.queue(), command.tier(), command.division(), 1))
+        .willReturn(List.of(grandmasterEntry));
+
+    useCase.execute(command);
+
+    verify(summonerSeedRegistry).upsertSeeded(eq("gm-puuid"), eq(Tier.GRANDMASTER), any());
+  }
+
+  @Test
+  @DisplayName("tier 문자열이 없으면 seedTier를 사용")
+  void fallsBackToSeedTierWhenEntryTierMissing() {
+    LeagueEntry noTierEntry = new LeagueEntry("p-x", null, "RANKED_SOLO_5x5", "I", 100L);
+    given(leagueEntriesSeedLoader.loadEntries(
+        command.queue(), command.tier(), command.division(), 1))
+        .willReturn(List.of(noTierEntry));
+
+    useCase.execute(command);
+
+    verify(summonerSeedRegistry).upsertSeeded(eq("p-x"), eq(Tier.MASTER), any());
   }
 
   private LeagueEntry entry(String puuid) {

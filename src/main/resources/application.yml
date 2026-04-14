@@ -56,6 +56,19 @@ patch-sync:
   enabled: ${PATCH_SYNC_ENABLED:true}
   interval-ms: ${PATCH_SYNC_INTERVAL_MS:21600000}  # 6시간
 
+pipeline:
+  runner:
+    enabled: ${PIPELINE_RUNNER_ENABLED:true}
+  seed-daily-budget: 2000
+  collect-daily-budget: 8000
+  collect-batch-size: 20
+  ingest-batch-size: 10
+  polling-interval-ms: 5000
+  max-pages-per-division: 5
+  tier-match-count:
+    apex-tiers: 30
+    diamond-emerald: 10
+
 management:
   endpoints:
     web:
