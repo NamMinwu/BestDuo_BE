@@ -39,7 +39,9 @@ pipeline:
   collect-batch-size: 20
   ingest-batch-size: 10
   polling-interval-ms: 5000
-  max-pages-per-division: 5
+  dia-eme-coverage-target: 500000
+  dia-eme-daily-page-quota: 10
+  dia-eme-safety-max-page: 100
   tier-match-count:
     apex-tiers: 30
     diamond-emerald: 10

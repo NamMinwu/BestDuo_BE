@@ -37,10 +37,13 @@ public class PipelineProperties {
   /** Stage 2에서 match_queue에 enqueue할 때 사용하는 기본 우선순위 */
   private int collectPriority = 50;
 
-  /**
-   * DIA/EME CoverageBucket에서 한 division 내 최대 page 수.
-   * 이 수에 도달하면 다음 division으로 이동한다.
-   */
+  private long diaEmeCoverageTarget = 500_000L;
+
+  private int diaEmeDailyPageQuota = 10;
+
+  private int diaEmeSafetyMaxPage = 100;
+
+  @Deprecated
   private int maxPagesPerDivision = 5;
 
   /** Stage 3(INGEST)에서 그날 먼저 처리할 tier. ALL_TIERS이면 기존 우선순위(CHALLENGER→…→기타) 유지. */
