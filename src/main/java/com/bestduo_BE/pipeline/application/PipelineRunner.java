@@ -6,6 +6,7 @@ import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.config.PipelineProperties;
 import com.bestduo_BE.ingest.application.MatchIngestWorker;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -38,9 +39,19 @@ public class PipelineRunner {
   private final PatchVersionService patchVersionService;
   private final PipelineProperties props;
 
+  private Thread pipelineThread;
+
   @PostConstruct
   public void start() {
-    Thread.ofVirtual().name("pipeline-runner").start(this::loop);
+    pipelineThread = Thread.ofVirtual().name("pipeline-runner").start(this::loop);
+  }
+
+  @PreDestroy
+  public void stop() {
+    if (pipelineThread != null) {
+      pipelineThread.interrupt();
+      log.info("PipelineRunner 종료 요청 (interrupt)");
+    }
   }
 
   private void loop() {
@@ -56,8 +67,8 @@ public class PipelineRunner {
         log.info("PipelineRunner 종료 (interrupted)");
         break;
       } catch (Exception e) {
-        log.error("PipelineRunner 예기치 않은 오류. 5초 후 재시도", e);
-        sleep(5_000L);
+        log.error("PipelineRunner 예기치 않은 오류. {}ms 후 재시도", props.getErrorBackoffMs(), e);
+        sleep(props.getErrorBackoffMs());
       }
     }
   }

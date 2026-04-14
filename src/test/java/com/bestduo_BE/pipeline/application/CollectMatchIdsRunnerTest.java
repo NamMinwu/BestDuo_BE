@@ -204,8 +204,10 @@ class CollectMatchIdsRunnerTest {
 
     CollectMatchIdsRunner.BatchResult result = runner.runBatch();
 
+    // 실패한 summoner도 API 호출이 발생했으므로 예산 차감 및 apiCalls에 포함된다
     verify(summonerRepository).markMatchIdsCollected(eq("p-good"), any());
-    assertThat(result.apiCalls()).isEqualTo(1);
+    verify(summonerRepository, never()).markMatchIdsCollected(eq("p-bad"), any());
+    assertThat(result.apiCalls()).isEqualTo(2);
   }
 
   @Test

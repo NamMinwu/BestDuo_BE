@@ -1,5 +1,6 @@
 package com.bestduo_BE.common.infra.persistence.entity;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -77,6 +78,11 @@ public class DailyPipelineState {
   public void incrementCollectCalls(int delta) {
     this.collectApiCallsUsed += delta;
     this.updatedAt = OffsetDateTime.now();
+  }
+
+  /** 오늘 해당 tier의 seed가 완료됐으면 true. */
+  public boolean isSeedTierCompleted(Tier tier) {
+    return seedCompletedTiers.contains("\"" + tier.name() + "\"");
   }
 
   /**

@@ -31,6 +31,12 @@ public class PipelineProperties {
   /** match_queue가 빌 때 대기 시간 (ms) */
   private long pollingIntervalMs = 5000;
 
+  /** 예기치 않은 오류 발생 시 재시도 전 대기 시간 (ms) */
+  private long errorBackoffMs = 5000;
+
+  /** Stage 2에서 match_queue에 enqueue할 때 사용하는 기본 우선순위 */
+  private int collectPriority = 50;
+
   /**
    * DIA/EME CoverageBucket에서 한 division 내 최대 page 수.
    * 이 수에 도달하면 다음 division으로 이동한다.
