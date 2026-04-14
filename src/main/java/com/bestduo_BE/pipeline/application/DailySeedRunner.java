@@ -76,12 +76,16 @@ public class DailySeedRunner {
     // Phase A: apex 티어 (CHALLENGER → GRANDMASTER → MASTER)
     for (Tier tier : APEX_TIERS) {
       if (!state.getSeedCompletedTiers().contains("\"" + tier.name() + "\"")) {
-        return runApexTierChunk(tier, state);
+        return runApexTierChunk(tier);
       }
     }
 
     // Phase B: DIA/EME 구간 순회
     String currentPatch = patchVersionService.currentPatchVersion().orElse(null);
+    if (currentPatch == null) {
+      log.warn("DIA/EME seed 스킵: 현재 패치 정보 없음");
+      return ChunkResult.noWork();
+    }
     for (Tier tier : DIA_EME_TIERS) {
       Optional<CoverageBucket> opt = coverageBucketRepository.findByPatchAndTier(currentPatch, tier);
       if (opt.isPresent() && !opt.get().isDailySeedCompleted()) {
@@ -105,6 +109,9 @@ public class DailySeedRunner {
 
   private boolean hasUncompletedDiaEmeBucket() {
     String currentPatch = patchVersionService.currentPatchVersion().orElse(null);
+    if (currentPatch == null) {
+      return false;
+    }
     for (Tier tier : DIA_EME_TIERS) {
       Optional<CoverageBucket> opt = coverageBucketRepository.findByPatchAndTier(currentPatch, tier);
       if (opt.isPresent() && !opt.get().isDailySeedCompleted()) {
@@ -114,14 +121,16 @@ public class DailySeedRunner {
     return false;
   }
 
-  private ChunkResult runApexTierChunk(Tier tier, DailyPipelineState state) {
+  private ChunkResult runApexTierChunk(Tier tier) {
     log.info("Stage1 apex 티어 시작: tier={}", tier);
+    // apex 티어는 항상 단일 페이지로 전체 목록이 반환되는 API 구조
     SeedBootstrapCommand cmd = new SeedBootstrapCommand(
         QUEUE, tier.name(), "I", tier, 1, 1, 0, 0);
     SeedBootstrapResult result = seedBootstrapExecutor.execute(cmd);
 
-    state.recordSeedCompletedTier(tier.name());
-    budgetTracker.recordSeedCall(result.pagesProcessed() > 0 ? result.pagesProcessed() : 1);
+    // tier 완료 기록과 seed 호출 수를 단일 DB fetch로 원자적으로 저장
+    int pages = result.pagesProcessed() > 0 ? result.pagesProcessed() : 1;
+    budgetTracker.recordSeedCall(pages, tier.name());
     log.info("Stage1 apex 완료: tier={} seeded={}", tier, result.summonersSeeded());
     return ChunkResult.apexTier(tier, result.summonersSeeded());
   }

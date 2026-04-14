@@ -101,6 +101,20 @@ class DailyBudgetTrackerTest {
   }
 
   @Test
+  @DisplayName("recordSeedCall(count, tier)는 호출 수와 완료 티어를 함께 저장한다")
+  void recordSeedCall_withTier_persistsCallCountAndCompletedTier() {
+    DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
+    given(stateRepository.findByPipelineDate(any(LocalDate.class))).willReturn(Optional.of(state));
+    given(stateRepository.save(any(DailyPipelineState.class))).willReturn(state);
+
+    tracker.recordSeedCall(1, "CHALLENGER");
+
+    verify(stateRepository).save(state);
+    assertThat(state.getSeedApiCallsUsed()).isEqualTo(1);
+    assertThat(state.getSeedCompletedTiers()).contains("\"CHALLENGER\"");
+  }
+
+  @Test
   @DisplayName("getOrCreateTodayState는 없으면 새 상태를 저장하고 반환한다")
   void getOrCreateTodayState_whenAbsent_savesAndReturnsNew() {
     DailyPipelineState newState = DailyPipelineState.create(LocalDate.now());

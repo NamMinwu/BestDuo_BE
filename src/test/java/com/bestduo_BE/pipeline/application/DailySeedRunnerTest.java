@@ -139,8 +139,7 @@ class DailySeedRunnerTest {
 
     assertThat(chunk.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.APEX_TIER_CHUNK);
     assertThat(chunk.tier()).isEqualTo(Tier.CHALLENGER);
-    assertThat(state.getSeedCompletedTiers()).contains("\"CHALLENGER\"");
-    verify(budgetTracker).recordSeedCall(1);
+    verify(budgetTracker).recordSeedCall(1, "CHALLENGER");
   }
 
   @Test
@@ -218,6 +217,25 @@ class DailySeedRunnerTest {
     DailySeedRunner.ChunkResult result = runner.runNextChunk();
 
     assertThat(result.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.NO_WORK);
+  }
+
+  @Test
+  @DisplayName("currentPatch가 null이면 DIA/EME seed를 스킵하고 NO_WORK 반환")
+  void runNextChunk_whenCurrentPatchNull_skipsDiaEmeAndReturnsNoWork() {
+    given(budgetTracker.canSeed()).willReturn(true);
+
+    DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
+    state.recordSeedCompletedTier("CHALLENGER");
+    state.recordSeedCompletedTier("GRANDMASTER");
+    state.recordSeedCompletedTier("MASTER");
+    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(patchVersionService.currentPatchVersion()).willReturn(Optional.empty());
+
+    DailySeedRunner.ChunkResult result = runner.runNextChunk();
+
+    assertThat(result.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.NO_WORK);
+    verify(seedBootstrapExecutor, never()).execute(any());
+    verify(coverageBucketRepository, never()).findByPatchAndTier(any(), any());
   }
 
   // ── helpers ────────────────────────────────────────────────────────

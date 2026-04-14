@@ -109,7 +109,7 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
       INSERT INTO summoner (puuid, last_known_tier, tier_observed_at, seeded_at, created_at, updated_at)
-      VALUES (:puuid, :tier, :seededAt, :seededAt, :seededAt, :seededAt)
+      VALUES (:puuid, :tier, :seededAt, :seededAt, now(), :seededAt)
       ON CONFLICT (puuid) DO UPDATE SET
           last_known_tier  = EXCLUDED.last_known_tier,
           tier_observed_at = EXCLUDED.tier_observed_at,

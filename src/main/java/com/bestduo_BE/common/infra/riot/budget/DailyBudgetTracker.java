@@ -33,11 +33,22 @@ public class DailyBudgetTracker {
 
   /** Stage 1 API 호출 {@code count}회를 기록하고 DB에 저장한다. */
   public void recordSeedCall(int count) {
+    recordSeedCall(count, null);
+  }
+
+  /**
+   * Stage 1 API 호출 {@code count}회를 기록하고, 완료된 apex 티어가 있으면 함께 저장한다.
+   * 단일 DB fetch로 seedApiCallsUsed와 seedCompletedTiers를 원자적으로 저장한다.
+   */
+  public void recordSeedCall(int count, String completedTier) {
     DailyPipelineState state = getOrCreateTodayState();
     state.incrementSeedCalls(count);
+    if (completedTier != null) {
+      state.recordSeedCompletedTier(completedTier);
+    }
     stateRepository.save(state);
-    log.debug("Seed 호출 기록: +{}, 오늘 합계={}/{}", count, state.getSeedApiCallsUsed(),
-        props.getSeedDailyBudget());
+    log.debug("Seed 호출 기록: +{}, 완료 티어={}, 오늘 합계={}/{}", count, completedTier,
+        state.getSeedApiCallsUsed(), props.getSeedDailyBudget());
   }
 
   /** Stage 2 API 호출 {@code count}회를 기록하고 DB에 저장한다. */
