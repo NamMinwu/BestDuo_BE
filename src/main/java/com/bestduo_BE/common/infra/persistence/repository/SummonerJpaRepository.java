@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
 
@@ -84,6 +85,7 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
       """, nativeQuery = true)
   List<Summoner> findMatchIdsPendingSummoners(@Param("limit") int limit);
 
+  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
       UPDATE summoner
@@ -93,6 +95,7 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
       """, nativeQuery = true)
   int markSeeded(@Param("puuid") String puuid, @Param("seededAt") OffsetDateTime seededAt);
 
+  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
       UPDATE summoner

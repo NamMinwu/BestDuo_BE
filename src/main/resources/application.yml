@@ -43,7 +43,7 @@ pipeline:
   tier-match-count:
     apex-tiers: 30
     diamond-emerald: 10
-  stage3-priority-tier: ${PIPELINE_STAGE3_PRIORITY_TIER:ALL_TIERS}
+  stage3-priority-tier: ${PIPELINE_STAGE3_PRIORITY_TIER:DIAMOND}
 
 management:
   endpoints:
