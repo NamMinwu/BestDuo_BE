@@ -2,7 +2,6 @@ package com.bestduo_BE.ingest.application;
 
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.ingest.application.port.MatchQueueDispatcher;
-import com.bestduo_BE.common.infra.riot.budget.BudgetExhaustedException;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -29,11 +28,6 @@ public class MatchIngestWorker {
     return execute(limit, Tier.ALL_TIERS);
   }
 
-  /** WorkItem의 patch를 수신하나, 실제 patch 필터링은 item.patch() (match_queue stamp) 기준으로 수행한다. */
-  public Result execute(int limit, Tier requestedTier, String expectedPatch) {
-    return execute(limit, requestedTier);
-  }
-
   public Result execute(int limit, Tier requestedTier) {
     int recovered = queue.recoverStaleRunning(STALE_MINUTES);
     List<MatchQueueDispatcher.Item> items =
@@ -42,15 +36,7 @@ public class MatchIngestWorker {
   }
 
   /**
-   * Phase 5: patch+tier 우선순위로 match_queue에서 pick해 처리한다.
-   * Stage 3(PipelineRunner)에서 ALL_TIERS 대상으로 호출하는 기본 형태.
-   */
-  public Result executeWithPriority(int limit, String currentPatch) {
-    return executeWithPriority(limit, Tier.ALL_TIERS, currentPatch);
-  }
-
-  /**
-   * Phase 5: tier 필터 + patch+tier 우선순위 pick.
+   * tier 필터 + patch+tier 우선순위 pick.
    *
    * @param requestedTier null 또는 ALL_TIERS이면 전체 tier 대상
    * @param currentPatch  현재 패치 (null이면 patch 우선순위 없이 tier 순서만 적용)
@@ -81,8 +67,7 @@ public class MatchIngestWorker {
         processed++;
         done++;
 
-      } catch (BudgetExhaustedException | RiotRateLimitedException e) {
-        // 실패가 아니라 오늘 세션 종료(키 보호/예산 소진)
+      } catch (RiotRateLimitedException e) {
         queue.unlockToReady(matchId);
         throw e;
 

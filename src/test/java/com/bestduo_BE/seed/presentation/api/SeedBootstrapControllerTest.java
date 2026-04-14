@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,7 @@ class SeedBootstrapControllerTest {
   private SeedBootstrapExecutor seedBootstrapRun;
 
   @Test
+  @DisplayName("POST /seed/bootstrap — 명시적 파라미터로 유스케이스를 호출하고 결과를 반환한다")
   void run_withExplicitParametersInvokesUsecaseAndReturnsResult() throws Exception {
     SeedBootstrapExecutor.SeedBootstrapResult result =
         new SeedBootstrapExecutor.SeedBootstrapResult(1, 2, 3, 4, 5);
@@ -63,6 +65,7 @@ class SeedBootstrapControllerTest {
   }
 
   @Test
+  @DisplayName("POST /seed/bootstrap — 선택 파라미터 생략 시 기본값을 사용한다")
   void run_withoutOptionalParametersUsesDefaults() throws Exception {
     SeedBootstrapExecutor.SeedBootstrapResult result =
         new SeedBootstrapExecutor.SeedBootstrapResult(0, 0, 0, 0, 0);

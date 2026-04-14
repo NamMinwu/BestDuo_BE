@@ -13,6 +13,7 @@ import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggreg
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -33,6 +34,7 @@ class BottomDuoStatFinderImplTest {
   }
 
   @Test
+  @DisplayName("findTierTotalGames — 레포지토리에 위임하고 티어 전체 게임 수를 반환한다")
   void findTierTotalGamesDelegatesToRepository() {
     when(repository.findLatestPatchVersion()).thenReturn("14.10");
     when(repository.sumGamesByTier("14.10", "GOLD")).thenReturn(128);
@@ -45,6 +47,7 @@ class BottomDuoStatFinderImplTest {
   }
 
   @Test
+  @DisplayName("findTierTotalGames — 제공된 패치 버전을 우선 사용한다")
   void findTierTotalGamesUsesProvidedPatchVersion() {
     when(repository.sumGamesByTier("14.9", "GOLD")).thenReturn(222);
 
@@ -56,6 +59,7 @@ class BottomDuoStatFinderImplTest {
   }
 
   @Test
+  @DisplayName("resolvePatchVersion — 명시적으로 제공된 패치 버전을 우선한다")
   void resolvePatchVersionPrefersProvidedValue() {
     String patch = finder.resolvePatchVersion(" 14.9 ");
 
@@ -64,6 +68,7 @@ class BottomDuoStatFinderImplTest {
   }
 
   @Test
+  @DisplayName("resolvePatchVersion — 패치 버전이 없으면 최신 버전으로 폴백한다")
   void resolvePatchVersionFallsBackToLatest() {
     when(repository.findLatestPatchVersion()).thenReturn("14.10");
 
@@ -74,6 +79,7 @@ class BottomDuoStatFinderImplTest {
   }
 
   @Test
+  @DisplayName("findStats — WINRATE_DESC 정렬 시 엔티티를 StatRow로 변환한다")
   void findStatsMapsEntitiesForWinRateDesc() {
     OffsetDateTime now = OffsetDateTime.now();
     BottomDuoStatAggregate entity = BottomDuoStatAggregate.builder()
@@ -124,6 +130,7 @@ class BottomDuoStatFinderImplTest {
   }
 
   @Test
+  @DisplayName("findStats — 패치 버전이 있으면 레포지토리 조회를 건너뛴다")
   void findStatsUsesProvidedPatchVersionWhenPresent() {
     when(repository.findTopWinRateDesc("14.9", "GOLD", null, null, 2))
         .thenReturn(List.of());
@@ -142,6 +149,7 @@ class BottomDuoStatFinderImplTest {
   }
 
   @Test
+  @DisplayName("findStats — 입력값을 trim하고 WINRATE_ASC 최소 limit 1을 보장한다")
   void findStatsTrimsInputsAndEnforcesMinimumLimitForWinRateAsc() {
     when(repository.findLatestPatchVersion()).thenReturn("14.10");
     when(repository.findTopWinRateAsc("14.10", "SILVER", "Caitlyn", null, 1))
@@ -174,6 +182,7 @@ class BottomDuoStatFinderImplTest {
   }
 
   @Test
+  @DisplayName("findStats — PICKRATE_DESC 정렬 시 tierTotalGames를 레포지토리에 전달한다")
   void findStatsPassesTierTotalGamesForPickRateDesc() {
     when(repository.findLatestPatchVersion()).thenReturn("14.10");
     when(repository.findTopPickRateDesc("14.10", "DIAMOND", null, null, 777, 5))
@@ -193,6 +202,7 @@ class BottomDuoStatFinderImplTest {
   }
 
   @Test
+  @DisplayName("findStats — PICKRATE_ASC 쿼리를 호출한다")
   void findStatsUsesPickRateAscQuery() {
     when(repository.findLatestPatchVersion()).thenReturn("14.10");
     when(repository.findTopPickRateAsc("14.10", "BRONZE", null, "Thresh", 321, 2))
@@ -212,6 +222,7 @@ class BottomDuoStatFinderImplTest {
   }
 
   @Test
+  @DisplayName("findStats — DUO_TIER_ASC 쿼리를 호출한다")
   void findStatsUsesDuoTierAscQuery() {
     when(repository.findLatestPatchVersion()).thenReturn("14.10");
     when(repository.findTopDuoTierAsc("14.10", "PLATINUM", null, null, 4))
@@ -231,6 +242,7 @@ class BottomDuoStatFinderImplTest {
   }
 
   @Test
+  @DisplayName("findStats — RANKING_DESC 쿼리를 호출한다")
   void findStatsUsesRankingDescQuery() {
     when(repository.findLatestPatchVersion()).thenReturn("14.10");
     when(repository.findTopRankingDesc("14.10", "GOLD", "Senna", null, 6))

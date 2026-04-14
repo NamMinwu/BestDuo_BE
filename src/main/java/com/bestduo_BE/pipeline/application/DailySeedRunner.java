@@ -75,7 +75,7 @@ public class DailySeedRunner {
 
     // Phase A: apex 티어 (CHALLENGER → GRANDMASTER → MASTER)
     for (Tier tier : APEX_TIERS) {
-      if (!state.getSeedCompletedTiers().contains("\"" + tier.name() + "\"")) {
+      if (!state.isSeedTierCompleted(tier)) {
         return runApexTierChunk(tier);
       }
     }
@@ -100,7 +100,7 @@ public class DailySeedRunner {
 
   private boolean hasUncompletedApexTier(DailyPipelineState state) {
     for (Tier tier : APEX_TIERS) {
-      if (!state.getSeedCompletedTiers().contains("\"" + tier.name() + "\"")) {
+      if (!state.isSeedTierCompleted(tier)) {
         return true;
       }
     }

@@ -12,6 +12,7 @@ import com.bestduo_BE.common.infra.persistence.repository.MatchQueueJpaRepositor
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -31,6 +32,7 @@ class MatchQueuePickerImplTest {
   }
 
   @Test
+  @DisplayName("pick — 엔티티를 MatchQueueItem으로 변환한다")
   void pickMapsEntitiesToItems() {
     MatchQueue ready = MatchQueue.newReady("m-1", Tier.EMERALD.name(), 20, null);
     MatchQueue retry = MatchQueue.newReady("m-2", Tier.SILVER.name(), 30, null);
@@ -46,6 +48,7 @@ class MatchQueuePickerImplTest {
   }
 
   @Test
+  @DisplayName("markRunning — 상태를 RUNNING으로 업데이트한다")
   void markRunningUpdatesStatus() {
     MatchQueue mq = MatchQueue.newReady("running", Tier.GOLD.name(), 10, null);
     given(repository.findById("running")).willReturn(Optional.of(mq));
@@ -57,6 +60,7 @@ class MatchQueuePickerImplTest {
   }
 
   @Test
+  @DisplayName("markDone — 락을 해제하고 상태를 DONE으로 설정한다")
   void markDoneClearsLock() {
     MatchQueue mq = MatchQueue.newReady("done", Tier.BRONZE.name(), 5, null);
     given(repository.findById("done")).willReturn(Optional.of(mq));
@@ -67,6 +71,7 @@ class MatchQueuePickerImplTest {
   }
 
   @Test
+  @DisplayName("markError — 실패 메시지를 기록하고 상태를 ERROR로 설정한다")
   void markErrorRecordsFailureMessage() {
     MatchQueue mq = MatchQueue.newReady("err", Tier.PLATINUM.name(), 1, null);
     given(repository.findById("err")).willReturn(Optional.of(mq));
@@ -78,6 +83,7 @@ class MatchQueuePickerImplTest {
   }
 
   @Test
+  @DisplayName("markRunning — 매치를 찾을 수 없으면 예외를 던진다")
   void markRunningThrowsWhenMatchNotFound() {
     given(repository.findById("missing")).willReturn(Optional.empty());
 

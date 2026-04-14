@@ -13,6 +13,7 @@ import com.bestduo_BE.common.infra.persistence.entity.BottomDuoRawEntity;
 import com.bestduo_BE.common.infra.persistence.repository.BottomDuoRawJpaRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -34,6 +35,7 @@ class BottomDuoRawSaverImplTest {
   }
 
   @Test
+  @DisplayName("saveAllIdempotent — 각 raw 데이터를 변환하고 저장한다")
   void saveAllIdempotent_convertsAndPersistsEachRaw() {
     List<BottomDuoRaw> raws = List.of(
         new BottomDuoRaw("KR_1", 100, 222, 412, true, "15.23", Tier.GOLD),
@@ -48,6 +50,7 @@ class BottomDuoRawSaverImplTest {
   }
 
   @Test
+  @DisplayName("saveAllIdempotent — null 또는 빈 리스트이면 저장 없이 조기 반환한다")
   void saveAllIdempotent_returnsEarlyWhenNullOrEmpty() {
     saver.saveAllIdempotent(null);
     saver.saveAllIdempotent(List.of());
@@ -55,6 +58,7 @@ class BottomDuoRawSaverImplTest {
   }
 
   @Test
+  @DisplayName("saveAllIdempotent — DataIntegrityViolation 예외를 무시하고 계속 진행한다")
   void saveAllIdempotent_ignoresDataIntegrityViolations() {
     willThrow(new DataIntegrityViolationException("duplicate"))
         .given(repository).save(any(BottomDuoRawEntity.class));

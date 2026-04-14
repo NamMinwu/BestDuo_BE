@@ -8,10 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.bestduo_BE.common.infra.riot.RiotMatchLoaderImpl;
 import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import com.bestduo_BE.common.infra.riot.exception.RiotApiException;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -19,6 +19,7 @@ import org.springframework.web.client.RestTemplate;
 class RiotMatchLoaderImplTest {
 
   @Test
+  @DisplayName("loadMatch — 리전 엔드포인트에서 매치 데이터를 가져온다")
   void loadMatch_fetchesMatchFromRegionalEndpoint() {
     RecordingRestTemplate restTemplate = new RecordingRestTemplate(
         riotMatch(
@@ -41,6 +42,7 @@ class RiotMatchLoaderImplTest {
   }
 
   @Test
+  @DisplayName("loadMatch — RestClientException을 RiotApiException으로 감싼다")
   void loadMatch_wrapsRestClientExceptionInRiotApiException() {
     RestTemplate throwingTemplate = new RestTemplate() {
       @Override

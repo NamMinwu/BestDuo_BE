@@ -13,6 +13,7 @@ import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
 import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -34,6 +35,7 @@ class SummonerSeedRegistryImplTest {
   }
 
   @Test
+  @DisplayName("registerIfAbsent — 신규 summoner를 저장하고 true를 반환한다")
   void registerIfAbsent_savesReadySummoner() {
     ArgumentCaptor<Summoner> captor = ArgumentCaptor.forClass(Summoner.class);
     OffsetDateTime now = OffsetDateTime.now();
@@ -48,6 +50,7 @@ class SummonerSeedRegistryImplTest {
   }
 
   @Test
+  @DisplayName("registerIfAbsent — 신규 summoner에 tier 정보를 저장한다")
   void registerIfAbsent_storesTierForNewSummoner() {
     ArgumentCaptor<Summoner> captor = ArgumentCaptor.forClass(Summoner.class);
     OffsetDateTime now = OffsetDateTime.now();
@@ -62,6 +65,7 @@ class SummonerSeedRegistryImplTest {
   }
 
   @Test
+  @DisplayName("registerIfAbsent — 이미 존재하는 summoner이면 false를 반환한다")
   void registerIfAbsent_returnsFalseWhenAlreadyExists() {
     given(repository.save(any(Summoner.class))).willThrow(new DataIntegrityViolationException("dup"));
 

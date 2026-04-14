@@ -3,6 +3,7 @@ package com.bestduo_BE.common.infra.riot;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bestduo_BE.config.RiotApiProperties;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.web.client.RestTemplate;
@@ -12,6 +13,7 @@ class RiotApiConfigTest {
   private final RiotApiConfig config = new RiotApiConfig();
 
   @Test
+  @DisplayName("riotRateLimitInterceptor — 설정된 API 키를 요청 헤더에 주입한다")
   void riotRateLimitInterceptorUsesConfiguredApiKey() throws Exception {
     RiotApiProperties properties = new RiotApiProperties();
     properties.setApiKey("my-key");
@@ -34,6 +36,7 @@ class RiotApiConfigTest {
   }
 
   @Test
+  @DisplayName("riotPlatformRestTemplate / riotRegionalRestTemplate — 빈이 정상 생성된다")
   void restTemplateBeansAreCreatedWithCorrectNames() {
     RiotApiProperties properties = new RiotApiProperties();
     properties.setPlatformBaseUrl("https://kr.api.riotgames.com");

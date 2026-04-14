@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.bestduo_BE.aggregate.application.AggregateBottomDuoMatchup;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -26,6 +27,7 @@ class BottomDuoMatchupAggregateControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @Test
+  @DisplayName("POST /admin/aggregate/bottom-duo-matchup — 유스케이스 결과를 반환한다")
   void runReturnsUseCaseResult() throws Exception {
     AggregateBottomDuoMatchup.Result result = new AggregateBottomDuoMatchup.Result(12);
     when(aggregateBottomDuoMatchup.execute()).thenReturn(result);

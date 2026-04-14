@@ -13,6 +13,7 @@ import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoDetailStatisticsResponse;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -35,6 +36,7 @@ class GetBottomDuoDetailStatisticsTest {
   }
 
   @Test
+  @DisplayName("execute — 픽률을 포함한 상세 통계 응답을 조립한다")
   void executeBuildsResponseWithPickRates() {
     given(matchupFinder.resolvePatchVersion(null)).willReturn("14.10");
     given(matchupFinder.findMyDuoTotalGames(Tier.EMERALD, "14.10", "ashe", "lux")).willReturn(120);
@@ -86,6 +88,7 @@ class GetBottomDuoDetailStatisticsTest {
   }
 
   @Test
+  @DisplayName("execute — 상대 필터를 정규화하고 최대 행 수를 제한한다")
   void executeNormalizesOpponentFiltersAndCapsRows() {
     given(matchupFinder.resolvePatchVersion(null)).willReturn("14.8");
     given(matchupFinder.findMyDuoTotalGames(Tier.GOLD, "14.8", "ashe", "lux")).willReturn(0);

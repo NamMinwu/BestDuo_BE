@@ -1,6 +1,5 @@
 package com.bestduo_BE.common.infra.riot;
 
-import com.bestduo_BE.common.infra.riot.budget.RiotRequestBudget;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import java.io.IOException;
 import java.time.Clock;
@@ -31,8 +30,6 @@ public class RiotRateLimitInterceptor implements ClientHttpRequestInterceptor {
   public ClientHttpResponse intercept(
       HttpRequest request, byte[] body, ClientHttpRequestExecution execution
   ) throws IOException {
-
-    RiotRequestBudget.consume(1);
 
     Duration wait = durationUntilAvailable();
     if (!wait.isZero()) {

@@ -12,6 +12,7 @@ import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoStatisticsResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -30,6 +31,7 @@ class BottomDuoStatisticsControllerTest {
   private GetBottomDuoStatistics viewBottomDuoStatistics;
 
   @Test
+  @DisplayName("GET /bottom-duo/stats — 유스케이스 응답을 반환한다")
   void getListReturnsUseCaseResponse() throws Exception {
     BottomDuoStatisticsResponse response = new BottomDuoStatisticsResponse(
         "GOLD",
@@ -78,6 +80,7 @@ class BottomDuoStatisticsControllerTest {
   }
 
   @Test
+  @DisplayName("GET /bottom-duo/stats — sort 파라미터 미제공 시 기본 정렬을 사용한다")
   void getListUsesDefaultSortWhenNotProvided() throws Exception {
     BottomDuoStatisticsResponse response = new BottomDuoStatisticsResponse("SILVER", null, 0, List.of());
     when(viewBottomDuoStatistics.execute(

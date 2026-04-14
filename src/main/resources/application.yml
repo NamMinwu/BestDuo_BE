@@ -27,31 +27,6 @@ external:
     regional-base-url: https://asia.api.riotgames.com
     api-key: ${EXTERNAL_RIOT_API_KEY:}
 
-collector:
-  seed-puuids: [] # TODO populate with seed accounts to crawl
-  queue-id: 420
-  match-count: 20
-  poll-delay-ms: 60000
-
-daily-run:
-  run-seed: true
-  run-refresh: true
-  seed-ratio: 0.2      # budgetTotal 대비 seed 전용 비율
-  refresh-ratio: 0.2   # budgetTotal 대비 refresh 전용 비율
-  refresh-limit: 5
-  seed:
-    queue: RANKED_SOLO_5x5
-    tier: GOLD
-    division: I
-    seed-tier: GOLD
-    start-page: 1
-    end-page: 1
-    matches-per-puuid: 20
-
-execution-request:
-  worker:
-    enabled: ${EXECUTION_REQUEST_WORKER_ENABLED:false}
-
 patch-sync:
   enabled: ${PATCH_SYNC_ENABLED:true}
   interval-ms: ${PATCH_SYNC_INTERVAL_MS:21600000}  # 6시간
@@ -68,7 +43,7 @@ pipeline:
   tier-match-count:
     apex-tiers: 30
     diamond-emerald: 10
-  stage3-priority-tier: ${PIPELINE_STAGE3_PRIORITY_TIER:ALL_TIERS}
+  stage3-priority-tier: ${PIPELINE_STAGE3_PRIORITY_TIER:DIAMOND}
 
 management:
   endpoints:

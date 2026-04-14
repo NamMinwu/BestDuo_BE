@@ -32,7 +32,6 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class CollectMatchIdsRunner {
 
-  private static final int PRIORITY_COLLECT = 50;
   private static final Set<Tier> APEX_TIERS =
       Set.of(Tier.CHALLENGER, Tier.GRANDMASTER, Tier.MASTER);
 
@@ -92,7 +91,10 @@ public class CollectMatchIdsRunner {
       } catch (RiotRateLimitedException e) {
         throw e;
       } catch (Exception e) {
-        log.warn("matchIds 수집 실패: puuid={}", summoner.getPuuid(), e);
+        // API 호출은 발생했으므로 예산은 차감한다. summoner는 재시도 대상으로 남긴다.
+        budgetTracker.recordCollectCall(1);
+        apiCalls++;
+        log.warn("matchIds 수집 실패 (재시도 예정): puuid={}", summoner.getPuuid(), e);
       }
     }
 
@@ -118,7 +120,7 @@ public class CollectMatchIdsRunner {
     }
 
     Tier tier = summoner.getLastKnownTier() != null ? summoner.getLastKnownTier() : Tier.ALL_TIERS;
-    matchQueueEnqueuer.enqueueAllIdempotent(matchIds, tier, PRIORITY_COLLECT, currentPatch);
+    matchQueueEnqueuer.enqueueAllIdempotent(matchIds, tier, props.getCollectPriority(), currentPatch);
     return matchIds.size();
   }
 

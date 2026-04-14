@@ -9,6 +9,7 @@ import com.bestduo_BE.common.infra.persistence.repository.MatchJpaRepository;
 import com.bestduo_BE.common.infra.riot.dto.InfoDto;
 import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -33,6 +34,7 @@ class MatchSaverImplTest {
   }
 
   @Test
+  @DisplayName("save — InfoDto로부터 Match 엔티티를 생성하고 저장한다")
   void save_persistsMatchEntityBuiltFromInfoDto() {
     RiotMatchDto dto = new RiotMatchDto(
         null,

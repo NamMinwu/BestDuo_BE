@@ -17,6 +17,7 @@ import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import com.bestduo_BE.common.infra.riot.dto.TeamDto;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -51,6 +52,7 @@ class IngestControllerTest {
   }
 
   @Test
+  @DisplayName("POST /ingest/match — 매치와 BottomDuoRaw를 저장하고 멱등성을 보장한다")
   void collectingMatchPersistsMatchAndBottomDuoRawsIdempotently() throws Exception {
     stubRiotMatchLoader.setResponse(sampleMatch());
 
