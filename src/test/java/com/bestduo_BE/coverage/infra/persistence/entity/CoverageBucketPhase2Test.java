@@ -21,6 +21,7 @@ class CoverageBucketPhase2Test {
 
     assertThat(b.isDailySeedCompleted()).isFalse();
     assertThat(b.getDailySeedResetAt()).isNull();
+    assertThat(b.getDailySeedStepsProcessed()).isZero();
   }
 
   @Test
@@ -34,15 +35,68 @@ class CoverageBucketPhase2Test {
   }
 
   @Test
-  @DisplayName("resetDailySeedIfNeeded() — dailySeedResetAt이 오늘 이전이면 리셋한다")
-  void resetDailySeedIfNeededResetsWhenOutdated() {
+  @DisplayName("advanceToNextPage() — 현재 division을 유지하고 page만 증가시킨다")
+  void advanceToNextPageKeepsDivisionAndIncrementsPage() {
     CoverageBucket b = bucket();
+    b.advanceToNextPage();
+
+    assertThat(b.getSeedDivision()).isEqualTo("I");
+    assertThat(b.getSeedPage()).isEqualTo(2);
+  }
+
+  @Test
+  @DisplayName("advanceToNextDivisionStart() — 현재 division이 끝나면 다음 division 1페이지로 이동한다")
+  void advanceToNextDivisionStartMovesToNextDivision() {
+    CoverageBucket b = bucket();
+    b.advanceToNextPage();
+    b.advanceToNextPage();
+    b.advanceToNextDivisionStart();
+
+    assertThat(b.getSeedDivision()).isEqualTo("II");
+    assertThat(b.getSeedPage()).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("advanceToNextDivisionStart() — IV division 다음은 I / 1 로 순환한다")
+  void advanceToNextDivisionStartWrapsFromIvToI() {
+    CoverageBucket b = bucket();
+    b.advanceToNextDivisionStart();
+    b.advanceToNextDivisionStart();
+    b.advanceToNextDivisionStart();
+    b.advanceToNextDivisionStart();
+
+    assertThat(b.getSeedDivision()).isEqualTo("I");
+    assertThat(b.getSeedPage()).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("incrementDailySeedProgress() — 하루 step 진행량을 1 증가시킨다")
+  void incrementDailySeedProgressIncrementsSteps() {
+    CoverageBucket b = bucket();
+
+    b.incrementDailySeedProgress();
+
+    assertThat(b.getDailySeedStepsProcessed()).isEqualTo(1);
+    assertThat(b.isDailyQuotaReached(1)).isTrue();
+  }
+
+  @Test
+  @DisplayName("resetDailySeedIfNeeded() — dailySeedResetAt이 오늘 이전이면 step과 완료 상태를 리셋하고 cursor는 유지한다")
+  void resetDailySeedIfNeededResetsWhenOutdatedButPreservesCursor() {
+    CoverageBucket b = bucket();
+    b.advanceToNextDivisionStart();
+    b.advanceToNextPage();
+    b.incrementDailySeedProgress();
+    b.incrementDailySeedProgress();
     b.markDailySeedCompleted();
-    // 어제 리셋 시점 설정 (오늘보다 이전)
     OffsetDateTime yesterday = OffsetDateTime.now().minusDays(1);
+
     b.resetDailySeedIfNeeded(yesterday, LocalDate.now());
 
     assertThat(b.isDailySeedCompleted()).isFalse();
+    assertThat(b.getDailySeedStepsProcessed()).isZero();
+    assertThat(b.getSeedDivision()).isEqualTo("II");
+    assertThat(b.getSeedPage()).isEqualTo(2);
     assertThat(b.getDailySeedResetAt()).isNotNull();
   }
 
@@ -50,22 +104,26 @@ class CoverageBucketPhase2Test {
   @DisplayName("resetDailySeedIfNeeded() — dailySeedResetAt이 오늘이면 리셋하지 않는다")
   void resetDailySeedIfNeededSkipsWhenAlreadyResetToday() {
     CoverageBucket b = bucket();
+    b.incrementDailySeedProgress();
     b.markDailySeedCompleted();
     OffsetDateTime todayTime = OffsetDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+
     b.resetDailySeedIfNeeded(todayTime, LocalDate.now());
 
-    // 이미 오늘 리셋했으면 completed가 true 유지
     assertThat(b.isDailySeedCompleted()).isTrue();
+    assertThat(b.getDailySeedStepsProcessed()).isEqualTo(1);
   }
 
   @Test
   @DisplayName("resetDailySeedIfNeeded() — dailySeedResetAt이 null이면 리셋한다")
   void resetDailySeedIfNeededResetsWhenNullResetAt() {
     CoverageBucket b = bucket();
+    b.incrementDailySeedProgress();
     b.markDailySeedCompleted();
 
     b.resetDailySeedIfNeeded(null, LocalDate.now());
 
     assertThat(b.isDailySeedCompleted()).isFalse();
+    assertThat(b.getDailySeedStepsProcessed()).isZero();
   }
 }

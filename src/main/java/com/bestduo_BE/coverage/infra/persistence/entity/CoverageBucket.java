@@ -75,6 +75,10 @@ public class CoverageBucket {
 
   @Column(name = "daily_seed_reset_at")
   private OffsetDateTime dailySeedResetAt;
+
+  @Builder.Default
+  @Column(name = "daily_seed_steps_processed", nullable = false)
+  private int dailySeedStepsProcessed = 0;
   // ─────────────────────────────────────────────────────────────────────────
 
   @Column(name = "last_evaluated_at", nullable = false)
@@ -105,24 +109,36 @@ public class CoverageBucket {
         .build();
   }
 
-  /**
-   * SEED WorkItem 발행 직후 호출. 다음 SEED가 새 페이지/division을 사용하도록 상태를 전진시킨다.
-   *
-   * <p>apex 티어(MASTER/GRANDMASTER/CHALLENGER)는 Riot league-v4가 division 없이 단일 리그를
-   * 제공하므로 페이지만 증가한다.
-   * 그 외 티어는 페이지가 maxPagesPerDivision에 도달하면 다음 division(I→II→III→IV→I)으로 rotation.
-   */
+  public void advanceToNextPage() {
+    this.seedPage++;
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  public void advanceToNextDivisionStart() {
+    int idx = DIVISIONS.indexOf(this.seedDivision);
+    this.seedDivision = DIVISIONS.get((idx + 1) % DIVISIONS.size());
+    this.seedPage = 1;
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  public void incrementDailySeedProgress() {
+    this.dailySeedStepsProcessed++;
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  public boolean isDailyQuotaReached(int quota) {
+    return this.dailySeedStepsProcessed >= quota;
+  }
+
+  @Deprecated
   public void advanceSeedState(int maxPagesPerDivision) {
     if (APEX_TIERS.contains(this.tier)) {
-      this.seedPage++;
+      advanceToNextPage();
     } else if (this.seedPage >= maxPagesPerDivision) {
-      int idx = DIVISIONS.indexOf(this.seedDivision);
-      this.seedDivision = DIVISIONS.get((idx + 1) % DIVISIONS.size());
-      this.seedPage = 1;
+      advanceToNextDivisionStart();
     } else {
-      this.seedPage++;
+      advanceToNextPage();
     }
-    this.updatedAt = OffsetDateTime.now();
   }
 
   /** 오늘 이 bucket의 seed를 완료했음을 기록한다. */
@@ -144,6 +160,7 @@ public class CoverageBucket {
       return;
     }
     this.dailySeedCompleted = false;
+    this.dailySeedStepsProcessed = 0;
     this.dailySeedResetAt = today.atStartOfDay().atOffset(OffsetDateTime.now().getOffset());
     this.updatedAt = OffsetDateTime.now();
   }

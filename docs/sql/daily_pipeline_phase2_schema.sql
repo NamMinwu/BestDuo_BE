@@ -14,7 +14,8 @@ CREATE INDEX IF NOT EXISTS idx_summoner_stage2_targets
 -- ── 2. coverage_bucket 테이블: 일일 seed 완료 추적 컬럼 추가 ─────────────────
 ALTER TABLE coverage_bucket
     ADD COLUMN IF NOT EXISTS daily_seed_completed  BOOLEAN     NOT NULL DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS daily_seed_reset_at   TIMESTAMPTZ;
+    ADD COLUMN IF NOT EXISTS daily_seed_reset_at   TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS daily_seed_steps_processed INTEGER NOT NULL DEFAULT 0;
 
 -- ── 3. daily_pipeline_state 테이블 신규 생성 ─────────────────────────────────
 CREATE TABLE IF NOT EXISTS daily_pipeline_state (
