@@ -10,10 +10,11 @@ import com.bestduo_BE.coverage.infra.persistence.entity.CoverageBucket;
 import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketJpaRepository;
 import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
 import com.bestduo_BE.seed.application.SeedBootstrapExecutor.SeedBootstrapResult;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 /**
@@ -86,10 +87,19 @@ public class DailySeedRunner {
       log.warn("DIA/EME seed 스킵: 현재 패치 정보 없음");
       return ChunkResult.noWork();
     }
+    LocalDate today = LocalDate.now();
     for (Tier tier : DIA_EME_TIERS) {
-      Optional<CoverageBucket> opt = coverageBucketRepository.findByPatchAndTier(currentPatch, tier);
-      if (opt.isPresent() && !opt.get().isDailySeedCompleted()) {
-        return runDiaEmePage(opt.get(), tier);
+      CoverageBucket bucket = getOrCreateDiaEmeBucket(currentPatch, tier);
+      bucket.resetDailySeedIfNeeded(bucket.getDailySeedResetAt(), today);
+
+      if (bucket.isDailyQuotaReached(props.getDiaEmeDailyPageQuota())) {
+        bucket.markDailySeedCompleted();
+        coverageBucketRepository.save(bucket);
+        continue;
+      }
+
+      if (!bucket.isDailySeedCompleted()) {
+        return runDiaEmePage(bucket, tier);
       }
     }
 
@@ -112,13 +122,43 @@ public class DailySeedRunner {
     if (currentPatch == null) {
       return false;
     }
+    LocalDate today = LocalDate.now();
     for (Tier tier : DIA_EME_TIERS) {
-      Optional<CoverageBucket> opt = coverageBucketRepository.findByPatchAndTier(currentPatch, tier);
-      if (opt.isPresent() && !opt.get().isDailySeedCompleted()) {
+      CoverageBucket bucket = coverageBucketRepository.findByPatchAndTier(currentPatch, tier)
+          .orElse(null);
+      if (bucket == null || hasQuotaRemaining(bucket, today)) {
         return true;
       }
     }
     return false;
+  }
+
+  private CoverageBucket getOrCreateDiaEmeBucket(String currentPatch, Tier tier) {
+    return coverageBucketRepository.findByPatchAndTier(currentPatch, tier)
+        .orElseGet(() -> createDiaEmeBucket(currentPatch, tier));
+  }
+
+  private CoverageBucket createDiaEmeBucket(String currentPatch, Tier tier) {
+    CoverageBucket bucket = CoverageBucket.create(
+        currentPatch,
+        tier,
+        props.getDiaEmeCoverageTarget(),
+        DIA_EME_TIERS.indexOf(tier) + 1);
+    try {
+      return coverageBucketRepository.save(bucket);
+    } catch (DataIntegrityViolationException ex) {
+      return coverageBucketRepository.findByPatchAndTier(currentPatch, tier)
+          .orElseThrow(() -> ex);
+    }
+  }
+
+  private boolean hasQuotaRemaining(CoverageBucket bucket, LocalDate today) {
+    return needsDailyReset(bucket, today) || !bucket.isDailySeedCompleted();
+  }
+
+  private boolean needsDailyReset(CoverageBucket bucket, LocalDate today) {
+    return bucket.getDailySeedResetAt() == null
+        || bucket.getDailySeedResetAt().toLocalDate().isBefore(today);
   }
 
   private ChunkResult runApexTierChunk(Tier tier) {
@@ -138,6 +178,7 @@ public class DailySeedRunner {
   private ChunkResult runDiaEmePage(CoverageBucket bucket, Tier tier) {
     log.info("Stage1 DIA/EME 페이지 시작: tier={} page={} division={}",
         tier, bucket.getSeedPage(), bucket.getSeedDivision());
+    int currentPage = bucket.getSeedPage();
 
     SeedBootstrapCommand cmd = new SeedBootstrapCommand(
         QUEUE,
@@ -152,17 +193,19 @@ public class DailySeedRunner {
     SeedBootstrapResult result = seedBootstrapExecutor.execute(cmd);
 
     budgetTracker.recordSeedCall(1);
+    bucket.incrementDailySeedProgress();
 
-    if (result.entriesFetched() == 0) {
-      // 페이지가 비었으면 해당 bucket 오늘 완료로 표시
-      bucket.markDailySeedCompleted();
-      coverageBucketRepository.save(bucket);
-      log.info("Stage1 DIA/EME bucket 완료: tier={}", tier);
+    if (result.entriesFetched() == 0 || currentPage >= props.getDiaEmeSafetyMaxPage()) {
+      bucket.advanceToNextDivisionStart();
     } else {
-      // 다음 페이지/division으로 전진
-      bucket.advanceSeedState(props.getMaxPagesPerDivision());
-      coverageBucketRepository.save(bucket);
+      bucket.advanceToNextPage();
     }
+
+    if (bucket.isDailyQuotaReached(props.getDiaEmeDailyPageQuota())) {
+      bucket.markDailySeedCompleted();
+    }
+
+    coverageBucketRepository.save(bucket);
 
     return ChunkResult.diaEmePage(tier, result.summonersSeeded());
   }
