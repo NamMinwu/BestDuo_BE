@@ -41,7 +41,7 @@ class MatchQueueDispatcherPhase5Test {
     given(repo.pickReadyWithPriorityAndLock(anyInt(), any(), anyString())).willReturn(List.of());
     given(repo.pickRetryableErrorAndLock(anyInt(), anyInt(), anyInt(), any())).willReturn(List.of());
 
-    dispatcher.pickAndLockWithPriority(5, 2, 10, "15.23");
+    dispatcher.pickAndLockWithPriority(5, 2, 10, Tier.ALL_TIERS, "15.23");
 
     verify(repo).pickReadyWithPriorityAndLock(5, null, "15.23");
   }
@@ -54,7 +54,7 @@ class MatchQueueDispatcherPhase5Test {
         .willReturn(List.of(mq));
     given(repo.pickRetryableErrorAndLock(anyInt(), anyInt(), anyInt(), any())).willReturn(List.of());
 
-    List<MatchQueueDispatcher.Item> items = dispatcher.pickAndLockWithPriority(5, 2, 10, "15.23");
+    List<MatchQueueDispatcher.Item> items = dispatcher.pickAndLockWithPriority(5, 2, 10, Tier.ALL_TIERS, "15.23");
 
     assertThat(items).hasSize(1);
     assertThat(items.get(0).matchId()).isEqualTo("match-1");
