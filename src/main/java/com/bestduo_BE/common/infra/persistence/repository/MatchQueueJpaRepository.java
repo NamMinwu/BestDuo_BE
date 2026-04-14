@@ -98,4 +98,51 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
       and status = 'RUNNING'
     """, nativeQuery = true)
   int unlockToReady(@Param("matchId") String matchId);
+
+  /**
+   * Phase 5: patch+tier 우선순위 READY pick&lock.
+   *
+   * <p>정렬 기준:
+   * <ol>
+   *   <li>currentPatch와 일치하는 항목 우선 (불일치 또는 null이면 후순위)</li>
+   *   <li>tier 우선순위: CHALLENGER(0) → GRANDMASTER(1) → MASTER(2) → DIAMOND(3) → EMERALD(4) → 기타(5)</li>
+   *   <li>priority ASC</li>
+   *   <li>updated_at ASC</li>
+   * </ol>
+   */
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = """
+    with candidates as (
+      select mq.match_id
+      from match_queue mq
+      where mq.status = 'READY'
+        and (:collectionTier is null or mq.collection_tier = :collectionTier)
+      order by
+        case when :currentPatch is not null and mq.patch = :currentPatch then 0 else 1 end asc,
+        case mq.collection_tier
+          when 'CHALLENGER'   then 0
+          when 'GRANDMASTER'  then 1
+          when 'MASTER'       then 2
+          when 'DIAMOND'      then 3
+          when 'EMERALD'      then 4
+          else 5
+        end asc,
+        mq.priority asc,
+        mq.updated_at asc
+      limit :limit
+    )
+    update match_queue mq
+    set status = 'RUNNING',
+        locked_at = now(),
+        updated_at = now()
+    where mq.match_id in (select match_id from candidates)
+      and mq.status = 'READY'
+      and (:collectionTier is null or mq.collection_tier = :collectionTier)
+    returning mq.*
+    """, nativeQuery = true)
+  List<MatchQueue> pickReadyWithPriorityAndLock(
+      @Param("limit") int limit,
+      @Param("collectionTier") String collectionTier,
+      @Param("currentPatch") String currentPatch
+  );
 }

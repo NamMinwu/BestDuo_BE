@@ -66,6 +66,23 @@ public class MatchQueueDispatcherImpl implements MatchQueueDispatcher {
     repo.unlockToReady(matchId);
   }
 
+  @Override
+  @Transactional
+  public List<Item> pickAndLockWithPriority(int limit, int maxRetry, int errorCooldownMinutes, String currentPatch) {
+    List<Item> out = new ArrayList<>();
+
+    List<MatchQueue> ready = repo.pickReadyWithPriorityAndLock(limit, null, currentPatch);
+    out.addAll(toItems(ready));
+
+    int remaining = limit - ready.size();
+    if (remaining > 0) {
+      List<MatchQueue> errs = repo.pickRetryableErrorAndLock(remaining, maxRetry, errorCooldownMinutes, null);
+      out.addAll(toItems(errs));
+    }
+
+    return out;
+  }
+
   private List<Item> toItems(List<MatchQueue> list) {
     List<Item> out = new ArrayList<>();
     for (MatchQueue mq : list) {
