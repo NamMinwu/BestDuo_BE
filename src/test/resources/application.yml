@@ -17,3 +17,7 @@ external:
 
 work-item:
   worker-enabled: false
+
+pipeline:
+  runner:
+    enabled: false

@@ -57,6 +57,8 @@ patch-sync:
   interval-ms: ${PATCH_SYNC_INTERVAL_MS:21600000}  # 6시간
 
 pipeline:
+  runner:
+    enabled: ${PIPELINE_RUNNER_ENABLED:true}
   seed-daily-budget: 2000
   collect-daily-budget: 8000
   collect-batch-size: 20
