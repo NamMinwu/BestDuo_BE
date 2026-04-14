@@ -1,5 +1,6 @@
 package com.bestduo_BE.config;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -35,6 +36,9 @@ public class PipelineProperties {
    * 이 수에 도달하면 다음 division으로 이동한다.
    */
   private int maxPagesPerDivision = 5;
+
+  /** Stage 3(INGEST)에서 그날 먼저 처리할 tier. ALL_TIERS이면 기존 우선순위(CHALLENGER→…→기타) 유지. */
+  private Tier stage3PriorityTier = Tier.ALL_TIERS;
 
   private TierMatchCount tierMatchCount = new TierMatchCount();
 

@@ -21,3 +21,4 @@ work-item:
 pipeline:
   runner:
     enabled: false
+  stage3-priority-tier: ALL_TIERS

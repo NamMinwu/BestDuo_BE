@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.common.application.PatchVersionService;
+import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.config.PipelineProperties;
 import com.bestduo_BE.ingest.application.MatchIngestWorker;
@@ -48,7 +49,7 @@ class PipelineRunnerTest {
 
     verify(dailySeedRunner).runNextChunk();
     verify(collectMatchIdsRunner, never()).runBatch();
-    verify(matchIngestWorker, never()).executeWithPriority(anyInt(), any());
+    verify(matchIngestWorker, never()).executeWithPriority(anyInt(), any(), any());
   }
 
   @Test
@@ -60,35 +61,51 @@ class PipelineRunnerTest {
     runner.executeTick();
 
     verify(collectMatchIdsRunner).runBatch();
-    verify(matchIngestWorker, never()).executeWithPriority(anyInt(), any());
+    verify(matchIngestWorker, never()).executeWithPriority(anyInt(), any(), any());
   }
 
   @Test
-  @DisplayName("Stage 1·2 없으면 currentPatch와 함께 Stage 3 executeWithPriority를 호출한다")
+  @DisplayName("Stage 1·2 없으면 ALL_TIERS + currentPatch로 Stage 3 executeWithPriority를 호출한다")
   void executeTick_whenNoStage1Or2_runsStage3WithCurrentPatch() throws InterruptedException {
     given(dailySeedRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
-    given(matchIngestWorker.executeWithPriority(anyInt(), any()))
+    given(matchIngestWorker.executeWithPriority(anyInt(), any(), any()))
         .willReturn(ingestResult(1));
 
     runner.executeTick();
 
-    verify(matchIngestWorker).executeWithPriority(props.getIngestBatchSize(), "15.23");
+    verify(matchIngestWorker).executeWithPriority(props.getIngestBatchSize(), Tier.ALL_TIERS, "15.23");
   }
 
   @Test
-  @DisplayName("patch 정보가 없으면 null로 Stage 3를 호출한다")
+  @DisplayName("patch 정보가 없으면 ALL_TIERS + null patch로 Stage 3를 호출한다")
   void executeTick_whenNoPatch_callsStage3WithNullPatch() throws InterruptedException {
     given(dailySeedRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.currentPatchVersion()).willReturn(Optional.empty());
-    given(matchIngestWorker.executeWithPriority(anyInt(), any()))
+    given(matchIngestWorker.executeWithPriority(anyInt(), any(), any()))
         .willReturn(ingestResult(1));
 
     runner.executeTick();
 
-    verify(matchIngestWorker).executeWithPriority(props.getIngestBatchSize(), null);
+    verify(matchIngestWorker).executeWithPriority(props.getIngestBatchSize(), Tier.ALL_TIERS, null);
+  }
+
+  @Test
+  @DisplayName("stage3PriorityTier가 EMERALD이면 EMERALD tier로 Stage 3를 호출한다")
+  void executeTick_whenStage3PriorityTierIsEmerald_callsStage3WithEmeraldTier()
+      throws InterruptedException {
+    props.setStage3PriorityTier(Tier.EMERALD);
+    given(dailySeedRunner.hasWorkToday()).willReturn(false);
+    given(collectMatchIdsRunner.hasPending()).willReturn(false);
+    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
+    given(matchIngestWorker.executeWithPriority(anyInt(), any(), any()))
+        .willReturn(ingestResult(1));
+
+    runner.executeTick();
+
+    verify(matchIngestWorker).executeWithPriority(props.getIngestBatchSize(), Tier.EMERALD, "15.23");
   }
 
   @Test
@@ -97,7 +114,7 @@ class PipelineRunnerTest {
     given(dailySeedRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.currentPatchVersion()).willReturn(Optional.empty());
-    given(matchIngestWorker.executeWithPriority(anyInt(), any()))
+    given(matchIngestWorker.executeWithPriority(anyInt(), any(), any()))
         .willReturn(ingestResult(0));
 
     long start = System.currentTimeMillis();
@@ -124,7 +141,7 @@ class PipelineRunnerTest {
     given(dailySeedRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.currentPatchVersion()).willReturn(Optional.empty());
-    given(matchIngestWorker.executeWithPriority(anyInt(), any()))
+    given(matchIngestWorker.executeWithPriority(anyInt(), any(), any()))
         .willThrow(new RiotRateLimitedException("429"));
 
     assertThatThrownBy(() -> runner.executeTick())
