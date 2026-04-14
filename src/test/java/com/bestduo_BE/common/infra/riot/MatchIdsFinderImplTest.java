@@ -7,10 +7,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
-import com.bestduo_BE.common.infra.riot.MatchIdsFinderImpl;
 import com.bestduo_BE.common.infra.riot.exception.RiotApiException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -32,6 +32,7 @@ class MatchIdsFinderImplTest {
   }
 
   @Test
+  @DisplayName("findRecentMatchIds — 리전 엔드포인트에서 매치 ID 목록을 반환한다")
   void findRecentMatchIds_returnsIdsFromRegionalEndpoint() {
     given(regionalRestTemplate.getForObject(
         "/lol/match/v5/matches/by-puuid/{puuid}/ids?count={count}",
@@ -52,6 +53,7 @@ class MatchIdsFinderImplTest {
   }
 
   @Test
+  @DisplayName("findRecentMatchIds — API가 null을 반환하면 빈 리스트를 반환한다")
   void findRecentMatchIds_returnsEmptyListWhenApiReturnsNull() {
     given(regionalRestTemplate.getForObject(
         "/lol/match/v5/matches/by-puuid/{puuid}/ids?count={count}",
@@ -66,6 +68,7 @@ class MatchIdsFinderImplTest {
   }
 
   @Test
+  @DisplayName("findRecentMatchIds — REST 예외를 RiotApiException으로 감싼다")
   void findRecentMatchIds_wrapsRestExceptionsInRiotApiException() {
     given(regionalRestTemplate.getForObject(
         "/lol/match/v5/matches/by-puuid/{puuid}/ids?count={count}",
@@ -79,6 +82,7 @@ class MatchIdsFinderImplTest {
   }
 
   @Test
+  @DisplayName("findMatchIdsSince — 특정 시각 이후의 매치 ID 목록을 반환한다")
   void findMatchIdsSince_returnsIdsFromRegionalEndpoint() {
     given(regionalRestTemplate.getForObject(
         "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&count={count}",
@@ -101,6 +105,7 @@ class MatchIdsFinderImplTest {
   }
 
   @Test
+  @DisplayName("findMatchIdsSince — REST 예외를 RiotApiException으로 감싼다")
   void findMatchIdsSince_wrapsRestExceptionsInRiotApiException() {
     given(regionalRestTemplate.getForObject(
         "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&count={count}",

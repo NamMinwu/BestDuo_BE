@@ -11,6 +11,7 @@ import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggreg
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -30,6 +31,7 @@ class ComputeBottomDuoRankingTest {
   }
 
   @Test
+  @DisplayName("execute — 패치 데이터가 없으면 0을 반환한다")
   void returnZeroWhenNoPatchDataExists() {
     when(repository.findLatestPatchVersion()).thenReturn(null);
 
@@ -41,6 +43,7 @@ class ComputeBottomDuoRankingTest {
   }
 
   @Test
+  @DisplayName("execute — 랭킹을 계산하고 이전 패치 대비 델타를 적용한다")
   void computeRankingAndApplyPreviousPatchDelta() {
     OffsetDateTime now = OffsetDateTime.now();
     BottomDuoStatAggregate asheLux = BottomDuoStatAggregate.builder()
@@ -126,6 +129,7 @@ class ComputeBottomDuoRankingTest {
   }
 
   @Test
+  @DisplayName("execute — 게임 수가 임계값 미만이면 INSUFFICIENT로 표시한다")
   void markInsufficientDataWhenGamesBelowThreshold() {
     OffsetDateTime now = OffsetDateTime.now();
     BottomDuoStatAggregate lowSample = BottomDuoStatAggregate.builder()

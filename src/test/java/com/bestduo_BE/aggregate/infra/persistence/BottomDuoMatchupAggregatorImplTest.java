@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.then;
 
 import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggregateJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -25,6 +26,7 @@ class BottomDuoMatchupAggregatorImplTest {
   }
 
   @Test
+  @DisplayName("aggregateAll — 레포지토리에 위임하고 집계된 행 수를 반환한다")
   void aggregateAllDelegatesToRepository() {
     given(repository.upsertAllFromRaw()).willReturn(42);
 

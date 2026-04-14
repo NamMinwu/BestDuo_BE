@@ -14,6 +14,7 @@ import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAgg
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -33,6 +34,7 @@ class BottomDuoMatchupFinderImplTest {
   }
 
   @Test
+  @DisplayName("findMyDuoTotalGames — 레포지토리에 위임하고 내 듀오 전체 게임 수를 반환한다")
   void findMyDuoTotalGamesDelegatesToRepository() {
     given(repository.sumGamesOfMyDuo("14.9", "DIAMOND", "ashe", "lux")).willReturn(87);
 
@@ -42,6 +44,7 @@ class BottomDuoMatchupFinderImplTest {
   }
 
   @Test
+  @DisplayName("resolvePatchVersion — 명시적으로 제공된 패치 버전을 우선한다")
   void resolvePatchVersionPrefersProvidedValue() {
     String patch = finder.resolvePatchVersion(" 14.8 ");
 
@@ -49,6 +52,7 @@ class BottomDuoMatchupFinderImplTest {
   }
 
   @Test
+  @DisplayName("resolvePatchVersion — 패치 버전이 없으면 레포지토리 최신 버전으로 폴백한다")
   void resolvePatchVersionFallsBackToRepository() {
     given(repository.findLatestPatchVersion()).willReturn("14.10");
 
@@ -59,6 +63,7 @@ class BottomDuoMatchupFinderImplTest {
   }
 
   @Test
+  @DisplayName("findMatchups — WINRATE_DESC 정렬 시 엔티티를 MatchupRow로 변환하고 상대 필터를 trim한다")
   void findMatchupsWinRateDescMapsEntitiesAndTrimsOpponentFilters() {
     OffsetDateTime now = OffsetDateTime.now();
     BottomDuoMatchupAggregate entity = BottomDuoMatchupAggregate.builder()
@@ -100,6 +105,7 @@ class BottomDuoMatchupFinderImplTest {
   }
 
   @Test
+  @DisplayName("findMatchups — WINRATE_ASC 정렬 시 레포지토리를 호출한다")
   void findMatchupsWinRateAscCallsRepository() {
     given(repository.findTopWinRateAsc("14.10", "DIAMOND", "ashe", "lux", "jinx", "morgana", 3))
         .willReturn(List.of());
@@ -120,6 +126,7 @@ class BottomDuoMatchupFinderImplTest {
   }
 
   @Test
+  @DisplayName("findMatchups — PICKRATE_DESC 정렬 시 최소 limit 1을 보장한다")
   void findMatchupsPickRateDescEnforcesMinimumLimit() {
     given(repository.findTopPickRateDesc("14.10", "DIAMOND", "ashe", "lux", "jinx", null, 200, 1))
         .willReturn(List.of());
@@ -140,6 +147,7 @@ class BottomDuoMatchupFinderImplTest {
   }
 
   @Test
+  @DisplayName("findMatchups — PICKRATE_ASC 정렬 시 myTotalGames를 그대로 전달한다")
   void findMatchupsPickRateAscPassesThroughMyTotalGames() {
     given(repository.findTopPickRateAsc("14.10", "DIAMOND", "ashe", "lux", null, null, 321, 4))
         .willReturn(List.of());
@@ -160,6 +168,7 @@ class BottomDuoMatchupFinderImplTest {
   }
 
   @Test
+  @DisplayName("findCountersByLowestWinRate — 엔티티를 매핑하고 limit 최솟값 1을 적용한다")
   void findCountersByLowestWinRateMapsEntitiesAndAppliesLimitFloor() {
     OffsetDateTime now = OffsetDateTime.now();
     BottomDuoMatchupAggregate entity = BottomDuoMatchupAggregate.builder()

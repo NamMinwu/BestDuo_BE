@@ -13,6 +13,7 @@ import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -36,6 +37,7 @@ class MatchPayloadReaderImplTest {
   }
 
   @Test
+  @DisplayName("read — 매치가 존재하면 파싱된 페이로드를 반환한다")
   void read_returnsParsedPayloadWhenMatchExists() throws Exception {
     RiotMatchDto expected = new RiotMatchDto(null, null);
     Match match = Match.builder()
@@ -57,6 +59,7 @@ class MatchPayloadReaderImplTest {
   }
 
   @Test
+  @DisplayName("read — 매치를 찾을 수 없으면 예외를 던진다")
   void read_throwsWhenMatchNotFound() {
     given(matchRepository.findById("KR_MISSING")).willReturn(Optional.empty());
 
@@ -68,6 +71,7 @@ class MatchPayloadReaderImplTest {
   }
 
   @Test
+  @DisplayName("read — JSON 파싱 예외를 IllegalStateException으로 감싼다")
   void read_wrapsJsonParsingException() throws Exception {
     Match match = Match.builder()
         .matchId("KR_2")

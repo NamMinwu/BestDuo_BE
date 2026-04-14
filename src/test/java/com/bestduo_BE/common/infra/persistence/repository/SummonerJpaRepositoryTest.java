@@ -6,6 +6,7 @@ import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import java.time.OffsetDateTime;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -26,6 +27,7 @@ class SummonerJpaRepositoryTest {
   private SummonerJpaRepository repository;
 
   @Test
+  @DisplayName("findRefreshTargets — 요청 tier 우선, 그 다음 tier 미지정 summoner 순으로 반환한다")
   void findRefreshTargetsPrefersRequestedTierThenUnknownTier() {
     Summoner gold = repository.save(summoner("gold", Tier.GOLD, OffsetDateTime.now().minusHours(2), OffsetDateTime.now().minusHours(2)));
     repository.save(summoner("unknown", null, null, OffsetDateTime.now().minusHours(3)));
@@ -37,6 +39,7 @@ class SummonerJpaRepositoryTest {
   }
 
   @Test
+  @DisplayName("updateTierMetadata — 관측된 tier 정보를 DB에 저장한다")
   void updateTierMetadataStoresObservedTier() {
     repository.save(Summoner.create("p-1"));
     OffsetDateTime observedAt = OffsetDateTime.now().minusMinutes(5);

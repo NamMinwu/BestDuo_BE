@@ -7,6 +7,7 @@ import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.BottomDuoRawEntity;
 import com.bestduo_BE.common.infra.persistence.repository.BottomDuoRawJpaRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -36,6 +37,7 @@ class CoverageBucketCountJpaRepositoryTest {
   }
 
   @Test
+  @DisplayName("countDistinctMatches — 같은 매치의 두 팀 행을 1건으로 집계하고 패치·티어로 필터링한다")
   void countDistinctMatchesCountsOneMatchForTwoTeamRowsAndFiltersByPatchAndTier() {
     bottomDuoRawRepository.save(BottomDuoRawEntity.fromDomain(new BottomDuoRaw("KR_1", 100, 1, 2, true, "15.7", Tier.MASTER)));
     bottomDuoRawRepository.save(BottomDuoRawEntity.fromDomain(new BottomDuoRaw("KR_1", 200, 3, 4, false, "15.7", Tier.MASTER)));

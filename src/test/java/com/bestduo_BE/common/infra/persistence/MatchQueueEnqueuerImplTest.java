@@ -11,6 +11,7 @@ import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
 import com.bestduo_BE.common.infra.persistence.repository.MatchQueueJpaRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -31,6 +32,7 @@ class MatchQueueEnqueuerImplTest {
   }
 
   @Test
+  @DisplayName("enqueueAllIdempotent — 신규 매치 ID만 저장한다")
   void saveOnlyNewMatchIds() {
     given(repository.existsById("m-1")).willReturn(false);
     given(repository.existsById("m-2")).willReturn(true);
@@ -49,6 +51,7 @@ class MatchQueueEnqueuerImplTest {
   }
 
   @Test
+  @DisplayName("enqueueAllIdempotent — 모든 ID가 이미 존재하면 저장을 건너뛴다")
   void skipSavingWhenAllIdsExist() {
     given(repository.existsById("m-3")).willReturn(true);
 

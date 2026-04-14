@@ -8,12 +8,12 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.verifyNoInteractions;
 
-import com.bestduo_BE.common.infra.riot.LeagueEntriesSeedLoaderImpl;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
 import com.bestduo_BE.common.infra.riot.dto.LeagueList;
 import com.bestduo_BE.common.infra.riot.exception.RiotApiException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -35,6 +35,7 @@ class LeagueEntriesSeedLoaderImplTest {
   }
 
   @Test
+  @DisplayName("loadEntries — 페이지네이션 엔드포인트에서 엔트리를 반환한다")
   void loadEntries_returnsEntriesFromPaginatedEndpoint() {
     LeagueEntry entry1 = new LeagueEntry("puuid-1", "DIAMOND", "RANKED_SOLO_5x5", "I", 100L);
     LeagueEntry entry2 = new LeagueEntry("puuid-2", "DIAMOND", "RANKED_SOLO_5x5", "I", 80L);
@@ -61,6 +62,7 @@ class LeagueEntriesSeedLoaderImplTest {
   }
 
   @Test
+  @DisplayName("loadEntries — 페이지네이션 API가 null을 반환하면 빈 리스트를 반환한다")
   void loadEntries_returnsEmptyListWhenPaginatedApiReturnsNull() {
     given(platformRestTemplate.getForObject(
         "/lol/league/v4/entries/{queue}/{tier}/{division}?page={page}",
@@ -77,6 +79,7 @@ class LeagueEntriesSeedLoaderImplTest {
   }
 
   @Test
+  @DisplayName("loadEntries — REST 예외를 RiotApiException으로 감싼다")
   void loadEntries_wrapsRestExceptionsInRiotApiException() {
     given(platformRestTemplate.getForObject(
         "/lol/league/v4/entries/{queue}/{tier}/{division}?page={page}",
@@ -92,6 +95,7 @@ class LeagueEntriesSeedLoaderImplTest {
   }
 
   @Test
+  @DisplayName("loadEntries — 최상위 티어는 전용 엔드포인트에서 엔트리를 가져온다 (CHALLENGER)")
   void loadEntries_fetchesTopTierEntriesFromDedicatedEndpoint() {
     LeagueEntry entry1 = new LeagueEntry("puuid-1", "CHALLENGER", "RANKED_SOLO_5x5", "I", 500L);
     LeagueEntry entry2 = new LeagueEntry("puuid-2", "CHALLENGER", "RANKED_SOLO_5x5", "I", 450L);
@@ -113,6 +117,7 @@ class LeagueEntriesSeedLoaderImplTest {
   }
 
   @Test
+  @DisplayName("loadEntries — MASTER 티어 전용 엔드포인트에서 엔트리를 가져온다")
   void loadEntries_fetchesMasterTierEntriesFromDedicatedEndpoint() {
     LeagueEntry entry1 = new LeagueEntry("puuid-3", "MASTER", "RANKED_SOLO_5x5", "I", 250L);
     LeagueEntry entry2 = new LeagueEntry("puuid-4", "MASTER", "RANKED_SOLO_5x5", "I", 200L);
@@ -134,6 +139,7 @@ class LeagueEntriesSeedLoaderImplTest {
   }
 
   @Test
+  @DisplayName("loadEntries — 최상위 티어에서 page가 1보다 크면 빈 리스트를 반환한다")
   void loadEntries_returnsEmptyListForTopTierWhenPageGreaterThanOne() {
     List<LeagueEntry> result = loader.loadEntries("RANKED_SOLO_5x5", "MASTER", "I", 2);
 

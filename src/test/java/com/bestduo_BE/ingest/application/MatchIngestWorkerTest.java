@@ -32,6 +32,7 @@ class MatchIngestWorkerTest {
   }
 
   @Test
+  @DisplayName("execute — 요청된 tier를 큐 락에 전달하고 처리 결과를 반환한다")
   void executeForwardsRequestedTierToQueueLocking() {
     MatchQueueDispatcher.Item item = new MatchQueueDispatcher.Item("match-1", Tier.GOLD, 1, "15.23");
     given(queue.recoverStaleRunning(10)).willReturn(0);
@@ -50,6 +51,7 @@ class MatchIngestWorkerTest {
   }
 
   @Test
+  @DisplayName("execute — tier 미지정 시 ALL_TIERS를 사용한다")
   void defaultExecuteUsesAllTiers() {
     given(queue.recoverStaleRunning(10)).willReturn(0);
     given(queue.pickAndLock(1, 2, 10, Tier.ALL_TIERS)).willReturn(List.of());

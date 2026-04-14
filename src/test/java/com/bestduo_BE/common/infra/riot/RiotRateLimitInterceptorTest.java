@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.ClientHttpRequestExecution;
@@ -41,6 +42,7 @@ class RiotRateLimitInterceptorTest {
   }
 
   @Test
+  @DisplayName("intercept — 요청 성공 시 헤더를 설정하고 응답을 반환한다")
   void headerSetAndResponseReturnedWhenRequestSucceeds() throws Exception {
     ClientHttpRequestExecution execution = mock(ClientHttpRequestExecution.class);
     ClientHttpResponse ok = new MockClientHttpResponse(new byte[0], HttpStatus.OK);
@@ -53,6 +55,7 @@ class RiotRateLimitInterceptorTest {
   }
 
   @Test
+  @DisplayName("intercept — 429 응답 시 RiotRateLimitedException을 던진다")
   void throwsRiotRateLimitedExceptionOnTooManyRequests() throws Exception {
     ClientHttpRequestExecution execution = mock(ClientHttpRequestExecution.class);
     ClientHttpResponse tooMany = mock(ClientHttpResponse.class);
@@ -71,6 +74,7 @@ class RiotRateLimitInterceptorTest {
   }
 
   @Test
+  @DisplayName("intercept — 쿨다운 중이면 execute 호출 없이 즉시 예외를 던진다")
   void throwsImmediatelyWhenStillCoolingDown() throws Exception {
     ClientHttpRequestExecution execution = mock(ClientHttpRequestExecution.class);
     ClientHttpResponse tooMany = mock(ClientHttpResponse.class);
@@ -96,11 +100,13 @@ class RiotRateLimitInterceptorTest {
   }
 
   @Test
+  @DisplayName("durationUntilAvailable — 쿨다운 중이 아니면 ZERO를 반환한다")
   void durationUntilAvailableIsZeroWhenNotCooling() {
     assertThat(interceptor.durationUntilAvailable()).isEqualTo(Duration.ZERO);
   }
 
   @Test
+  @DisplayName("durationUntilAvailable — 쿨다운 중이면 남은 대기 시간을 반환한다")
   void durationUntilAvailableReflectsCooldown() throws Exception {
     ClientHttpRequestExecution execution = mock(ClientHttpRequestExecution.class);
     ClientHttpResponse tooMany = mock(ClientHttpResponse.class);
