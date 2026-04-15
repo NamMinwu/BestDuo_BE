@@ -1,7 +1,6 @@
 package com.bestduo_BE.ingest.infra.persistence;
 
 import com.bestduo_BE.ingest.application.port.MatchQueuePicker;
-import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
 import com.bestduo_BE.common.infra.persistence.repository.MatchQueueJpaRepository;
 import java.util.List;
@@ -19,7 +18,7 @@ public class MatchQueuePickerImpl implements MatchQueuePicker {
   @Transactional(readOnly = true)
   public List<MatchQueueItem> pick(int limit) {
     return repo.pickReadyOrRetry(limit).stream()
-        .map(mq -> new MatchQueueItem(mq.getMatchId(), Tier.valueOf(mq.getCollectionTier()), mq.getPriority()))
+        .map(mq -> new MatchQueueItem(mq.getMatchId(), mq.getCollectionTier(), mq.getPriority()))
         .toList();
   }
 

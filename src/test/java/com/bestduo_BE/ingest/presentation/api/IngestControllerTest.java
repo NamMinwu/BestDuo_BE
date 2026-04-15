@@ -6,8 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
 import com.bestduo_BE.common.infra.persistence.entity.BottomDuoRawEntity;
+import com.bestduo_BE.common.infra.riot.FakeRiotApiAdapter;
 import com.bestduo_BE.common.infra.persistence.entity.Match;
 import com.bestduo_BE.common.infra.persistence.repository.BottomDuoRawJpaRepository;
 import com.bestduo_BE.common.infra.persistence.repository.MatchJpaRepository;
@@ -43,7 +43,7 @@ class IngestControllerTest {
   @Autowired private MockMvc mockMvc;
   @Autowired private MatchJpaRepository matchRepository;
   @Autowired private BottomDuoRawJpaRepository bottomDuoRawRepository;
-  @Autowired private StubRiotMatchLoader stubRiotMatchLoader;
+  @Autowired private FakeRiotApiAdapter fakeRiotApiAdapter;
 
   @AfterEach
   void cleanUp() {
@@ -54,7 +54,7 @@ class IngestControllerTest {
   @Test
   @DisplayName("POST /ingest/match — 매치와 BottomDuoRaw를 저장하고 멱등성을 보장한다")
   void collectingMatchPersistsMatchAndBottomDuoRawsIdempotently() throws Exception {
-    stubRiotMatchLoader.setResponse(sampleMatch());
+    fakeRiotApiAdapter.stubMatch("KR_ABCDE", sampleMatch());
 
     mockMvc.perform(post("/ingest/match/{matchId}", "KR_ABCDE")
             .param("tier", "EMERALD"))
@@ -120,24 +120,8 @@ class IngestControllerTest {
   static class StubConfig {
     @Bean
     @Primary
-    StubRiotMatchLoader stubRiotMatchLoader() {
-      return new StubRiotMatchLoader();
-    }
-  }
-
-  static class StubRiotMatchLoader implements RiotMatchLoader {
-    private RiotMatchDto response;
-
-    void setResponse(RiotMatchDto response) {
-      this.response = response;
-    }
-
-    @Override
-    public RiotMatchDto loadMatch(String matchId) {
-      if (response == null) {
-        throw new IllegalStateException("No match stub configured");
-      }
-      return response;
+    FakeRiotApiAdapter fakeRiotApiAdapter() {
+      return new FakeRiotApiAdapter();
     }
   }
 }

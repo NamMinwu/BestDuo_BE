@@ -1,9 +1,9 @@
 package com.bestduo_BE.leagueentry.application;
 
+import com.bestduo_BE.common.application.port.RiotApiPort;
 import com.bestduo_BE.common.domain.model.LeagueEntriesFetchCommand;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
-import com.bestduo_BE.leagueentry.application.port.LeagueEntriesSeedLoader;
 import com.bestduo_BE.leagueentry.application.port.SummonerSeedRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class LeagueEntriesFetcher {
 
-  private final LeagueEntriesSeedLoader leagueEntriesSeedLoader;
+  private final RiotApiPort riotApiPort;
   private final SummonerSeedRegistry summonerSeedRegistry;
 
   public record LeagueEntriesFetchResult(
@@ -34,7 +34,7 @@ public class LeagueEntriesFetcher {
   public LeagueEntriesFetchResult execute(LeagueEntriesFetchCommand cmd) {
     FetchProgress progress = new FetchProgress(cmd.maxEntries());
 
-    List<LeagueEntry> entries = leagueEntriesSeedLoader.loadEntries(
+    List<LeagueEntry> entries = riotApiPort.loadLeagueEntries(
         cmd.queue(), cmd.tier(), cmd.division(), cmd.page());
 
     if (entries != null && !entries.isEmpty()) {

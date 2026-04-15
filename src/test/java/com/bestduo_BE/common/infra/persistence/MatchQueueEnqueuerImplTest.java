@@ -43,7 +43,7 @@ class MatchQueueEnqueuerImplTest {
     verify(repository).save(captor.capture());
     MatchQueue saved = captor.getValue();
     assertThat(saved.getMatchId()).isEqualTo("m-1");
-    assertThat(saved.getCollectionTier()).isEqualTo("EMERALD");
+    assertThat(saved.getCollectionTier()).isEqualTo(Tier.EMERALD);
     assertThat(saved.getPriority()).isEqualTo(80);
     assertThat(saved.getPatch()).isEqualTo("15.23");
     verify(repository).existsById("m-1");

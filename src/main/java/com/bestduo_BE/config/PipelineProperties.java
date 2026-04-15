@@ -52,10 +52,25 @@ public class PipelineProperties {
   /** DIA/EME 버킷당 하루에 처리할 최대 페이지 수 (per-bucket). */
   private int diaEmeDailyPageQuota = 10;
 
-  /** Stage 3(INGEST)에서 그날 먼저 처리할 tier. ALL_TIERS이면 기존 우선순위(CHALLENGER→…→기타) 유지. */
-  private Tier stage3PriorityTier = Tier.ALL_TIERS;
+  /** Stage 3(INGEST)에서 그날 먼저 처리할 tier. null이면 기존 우선순위(CHALLENGER→…→기타) 유지. */
+  private Tier stage3PriorityTier = null;
+
+  private Ingest ingest = new Ingest();
 
   private TierMatchCount tierMatchCount = new TierMatchCount();
+
+  @Getter
+  @Setter
+  public static class Ingest {
+    /** RUNNING 상태가 이 분 이상 지속되면 stale로 복구 */
+    private int staleMinutes = 10;
+
+    /** ERROR 상태 재시도 쿨다운 (분) */
+    private int errorCooldownMinutes = 10;
+
+    /** 최대 재시도 횟수 */
+    private int maxRetry = 2;
+  }
 
   @Getter
   @Setter

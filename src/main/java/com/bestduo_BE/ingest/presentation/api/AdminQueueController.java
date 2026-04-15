@@ -25,6 +25,6 @@ public class AdminQueueController {
 
   @PostMapping("/work")
   public MatchIngestRunner.Result work(@RequestParam(defaultValue = "20") int limit) {
-    return matchIngestRunner.execute(limit);
+    return matchIngestRunner.executeWithPriority(limit, null, null);
   }
 }

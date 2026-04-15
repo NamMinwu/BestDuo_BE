@@ -44,6 +44,10 @@ pipeline:
     apex-tiers: 30
     diamond-emerald: 100
   stage3-priority-tier: ${PIPELINE_STAGE3_PRIORITY_TIER:DIAMOND}
+  ingest:
+    stale-minutes: 10
+    error-cooldown-minutes: 10
+    max-retry: 2
 
 management:
   endpoints:

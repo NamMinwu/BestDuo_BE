@@ -10,8 +10,8 @@ import static org.mockito.Mockito.verify;
 import com.bestduo_BE.common.domain.model.LeagueEntriesFetchCommand;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
+import com.bestduo_BE.common.application.port.RiotApiPort;
 import com.bestduo_BE.leagueentry.application.LeagueEntriesFetcher.LeagueEntriesFetchResult;
-import com.bestduo_BE.leagueentry.application.port.LeagueEntriesSeedLoader;
 import com.bestduo_BE.leagueentry.application.port.SummonerSeedRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -26,7 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class LeagueEntriesFetcherPhase3Test {
 
   @Mock
-  private LeagueEntriesSeedLoader leagueEntriesSeedLoader;
+  private RiotApiPort riotApiPort;
 
   @Mock
   private SummonerSeedRegistry summonerSeedRegistry;
@@ -39,13 +39,13 @@ class LeagueEntriesFetcherPhase3Test {
 
   @BeforeEach
   void setUp() {
-    executor = new LeagueEntriesFetcher(leagueEntriesSeedLoader, summonerSeedRegistry);
+    executor = new LeagueEntriesFetcher(riotApiPort, summonerSeedRegistry);
   }
 
   @Test
   @DisplayName("빈 응답이면 결과가 모두 0")
   void execute_whenEmpty_returnsZeros() {
-    given(leagueEntriesSeedLoader.loadEntries(
+    given(riotApiPort.loadLeagueEntries(
         command.queue(), command.tier(), command.division(), 1))
         .willReturn(List.of());
 
@@ -59,7 +59,7 @@ class LeagueEntriesFetcherPhase3Test {
   @Test
   @DisplayName("엔트리가 있으면 모든 summoner에 upsertLeagueEntry 호출")
   void execute_withEntries_upsertsAllSummoners() {
-    given(leagueEntriesSeedLoader.loadEntries(
+    given(riotApiPort.loadLeagueEntries(
         command.queue(), command.tier(), command.division(), 1))
         .willReturn(List.of(entry("puuid-1"), entry("puuid-2")));
 
@@ -72,7 +72,7 @@ class LeagueEntriesFetcherPhase3Test {
   @Test
   @DisplayName("puuid가 null이거나 blank인 엔트리는 건너뜀")
   void execute_skipsEntriesWithBlankPuuid() {
-    given(leagueEntriesSeedLoader.loadEntries(
+    given(riotApiPort.loadLeagueEntries(
         command.queue(), command.tier(), command.division(), 1))
         .willReturn(List.of(entry(""), entry("  "), entry("valid-puuid")));
 
@@ -88,7 +88,7 @@ class LeagueEntriesFetcherPhase3Test {
     LeagueEntriesFetchCommand limited = new LeagueEntriesFetchCommand(
         "RANKED_SOLO_5x5", "DIAMOND", "I", Tier.DIAMOND, 1, 1
     );
-    given(leagueEntriesSeedLoader.loadEntries(
+    given(riotApiPort.loadLeagueEntries(
         limited.queue(), limited.tier(), limited.division(), 1))
         .willReturn(List.of(entry("p1"), entry("p2"), entry("p3")));
 
@@ -102,7 +102,7 @@ class LeagueEntriesFetcherPhase3Test {
   @DisplayName("엔트리의 tier 문자열이 있으면 해당 tier로 upsert")
   void execute_usesTierFromEntry() {
     LeagueEntry masterEntry = new LeagueEntry("puuid-m", "MASTER", "RANKED_SOLO_5x5", "I", 100L);
-    given(leagueEntriesSeedLoader.loadEntries(
+    given(riotApiPort.loadLeagueEntries(
         command.queue(), command.tier(), command.division(), 1))
         .willReturn(List.of(masterEntry));
 
@@ -115,7 +115,7 @@ class LeagueEntriesFetcherPhase3Test {
   @DisplayName("엔트리의 tier 문자열이 없으면 seedTier(fallback) 사용")
   void execute_fallsBackToSeedTierWhenEntryTierMissing() {
     LeagueEntry noTierEntry = new LeagueEntry("puuid-x", null, "RANKED_SOLO_5x5", "I", 100L);
-    given(leagueEntriesSeedLoader.loadEntries(
+    given(riotApiPort.loadLeagueEntries(
         command.queue(), command.tier(), command.division(), 1))
         .willReturn(List.of(noTierEntry));
 

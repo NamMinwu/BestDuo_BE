@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.common.application.PatchVersionService;
+import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.DailyPipelineState;
 import com.bestduo_BE.common.infra.riot.budget.DailyBudgetTracker;
@@ -77,14 +78,14 @@ class DailyLeagueEntriesRunnerTest {
     given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    state.recordSeedCompletedTier("CHALLENGER");
-    state.recordSeedCompletedTier("GRANDMASTER");
-    state.recordSeedCompletedTier("MASTER");
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+    state.recordSeedCompletedTier(Tier.GRANDMASTER);
+    state.recordSeedCompletedTier(Tier.MASTER);
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
 
     CoverageBucket diaBucket = bucketWithQuotaExhausted(Tier.DIAMOND, "15.23");
     CoverageBucket emeBucket = bucketWithQuotaExhausted(Tier.EMERALD, "15.23");
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.of(diaBucket));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.EMERALD)).willReturn(Optional.of(emeBucket));
 
@@ -97,12 +98,12 @@ class DailyLeagueEntriesRunnerTest {
     given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    state.recordSeedCompletedTier("CHALLENGER");
-    state.recordSeedCompletedTier("GRANDMASTER");
-    state.recordSeedCompletedTier("MASTER");
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+    state.recordSeedCompletedTier(Tier.GRANDMASTER);
+    state.recordSeedCompletedTier(Tier.MASTER);
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
 
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     // fresh bucket: dailyPagesProcessed=0 < quota=10
     CoverageBucket diaFresh = bucketNotCompleted(Tier.DIAMOND, "15.23");
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.of(diaFresh));
@@ -140,7 +141,7 @@ class DailyLeagueEntriesRunnerTest {
 
     assertThat(chunk.type()).isEqualTo(DailyLeagueEntriesRunner.ChunkResult.Type.APEX_TIER_CHUNK);
     assertThat(chunk.tier()).isEqualTo(Tier.CHALLENGER);
-    verify(budgetTracker).recordSeedCall(1, "CHALLENGER");
+    verify(budgetTracker).recordSeedCall(1, Tier.CHALLENGER);
   }
 
   @Test
@@ -149,12 +150,12 @@ class DailyLeagueEntriesRunnerTest {
     given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    state.recordSeedCompletedTier("CHALLENGER");
-    state.recordSeedCompletedTier("GRANDMASTER");
-    state.recordSeedCompletedTier("MASTER");
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+    state.recordSeedCompletedTier(Tier.GRANDMASTER);
+    state.recordSeedCompletedTier(Tier.MASTER);
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
 
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
 
     CoverageBucket diaBucket = bucketNotCompleted(Tier.DIAMOND, "15.23");
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.of(diaBucket));
@@ -177,12 +178,12 @@ class DailyLeagueEntriesRunnerTest {
     given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    state.recordSeedCompletedTier("CHALLENGER");
-    state.recordSeedCompletedTier("GRANDMASTER");
-    state.recordSeedCompletedTier("MASTER");
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+    state.recordSeedCompletedTier(Tier.GRANDMASTER);
+    state.recordSeedCompletedTier(Tier.MASTER);
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
 
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
 
     CoverageBucket diaBucket = bucketNotCompleted(Tier.DIAMOND, "15.23");
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.of(diaBucket));
@@ -207,12 +208,12 @@ class DailyLeagueEntriesRunnerTest {
     given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    state.recordSeedCompletedTier("CHALLENGER");
-    state.recordSeedCompletedTier("GRANDMASTER");
-    state.recordSeedCompletedTier("MASTER");
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+    state.recordSeedCompletedTier(Tier.GRANDMASTER);
+    state.recordSeedCompletedTier(Tier.MASTER);
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
 
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
 
     CoverageBucket diaBucket = bucketNotCompleted(Tier.DIAMOND, "15.23");
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.of(diaBucket));
@@ -235,12 +236,12 @@ class DailyLeagueEntriesRunnerTest {
     given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    state.recordSeedCompletedTier("CHALLENGER");
-    state.recordSeedCompletedTier("GRANDMASTER");
-    state.recordSeedCompletedTier("MASTER");
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+    state.recordSeedCompletedTier(Tier.GRANDMASTER);
+    state.recordSeedCompletedTier(Tier.MASTER);
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
 
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND))
         .willReturn(Optional.of(bucketWithQuotaExhausted(Tier.DIAMOND, "15.23")));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.EMERALD))
@@ -259,12 +260,12 @@ class DailyLeagueEntriesRunnerTest {
     given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    state.recordSeedCompletedTier("CHALLENGER");
-    state.recordSeedCompletedTier("GRANDMASTER");
-    state.recordSeedCompletedTier("MASTER");
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+    state.recordSeedCompletedTier(Tier.GRANDMASTER);
+    state.recordSeedCompletedTier(Tier.MASTER);
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
 
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.empty());
 
     assertThat(runner.hasWorkToday()).isTrue();
@@ -276,12 +277,12 @@ class DailyLeagueEntriesRunnerTest {
     given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    state.recordSeedCompletedTier("CHALLENGER");
-    state.recordSeedCompletedTier("GRANDMASTER");
-    state.recordSeedCompletedTier("MASTER");
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+    state.recordSeedCompletedTier(Tier.GRANDMASTER);
+    state.recordSeedCompletedTier(Tier.MASTER);
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
 
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.empty());
 
     CoverageBucket savedBucket = CoverageBucket.create("15.23", Tier.DIAMOND);
@@ -310,11 +311,11 @@ class DailyLeagueEntriesRunnerTest {
     given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    state.recordSeedCompletedTier("CHALLENGER");
-    state.recordSeedCompletedTier("GRANDMASTER");
-    state.recordSeedCompletedTier("MASTER");
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+    state.recordSeedCompletedTier(Tier.GRANDMASTER);
+    state.recordSeedCompletedTier(Tier.MASTER);
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.empty());
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
 
     DailyLeagueEntriesRunner.ChunkResult result = runner.runNextChunk();
 
@@ -331,12 +332,12 @@ class DailyLeagueEntriesRunnerTest {
     given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    state.recordSeedCompletedTier("CHALLENGER");
-    state.recordSeedCompletedTier("GRANDMASTER");
-    state.recordSeedCompletedTier("MASTER");
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+    state.recordSeedCompletedTier(Tier.GRANDMASTER);
+    state.recordSeedCompletedTier(Tier.MASTER);
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
 
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND))
         .willReturn(Optional.of(bucketWithQuotaExhausted(Tier.DIAMOND, "15.23")));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.EMERALD))

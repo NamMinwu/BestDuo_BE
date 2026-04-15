@@ -56,7 +56,7 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
       from summoner s
       order by
         case
-          when :requestedTier = 'ALL_TIERS' then 0
+          when :requestedTier is null then 0
           when s.last_known_tier = :requestedTier then 0
           when s.last_known_tier is null then 1
           else 2

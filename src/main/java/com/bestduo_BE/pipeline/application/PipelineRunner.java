@@ -52,6 +52,14 @@ public class PipelineRunner {
     if (pipelineThread != null) {
       pipelineThread.interrupt();
       log.info("PipelineRunner 종료 요청 (interrupt)");
+      try {
+        pipelineThread.join(30_000L);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      if (pipelineThread.isAlive()) {
+        log.warn("PipelineRunner 30초 내 종료되지 않음");
+      }
     }
   }
 

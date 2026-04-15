@@ -11,8 +11,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.common.application.PatchVersionService;
-import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
+import com.bestduo_BE.common.application.port.RiotApiPort;
 import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
@@ -37,7 +37,7 @@ class CollectMatchIdsRunnerTest {
   private SummonerJpaRepository summonerRepository;
 
   @Mock
-  private MatchIdsFinder matchIdsFinder;
+  private RiotApiPort riotApiPort;
 
   @Mock
   private MatchQueueEnqueuer matchQueueEnqueuer;
@@ -60,7 +60,7 @@ class CollectMatchIdsRunnerTest {
     tierMatchCount.setDiamondEmerald(10);
     props.setTierMatchCount(tierMatchCount);
     runner = new CollectMatchIdsRunner(
-        summonerRepository, matchIdsFinder, matchQueueEnqueuer,
+        summonerRepository, riotApiPort, matchQueueEnqueuer,
         patchVersionService, budgetTracker, props);
   }
 
@@ -127,13 +127,13 @@ class CollectMatchIdsRunnerTest {
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(matchIdsFinder.findMatchIdsSince("p-dia", 1700000000L, 10))
+    given(riotApiPort.findMatchIdsSince("p-dia", 1700000000L, 10))
         .willReturn(List.of("m1", "m2"));
 
     CollectMatchIdsRunner.BatchResult result = runner.runBatch();
 
-    verify(matchIdsFinder).findMatchIdsSince("p-dia", 1700000000L, 10);
-    verify(matchIdsFinder, never()).findMatchIdsBetween(any(), anyLong(), anyLong(), anyInt());
+    verify(riotApiPort).findMatchIdsSince("p-dia", 1700000000L, 10);
+    verify(riotApiPort, never()).findMatchIdsBetween(any(), anyLong(), anyLong(), anyInt());
     assertThat(result.matchIdsQueued()).isEqualTo(2);
   }
 
@@ -146,12 +146,12 @@ class CollectMatchIdsRunnerTest {
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(matchIdsFinder.findMatchIdsSince("p-chall", 1700000000L, 30))
+    given(riotApiPort.findMatchIdsSince("p-chall", 1700000000L, 30))
         .willReturn(List.of("m1", "m2", "m3"));
 
     runner.runBatch();
 
-    verify(matchIdsFinder).findMatchIdsSince("p-chall", 1700000000L, 30);
+    verify(riotApiPort).findMatchIdsSince("p-chall", 1700000000L, 30);
   }
 
   @Test
@@ -163,13 +163,13 @@ class CollectMatchIdsRunnerTest {
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(matchIdsFinder.findMatchIdsBetween("p-dia", 1699000000L, 1700000000L, 10))
+    given(riotApiPort.findMatchIdsBetween("p-dia", 1699000000L, 1700000000L, 10))
         .willReturn(List.of("m1", "m2"));
 
     CollectMatchIdsRunner.BatchResult result = runner.runBatch();
 
-    verify(matchIdsFinder).findMatchIdsBetween("p-dia", 1699000000L, 1700000000L, 10);
-    verify(matchIdsFinder, never()).findMatchIdsSince(any(), anyLong(), anyInt());
+    verify(riotApiPort).findMatchIdsBetween("p-dia", 1699000000L, 1700000000L, 10);
+    verify(riotApiPort, never()).findMatchIdsSince(any(), anyLong(), anyInt());
     assertThat(result.matchIdsQueued()).isEqualTo(2);
   }
 
@@ -182,7 +182,7 @@ class CollectMatchIdsRunnerTest {
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(matchIdsFinder.findMatchIdsBetween(any(), anyLong(), anyLong(), anyInt()))
+    given(riotApiPort.findMatchIdsBetween(any(), anyLong(), anyLong(), anyInt()))
         .willReturn(List.of("m1"));
 
     runner.runBatch();
@@ -199,7 +199,7 @@ class CollectMatchIdsRunnerTest {
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(matchIdsFinder.findMatchIdsSince(eq("p-1"), anyLong(), anyInt()))
+    given(riotApiPort.findMatchIdsSince(eq("p-1"), anyLong(), anyInt()))
         .willReturn(List.of("m1"));
 
     runner.runBatch();
@@ -216,13 +216,13 @@ class CollectMatchIdsRunnerTest {
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
-    given(matchIdsFinder.findRecentMatchIds("p-gold", 10)).willReturn(List.of("m1"));
+    given(riotApiPort.findRecentMatchIds("p-gold", 10)).willReturn(List.of("m1"));
 
     runner.runBatch();
 
-    verify(matchIdsFinder).findRecentMatchIds("p-gold", 10);
-    verify(matchIdsFinder, never()).findMatchIdsSince(any(), anyLong(), anyInt());
-    verify(matchIdsFinder, never()).findMatchIdsBetween(any(), anyLong(), anyLong(), anyInt());
+    verify(riotApiPort).findRecentMatchIds("p-gold", 10);
+    verify(riotApiPort, never()).findMatchIdsSince(any(), anyLong(), anyInt());
+    verify(riotApiPort, never()).findMatchIdsBetween(any(), anyLong(), anyLong(), anyInt());
   }
 
   @Test
@@ -235,16 +235,34 @@ class CollectMatchIdsRunnerTest {
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(bad, good));
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(matchIdsFinder.findMatchIdsSince(eq("p-bad"), anyLong(), anyInt()))
+    given(riotApiPort.findMatchIdsSince(eq("p-bad"), anyLong(), anyInt()))
         .willThrow(new RuntimeException("API error"));
-    given(matchIdsFinder.findMatchIdsSince(eq("p-good"), anyLong(), anyInt()))
+    given(riotApiPort.findMatchIdsSince(eq("p-good"), anyLong(), anyInt()))
         .willReturn(List.of("m1"));
 
     CollectMatchIdsRunner.BatchResult result = runner.runBatch();
 
     verify(summonerRepository).markMatchIdsCollected(eq("p-good"), any());
     verify(summonerRepository, never()).markMatchIdsCollected(eq("p-bad"), any());
-    assertThat(result.apiCalls()).isEqualTo(2);
+    // 실패한 summoner는 apiCalls·예산 모두 미차감
+    assertThat(result.apiCalls()).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("개별 summoner 수집 실패 시 예산을 차감하지 않는다")
+  void runBatch_onIndividualError_doesNotChargeBudget() {
+    Summoner bad = summonerWithTier("p-bad", Tier.GOLD);
+    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
+    given(budgetTracker.canCollect()).willReturn(true);
+    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+        .willReturn(List.of(bad));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
+    given(riotApiPort.findMatchIdsSince(eq("p-bad"), anyLong(), anyInt()))
+        .willThrow(new RuntimeException("network error"));
+
+    runner.runBatch();
+
+    verify(budgetTracker, never()).recordCollectCall(anyInt());
   }
 
   @Test
@@ -256,7 +274,7 @@ class CollectMatchIdsRunnerTest {
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(matchIdsFinder.findMatchIdsSince(any(), anyLong(), anyInt()))
+    given(riotApiPort.findMatchIdsSince(any(), anyLong(), anyInt()))
         .willThrow(new RiotRateLimitedException("429"));
 
     assertThatThrownBy(() -> runner.runBatch())
@@ -272,7 +290,7 @@ class CollectMatchIdsRunnerTest {
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(matchIdsFinder.findMatchIdsSince(any(), anyLong(), anyInt())).willReturn(List.of());
+    given(riotApiPort.findMatchIdsSince(any(), anyLong(), anyInt())).willReturn(List.of());
 
     runner.runBatch();
 
