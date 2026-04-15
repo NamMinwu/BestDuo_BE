@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import com.bestduo_BE.common.application.PatchVersionService;
 import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
+import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
@@ -118,32 +119,33 @@ class CollectMatchIdsRunnerTest {
   }
 
   @Test
-  @DisplayName("DIAMOND tier summoner에게 diamondEmerald matchCount 적용")
-  void runBatch_usesCorrectMatchCountForDiamond() {
+  @DisplayName("정상 패치(grace period 아님): DIAMOND tier summoner에게 findMatchIdsSince 호출")
+  void runBatch_normalPatch_usesCorrectMatchCountForDiamond() {
     Summoner summoner = summonerWithTier("p-dia", Tier.DIAMOND);
+    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
     given(budgetTracker.canCollect()).willReturn(true);
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
-    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(Optional.of(1700000000L));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
     given(matchIdsFinder.findMatchIdsSince("p-dia", 1700000000L, 10))
         .willReturn(List.of("m1", "m2"));
 
     CollectMatchIdsRunner.BatchResult result = runner.runBatch();
 
     verify(matchIdsFinder).findMatchIdsSince("p-dia", 1700000000L, 10);
+    verify(matchIdsFinder, never()).findMatchIdsBetween(any(), anyLong(), anyLong(), anyInt());
     assertThat(result.matchIdsQueued()).isEqualTo(2);
   }
 
   @Test
-  @DisplayName("CHALLENGER tier summoner에게 apexTiers matchCount 적용")
-  void runBatch_usesCorrectMatchCountForChallenger() {
+  @DisplayName("정상 패치(grace period 아님): CHALLENGER tier summoner에게 apexTiers matchCount 적용")
+  void runBatch_normalPatch_usesApexMatchCountForChallenger() {
     Summoner summoner = summonerWithTier("p-chall", Tier.CHALLENGER);
+    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
     given(budgetTracker.canCollect()).willReturn(true);
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
-    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(Optional.of(1700000000L));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
     given(matchIdsFinder.findMatchIdsSince("p-chall", 1700000000L, 30))
         .willReturn(List.of("m1", "m2", "m3"));
 
@@ -153,14 +155,50 @@ class CollectMatchIdsRunnerTest {
   }
 
   @Test
-  @DisplayName("matchIds를 수집한 후 matchIdsCollectedAt을 갱신한다")
-  void runBatch_marksMatchIdsCollectedAfterCollection() {
-    Summoner summoner = summonerWithTier("p-1", Tier.EMERALD);
+  @DisplayName("grace period 중: findMatchIdsBetween이 endTime과 함께 호출된다")
+  void runBatch_inGracePeriod_callsFindMatchIdsBetweenWithEndTime() {
+    Summoner summoner = summonerWithTier("p-dia", Tier.DIAMOND);
+    EffectivePatchContext ctx = new EffectivePatchContext("16.7", 1699000000L, 1700000000L);
     given(budgetTracker.canCollect()).willReturn(true);
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
-    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(Optional.of(1700000000L));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
+    given(matchIdsFinder.findMatchIdsBetween("p-dia", 1699000000L, 1700000000L, 10))
+        .willReturn(List.of("m1", "m2"));
+
+    CollectMatchIdsRunner.BatchResult result = runner.runBatch();
+
+    verify(matchIdsFinder).findMatchIdsBetween("p-dia", 1699000000L, 1700000000L, 10);
+    verify(matchIdsFinder, never()).findMatchIdsSince(any(), anyLong(), anyInt());
+    assertThat(result.matchIdsQueued()).isEqualTo(2);
+  }
+
+  @Test
+  @DisplayName("grace period 중: MatchQueue는 이전 패치(16.7)로 태깅된다")
+  void runBatch_inGracePeriod_enqueuedWithPreviousPatchTag() {
+    Summoner summoner = summonerWithTier("p-dia", Tier.DIAMOND);
+    EffectivePatchContext ctx = new EffectivePatchContext("16.7", 1699000000L, 1700000000L);
+    given(budgetTracker.canCollect()).willReturn(true);
+    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+        .willReturn(List.of(summoner));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
+    given(matchIdsFinder.findMatchIdsBetween(any(), anyLong(), anyLong(), anyInt()))
+        .willReturn(List.of("m1"));
+
+    runner.runBatch();
+
+    verify(matchQueueEnqueuer).enqueueAllIdempotent(any(), any(), anyInt(), eq("16.7"));
+  }
+
+  @Test
+  @DisplayName("matchIds를 수집한 후 matchIdsCollectedAt을 갱신한다")
+  void runBatch_marksMatchIdsCollectedAfterCollection() {
+    Summoner summoner = summonerWithTier("p-1", Tier.EMERALD);
+    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
+    given(budgetTracker.canCollect()).willReturn(true);
+    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+        .willReturn(List.of(summoner));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
     given(matchIdsFinder.findMatchIdsSince(eq("p-1"), anyLong(), anyInt()))
         .willReturn(List.of("m1"));
 
@@ -171,20 +209,20 @@ class CollectMatchIdsRunnerTest {
   }
 
   @Test
-  @DisplayName("patchStartTime이 없으면 findRecentMatchIds를 사용")
-  void runBatch_whenNoPatchStartTime_usesRecentMatchIds() {
+  @DisplayName("패치 정보가 없으면 findRecentMatchIds를 사용")
+  void runBatch_whenNoPatchContext_usesRecentMatchIds() {
     Summoner summoner = summonerWithTier("p-gold", Tier.GOLD);
     given(budgetTracker.canCollect()).willReturn(true);
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.empty());
-    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(Optional.empty());
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
     given(matchIdsFinder.findRecentMatchIds("p-gold", 10)).willReturn(List.of("m1"));
 
     runner.runBatch();
 
     verify(matchIdsFinder).findRecentMatchIds("p-gold", 10);
     verify(matchIdsFinder, never()).findMatchIdsSince(any(), anyLong(), anyInt());
+    verify(matchIdsFinder, never()).findMatchIdsBetween(any(), anyLong(), anyLong(), anyInt());
   }
 
   @Test
@@ -192,11 +230,11 @@ class CollectMatchIdsRunnerTest {
   void runBatch_skipsSummonerOnIndividualError() {
     Summoner bad = summonerWithTier("p-bad", Tier.GOLD);
     Summoner good = summonerWithTier("p-good", Tier.GOLD);
+    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
     given(budgetTracker.canCollect()).willReturn(true);
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(bad, good));
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
-    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(Optional.of(1700000000L));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
     given(matchIdsFinder.findMatchIdsSince(eq("p-bad"), anyLong(), anyInt()))
         .willThrow(new RuntimeException("API error"));
     given(matchIdsFinder.findMatchIdsSince(eq("p-good"), anyLong(), anyInt()))
@@ -204,7 +242,6 @@ class CollectMatchIdsRunnerTest {
 
     CollectMatchIdsRunner.BatchResult result = runner.runBatch();
 
-    // 실패한 summoner도 API 호출이 발생했으므로 예산 차감 및 apiCalls에 포함된다
     verify(summonerRepository).markMatchIdsCollected(eq("p-good"), any());
     verify(summonerRepository, never()).markMatchIdsCollected(eq("p-bad"), any());
     assertThat(result.apiCalls()).isEqualTo(2);
@@ -214,11 +251,11 @@ class CollectMatchIdsRunnerTest {
   @DisplayName("429 예외는 전파된다")
   void runBatch_propagatesRateLimitedException() {
     Summoner summoner = summonerWithTier("p-1", Tier.GOLD);
+    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
     given(budgetTracker.canCollect()).willReturn(true);
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
-    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(Optional.of(1700000000L));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
     given(matchIdsFinder.findMatchIdsSince(any(), anyLong(), anyInt()))
         .willThrow(new RiotRateLimitedException("429"));
 
@@ -230,11 +267,11 @@ class CollectMatchIdsRunnerTest {
   @DisplayName("matchIds가 비어있으면 enqueue 하지 않지만 collectedAt은 갱신")
   void runBatch_whenNoMatchIds_doesNotEnqueueButMarksCollected() {
     Summoner summoner = summonerWithTier("p-empty", Tier.GOLD);
+    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
     given(budgetTracker.canCollect()).willReturn(true);
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
-    given(patchVersionService.currentPatchStartTimeEpochSeconds()).willReturn(Optional.of(1700000000L));
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
     given(matchIdsFinder.findMatchIdsSince(any(), anyLong(), anyInt())).willReturn(List.of());
 
     runner.runBatch();
