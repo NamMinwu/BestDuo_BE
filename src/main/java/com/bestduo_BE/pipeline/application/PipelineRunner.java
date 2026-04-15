@@ -1,6 +1,7 @@
 package com.bestduo_BE.pipeline.application;
 
 import com.bestduo_BE.common.application.PatchVersionService;
+import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.config.PipelineProperties;
@@ -93,11 +94,14 @@ public class PipelineRunner {
     }
 
     // Stage 3: Ingest (상시, patch+tier 우선순위)
-    String currentPatch = patchVersionService.currentPatchVersion().orElse(null);
+    // Stage 2가 유효 패치 기준으로 match ID를 수집하므로, Stage 3도 같은 기준을 사용해야 우선순위가 일치한다.
+    String effectivePatch = patchVersionService.resolveEffectivePatchContext()
+        .map(EffectivePatchContext::patch)
+        .orElse(null);
     Tier priorityTier = props.getStage3PriorityTier();
-    log.debug("Stage 3 실행 (currentPatch={}, priorityTier={})", currentPatch, priorityTier);
+    log.debug("Stage 3 실행 (effectivePatch={}, priorityTier={})", effectivePatch, priorityTier);
     MatchIngestRunner.Result result = matchIngestRunner.executeWithPriority(
-        props.getIngestBatchSize(), priorityTier, currentPatch);
+        props.getIngestBatchSize(), priorityTier, effectivePatch);
 
     if (result.picked() == 0) {
       log.debug("match_queue 비어있음. {}ms 대기", props.getPollingIntervalMs());

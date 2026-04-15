@@ -1,5 +1,6 @@
 package com.bestduo_BE.pipeline.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -8,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.common.application.PatchVersionService;
+import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.config.PipelineProperties;
@@ -53,7 +55,7 @@ class PipelineRunnerTest {
   }
 
   @Test
-  @DisplayName("Stage 1 없고 Stage 2 pending이면 runBatch만 호출된다")
+  @DisplayName("Stage 1 없고 Stage 2 대기 중이면 runBatch만 호출된다")
   void executeTick_whenStage2HasPending_runsOnlyStage2() throws InterruptedException {
     given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(true);
@@ -65,11 +67,12 @@ class PipelineRunnerTest {
   }
 
   @Test
-  @DisplayName("Stage 1·2 없으면 ALL_TIERS + currentPatch로 Stage 3 executeWithPriority를 호출한다")
-  void executeTick_whenNoStage1Or2_runsStage3WithCurrentPatch() throws InterruptedException {
+  @DisplayName("유예 기간이 아닐 때 Stage 3는 최신 패치(유효 패치 == 최신 패치)로 우선순위를 결정한다")
+  void executeTick_whenNotInGracePeriod_runsStage3WithCurrentPatch() throws InterruptedException {
     given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
+    given(patchVersionService.resolveEffectivePatchContext())
+        .willReturn(Optional.of(new EffectivePatchContext("15.23", 1000L, null)));
     given(matchIngestRunner.executeWithPriority(anyInt(), any(), any()))
         .willReturn(ingestResult(1));
 
@@ -79,11 +82,27 @@ class PipelineRunnerTest {
   }
 
   @Test
-  @DisplayName("patch 정보가 없으면 ALL_TIERS + null patch로 Stage 3를 호출한다")
+  @DisplayName("유예 기간 중일 때 Stage 3는 직전 패치(유효 패치 == 직전 패치)로 우선순위를 결정한다")
+  void executeTick_whenInGracePeriod_runsStage3WithPreviousPatch() throws InterruptedException {
+    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
+    given(collectMatchIdsRunner.hasPending()).willReturn(false);
+    // 유예 기간: endTimeEpochSeconds != null → 유효 패치 = "15.22" (직전 패치)
+    given(patchVersionService.resolveEffectivePatchContext())
+        .willReturn(Optional.of(new EffectivePatchContext("15.22", 900L, 1000L)));
+    given(matchIngestRunner.executeWithPriority(anyInt(), any(), any()))
+        .willReturn(ingestResult(1));
+
+    runner.executeTick();
+
+    verify(matchIngestRunner).executeWithPriority(props.getIngestBatchSize(), Tier.ALL_TIERS, "15.22");
+  }
+
+  @Test
+  @DisplayName("패치 정보가 없으면 null 패치로 Stage 3를 호출한다")
   void executeTick_whenNoPatch_callsStage3WithNullPatch() throws InterruptedException {
     given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.empty());
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
     given(matchIngestRunner.executeWithPriority(anyInt(), any(), any()))
         .willReturn(ingestResult(1));
 
@@ -93,13 +112,14 @@ class PipelineRunnerTest {
   }
 
   @Test
-  @DisplayName("stage3PriorityTier가 EMERALD이면 EMERALD tier로 Stage 3를 호출한다")
+  @DisplayName("stage3PriorityTier가 EMERALD이면 EMERALD 티어로 Stage 3를 호출한다")
   void executeTick_whenStage3PriorityTierIsEmerald_callsStage3WithEmeraldTier()
       throws InterruptedException {
     props.setStage3PriorityTier(Tier.EMERALD);
     given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
+    given(patchVersionService.resolveEffectivePatchContext())
+        .willReturn(Optional.of(new EffectivePatchContext("15.23", 1000L, null)));
     given(matchIngestRunner.executeWithPriority(anyInt(), any(), any()))
         .willReturn(ingestResult(1));
 
@@ -109,11 +129,11 @@ class PipelineRunnerTest {
   }
 
   @Test
-  @DisplayName("Stage 3에서 picked == 0이면 pollingIntervalMs 동안 sleep한다")
+  @DisplayName("Stage 3에서 처리된 항목이 없으면 폴링 간격만큼 대기한다")
   void executeTick_whenNothingInQueue_sleepsPollingInterval() throws InterruptedException {
     given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.empty());
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
     given(matchIngestRunner.executeWithPriority(anyInt(), any(), any()))
         .willReturn(ingestResult(0));
 
@@ -122,11 +142,11 @@ class PipelineRunnerTest {
     long elapsed = System.currentTimeMillis() - start;
 
     // pollingIntervalMs=100 으로 설정했으므로 최소 80ms 이상 sleep 해야 함
-    org.assertj.core.api.Assertions.assertThat(elapsed).isGreaterThanOrEqualTo(80L);
+    assertThat(elapsed).isGreaterThanOrEqualTo(80L);
   }
 
   @Test
-  @DisplayName("Stage 1에서 429 발생 시 RiotRateLimitedException이 전파된다")
+  @DisplayName("Stage 1에서 429 발생 시 속도 제한 예외가 전파된다")
   void executeTick_whenStage1Throws429_propagates() {
     given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(true);
     given(dailyLeagueEntriesRunner.runNextChunk()).willThrow(new RiotRateLimitedException("429"));
@@ -136,19 +156,17 @@ class PipelineRunnerTest {
   }
 
   @Test
-  @DisplayName("Stage 3에서 429 발생 시 RiotRateLimitedException이 전파된다")
+  @DisplayName("Stage 3에서 429 발생 시 속도 제한 예외가 전파된다")
   void executeTick_whenStage3Throws429_propagates() {
     given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
-    given(patchVersionService.currentPatchVersion()).willReturn(Optional.empty());
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
     given(matchIngestRunner.executeWithPriority(anyInt(), any(), any()))
         .willThrow(new RiotRateLimitedException("429"));
 
     assertThatThrownBy(() -> runner.executeTick())
         .isInstanceOf(RiotRateLimitedException.class);
   }
-
-  // ── helpers ─────────────────────────────────────────────────────────────
 
   private MatchIngestRunner.Result ingestResult(int picked) {
     return new MatchIngestRunner.Result(0, picked, picked, picked, 0, 0);
