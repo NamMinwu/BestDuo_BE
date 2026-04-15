@@ -3,6 +3,7 @@ package com.bestduo_BE.pipeline.application;
 import com.bestduo_BE.common.application.PatchVersionService;
 import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
+import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
@@ -68,8 +69,7 @@ public class CollectMatchIdsRunner {
       return BatchResult.noPending();
     }
 
-    String currentPatch = patchVersionService.currentPatchVersion().orElse(null);
-    Long patchStartTime = patchVersionService.currentPatchStartTimeEpochSeconds().orElse(null);
+    EffectivePatchContext ctx = patchVersionService.resolveEffectivePatchContext().orElse(null);
 
     int apiCalls = 0;
     int matchIdsQueued = 0;
@@ -79,7 +79,7 @@ public class CollectMatchIdsRunner {
         break;
       }
       try {
-        int queued = collectForSummoner(summoner, currentPatch, patchStartTime);
+        int queued = collectForSummoner(summoner, ctx);
         matchIdsQueued += queued;
         summonerRepository.markMatchIdsCollected(summoner.getPuuid(), OffsetDateTime.now());
         budgetTracker.recordCollectCall(1);
@@ -101,22 +101,27 @@ public class CollectMatchIdsRunner {
 
   // ── private helpers ─────────────────────────────────────────────────────
 
-  private int collectForSummoner(Summoner summoner, String currentPatch, Long patchStartTime) {
+  private int collectForSummoner(Summoner summoner, EffectivePatchContext ctx) {
     int matchCount = matchCountFor(summoner.getLastKnownTier());
 
     List<String> matchIds;
-    if (patchStartTime != null) {
-      matchIds = matchIdsFinder.findMatchIdsSince(summoner.getPuuid(), patchStartTime, matchCount);
-    } else {
+    if (ctx == null) {
       matchIds = matchIdsFinder.findRecentMatchIds(summoner.getPuuid(), matchCount);
+    } else if (ctx.isInGracePeriod()) {
+      matchIds = matchIdsFinder.findMatchIdsBetween(
+          summoner.getPuuid(), ctx.startTimeEpochSeconds(), ctx.endTimeEpochSeconds(), matchCount);
+    } else {
+      matchIds = matchIdsFinder.findMatchIdsSince(
+          summoner.getPuuid(), ctx.startTimeEpochSeconds(), matchCount);
     }
 
     if (matchIds == null || matchIds.isEmpty()) {
       return 0;
     }
 
+    String patch = ctx != null ? ctx.patch() : null;
     Tier tier = summoner.getLastKnownTier() != null ? summoner.getLastKnownTier() : Tier.ALL_TIERS;
-    matchQueueEnqueuer.enqueueAllIdempotent(matchIds, tier, props.getCollectPriority(), currentPatch);
+    matchQueueEnqueuer.enqueueAllIdempotent(matchIds, tier, props.getCollectPriority(), patch);
     return matchIds.size();
   }
 

@@ -60,4 +60,26 @@ public class MatchIdsFinderImpl implements MatchIdsFinder {
       throw new RiotApiException("Failed to load match ids since startTime from Riot API", e);
     }
   }
+
+  @Override
+  public List<String> findMatchIdsBetween(
+      String puuid, long startTimeSeconds, long endTimeSeconds, int count) {
+    try {
+      String[] matchIds = regionalRestTemplate.getForObject(
+          "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&endTime={endTime}&count={count}",
+          String[].class,
+          puuid,
+          startTimeSeconds,
+          endTimeSeconds,
+          count
+      );
+      return matchIds == null ? List.of() : Arrays.asList(matchIds);
+    } catch (RestClientException e) {
+      log.error(
+          "Failed to load match ids between. puuid={}, startTimeSeconds={}, endTimeSeconds={}, count={}",
+          puuid, startTimeSeconds, endTimeSeconds, count, e
+      );
+      throw new RiotApiException("Failed to load match ids between timerange from Riot API", e);
+    }
+  }
 }

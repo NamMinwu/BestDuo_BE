@@ -118,4 +118,62 @@ class MatchIdsFinderImplTest {
     assertThrows(RiotApiException.class,
         () -> finder.findMatchIdsSince("puuid-def", 1600000000L, 15));
   }
+
+  @Test
+  @DisplayName("findMatchIdsBetween — startTime과 endTime을 포함한 매치 ID 목록을 반환한다")
+  void findMatchIdsBetween_returnsIdsWithBothTimeParams() {
+    given(regionalRestTemplate.getForObject(
+        "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&endTime={endTime}&count={count}",
+        String[].class,
+        "puuid-xyz",
+        1700000000L,
+        1700259200L,
+        10
+    )).willReturn(new String[]{"KR_20", "KR_21"});
+
+    List<String> result = finder.findMatchIdsBetween("puuid-xyz", 1700000000L, 1700259200L, 10);
+
+    assertEquals(List.of("KR_20", "KR_21"), result);
+    then(regionalRestTemplate).should().getForObject(
+        eq("/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&endTime={endTime}&count={count}"),
+        eq(String[].class),
+        eq("puuid-xyz"),
+        eq(1700000000L),
+        eq(1700259200L),
+        eq(10)
+    );
+  }
+
+  @Test
+  @DisplayName("findMatchIdsBetween — API가 null을 반환하면 빈 리스트를 반환한다")
+  void findMatchIdsBetween_returnsEmptyListWhenApiReturnsNull() {
+    given(regionalRestTemplate.getForObject(
+        "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&endTime={endTime}&count={count}",
+        String[].class,
+        "puuid-xyz",
+        1700000000L,
+        1700259200L,
+        10
+    )).willReturn(null);
+
+    List<String> result = finder.findMatchIdsBetween("puuid-xyz", 1700000000L, 1700259200L, 10);
+
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  @DisplayName("findMatchIdsBetween — REST 예외를 RiotApiException으로 감싼다")
+  void findMatchIdsBetween_wrapsRestExceptionsInRiotApiException() {
+    given(regionalRestTemplate.getForObject(
+        "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&endTime={endTime}&count={count}",
+        String[].class,
+        "puuid-xyz",
+        1700000000L,
+        1700259200L,
+        10
+    )).willThrow(new RestClientException("timeout"));
+
+    assertThrows(RiotApiException.class,
+        () -> finder.findMatchIdsBetween("puuid-xyz", 1700000000L, 1700259200L, 10));
+  }
 }
