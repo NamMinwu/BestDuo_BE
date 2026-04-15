@@ -55,12 +55,6 @@ public class CoverageBucket {
   // ─────────────────────────────────────────────────────────────────────────
 
   // ── 일일 Seed 완료 상태 ──────────────────────────────────────────────────────
-  /** @deprecated Phase 3에서 제거 예정. Phase 2부터는 dailyPagesProcessed/quota로 판단한다. */
-  @Deprecated
-  @Builder.Default
-  @Column(name = "daily_seed_completed", nullable = false)
-  private boolean dailySeedCompleted = false;
-
   @Column(name = "daily_seed_reset_at")
   private OffsetDateTime dailySeedResetAt;
 
@@ -144,15 +138,9 @@ public class CoverageBucket {
     return this.dailyPagesProcessed < quota;
   }
 
-  /** @deprecated Phase 3에서 제거 예정. {@link #hasRemainingDailyQuota} 로 대체. */
-  @Deprecated
-  public void markDailySeedCompleted() {
-    this.dailySeedCompleted = true;
-    this.updatedAt = OffsetDateTime.now();
-  }
 
   /**
-   * 자정 경계를 넘었으면 {@code dailyPagesProcessed}와 {@code dailySeedCompleted}를 리셋하고
+   * 자정 경계를 넘었으면 {@code dailyPagesProcessed}를 리셋하고
    * {@code dailySeedResetAt}을 오늘 자정으로 기록한다.
    * {@code seedPage} / {@code seedDivision}은 사이클 위치를 유지하기 위해 변경하지 않는다.
    *
@@ -165,7 +153,6 @@ public class CoverageBucket {
     if (!needsReset) {
       return;
     }
-    this.dailySeedCompleted = false;
     this.dailyPagesProcessed = 0;
     this.dailySeedResetAt = today.atStartOfDay().atOffset(OffsetDateTime.now().getOffset());
     this.updatedAt = OffsetDateTime.now();
