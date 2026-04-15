@@ -285,7 +285,7 @@ class DailySeedRunnerTest {
     given(patchVersionService.currentPatchVersion()).willReturn(Optional.of("15.23"));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.empty());
 
-    CoverageBucket savedBucket = CoverageBucket.create("15.23", Tier.DIAMOND, props.getDiaEmeCoverageTarget(), 1);
+    CoverageBucket savedBucket = CoverageBucket.create("15.23", Tier.DIAMOND);
     given(coverageBucketRepository.save(argThat(b ->
         b.getTier() == Tier.DIAMOND && b.getPatch().equals("15.23") && b.isDailySeedCompleted() == false
     ))).willReturn(savedBucket);
@@ -349,18 +349,18 @@ class DailySeedRunnerTest {
   // ── helpers ────────────────────────────────────────────────────────
 
   private CoverageBucket bucketNotCompleted(Tier tier, String patch) {
-    return CoverageBucket.create(patch, tier, 1000L, 1);
+    return CoverageBucket.create(patch, tier);
   }
 
   private CoverageBucket bucketWithDailySeedCompleted(Tier tier, String patch) {
-    CoverageBucket bucket = CoverageBucket.create(patch, tier, 1000L, 1);
+    CoverageBucket bucket = CoverageBucket.create(patch, tier);
     bucket.markDailySeedCompleted();
     return bucket;
   }
 
   /** dailyPagesProcessed = quota(기본값 10)로 설정한 버킷 */
   private CoverageBucket bucketWithQuotaExhausted(Tier tier, String patch) {
-    CoverageBucket bucket = CoverageBucket.create(patch, tier, 1000L, 1);
+    CoverageBucket bucket = CoverageBucket.create(patch, tier);
     for (int i = 0; i < props.getDiaEmeDailyPageQuota(); i++) {
       bucket.incrementDailyPagesProcessed();
     }

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class CoverageBucketPhase2Test {
 
   private CoverageBucket bucket() {
-    return CoverageBucket.create("15.1", Tier.GOLD, 1000L, 1);
+    return CoverageBucket.create("15.1", Tier.GOLD);
   }
 
   @Test
