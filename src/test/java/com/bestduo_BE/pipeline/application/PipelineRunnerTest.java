@@ -78,7 +78,7 @@ class PipelineRunnerTest {
 
     runner.executeTick();
 
-    verify(matchIngestRunner).executeWithPriority(props.getIngestBatchSize(), Tier.ALL_TIERS, "15.23");
+    verify(matchIngestRunner).executeWithPriority(props.getIngestBatchSize(), null, "15.23");
   }
 
   @Test
@@ -94,7 +94,7 @@ class PipelineRunnerTest {
 
     runner.executeTick();
 
-    verify(matchIngestRunner).executeWithPriority(props.getIngestBatchSize(), Tier.ALL_TIERS, "15.22");
+    verify(matchIngestRunner).executeWithPriority(props.getIngestBatchSize(), null, "15.22");
   }
 
   @Test
@@ -108,7 +108,7 @@ class PipelineRunnerTest {
 
     runner.executeTick();
 
-    verify(matchIngestRunner).executeWithPriority(props.getIngestBatchSize(), Tier.ALL_TIERS, null);
+    verify(matchIngestRunner).executeWithPriority(props.getIngestBatchSize(), null, null);
   }
 
   @Test

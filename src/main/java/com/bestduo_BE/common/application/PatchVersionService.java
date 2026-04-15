@@ -22,12 +22,14 @@ public class PatchVersionService {
   private final PatchVersionJpaRepository patchVersionRepository;
 
   /** 최신 패치의 릴리스 시점 (epoch seconds). 데이터 없으면 Optional.empty() */
+  @Deprecated
   public Optional<Long> currentPatchStartTimeEpochSeconds() {
     return patchVersionRepository.findTopByOrderByReleasedAtDesc()
         .map(PatchVersion::releasedAtEpochSeconds);
   }
 
   /** 최신 패치 문자열 (e.g., "15.23"). 데이터 없으면 Optional.empty() */
+  @Deprecated
   public Optional<String> currentPatchVersion() {
     return patchVersionRepository.findTopByOrderByReleasedAtDesc()
         .map(PatchVersion::getPatch);

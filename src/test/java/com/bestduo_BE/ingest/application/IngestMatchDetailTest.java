@@ -4,12 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
+import com.bestduo_BE.common.application.port.RiotApiPort;
 import com.bestduo_BE.ingest.application.port.BottomDuoRawSaver;
 import com.bestduo_BE.ingest.application.port.MatchSaver;
-import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;
+import com.bestduo_BE.common.domain.service.BottomDuoExtractor;
 import com.bestduo_BE.common.infra.riot.dto.InfoDto;
 import com.bestduo_BE.common.infra.riot.dto.MetadataDto;
 import com.bestduo_BE.common.infra.riot.dto.ParticipantDto;
@@ -28,7 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class IngestMatchDetailTest {
 
   @Mock
-  private RiotMatchLoader riotMatchLoader;
+  private RiotApiPort riotApiPort;
 
   @Mock
   private MatchSaver matchSaver;
@@ -40,14 +41,14 @@ class IngestMatchDetailTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new IngestMatchDetail(riotMatchLoader, matchSaver, bottomDuoRawSaver);
+    useCase = new IngestMatchDetail(riotApiPort, matchSaver, bottomDuoRawSaver, new BottomDuoExtractor());
   }
 
   @Test
   @DisplayName("match 저장, bottom duo raw 저장, 결과 반환")
   void saveMatchAndBottomDuoRaws() {
     RiotMatchDto match = sampleMatch();
-    given(riotMatchLoader.loadMatch("KR_1")).willReturn(match);
+    given(riotApiPort.loadMatch("KR_1")).willReturn(match);
 
     IngestResult result = useCase.execute("KR_1", Tier.EMERALD, null);
 

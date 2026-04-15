@@ -2,6 +2,7 @@ package com.bestduo_BE.common.infra.persistence.entity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,7 @@ class DailyPipelineStateTest {
     assertThat(state.getPipelineDate()).isEqualTo(today);
     assertThat(state.getSeedApiCallsUsed()).isZero();
     assertThat(state.getCollectApiCallsUsed()).isZero();
-    assertThat(state.getSeedCompletedTiers()).isEqualTo("[]");
+    assertThat(state.getSeedCompletedTiers()).isEmpty();
     assertThat(state.getCreatedAt()).isNotNull();
     assertThat(state.getUpdatedAt()).isNotNull();
   }
@@ -45,14 +46,14 @@ class DailyPipelineStateTest {
   }
 
   @Test
-  @DisplayName("recordSeedCompletedTier() — tier가 JSON 배열에 추가된다")
+  @DisplayName("recordSeedCompletedTier() — tier가 Set에 추가된다")
   void recordSeedCompletedTierAppendsTier() {
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
 
-    state.recordSeedCompletedTier("MASTER");
-    state.recordSeedCompletedTier("CHALLENGER");
+    state.recordSeedCompletedTier(Tier.MASTER);
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
 
-    assertThat(state.getSeedCompletedTiers()).contains("MASTER", "CHALLENGER");
+    assertThat(state.getSeedCompletedTiers()).containsExactlyInAnyOrder(Tier.MASTER, Tier.CHALLENGER);
   }
 
   @Test
@@ -60,14 +61,19 @@ class DailyPipelineStateTest {
   void recordSeedCompletedTierDeduplicates() {
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
 
-    state.recordSeedCompletedTier("GOLD");
-    state.recordSeedCompletedTier("GOLD");
+    state.recordSeedCompletedTier(Tier.GOLD);
+    state.recordSeedCompletedTier(Tier.GOLD);
 
-    long count = state.getSeedCompletedTiers().chars()
-        .filter(c -> c == 'G')
-        .count();
-    // "GOLD"가 한 번만 있으면 G는 1번
-    assertThat(state.getSeedCompletedTiers().indexOf("GOLD"))
-        .isEqualTo(state.getSeedCompletedTiers().lastIndexOf("GOLD"));
+    assertThat(state.getSeedCompletedTiers()).containsExactly(Tier.GOLD);
+  }
+
+  @Test
+  @DisplayName("isSeedTierCompleted() — 기록된 tier는 true, 없는 tier는 false")
+  void isSeedTierCompletedReturnsTrueOnlyForRecordedTiers() {
+    DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+
+    assertThat(state.isSeedTierCompleted(Tier.CHALLENGER)).isTrue();
+    assertThat(state.isSeedTierCompleted(Tier.GRANDMASTER)).isFalse();
   }
 }

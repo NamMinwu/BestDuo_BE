@@ -1,20 +1,23 @@
 package com.bestduo_BE.ingest.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;
+import com.bestduo_BE.common.domain.service.BottomDuoExtractor;
 import com.bestduo_BE.common.infra.riot.dto.InfoDto;
 import com.bestduo_BE.common.infra.riot.dto.MetadataDto;
 import com.bestduo_BE.common.infra.riot.dto.ParticipantDto;
 import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import com.bestduo_BE.common.infra.riot.dto.TeamDto;
+import com.bestduo_BE.common.application.port.RiotApiPort;
 import com.bestduo_BE.ingest.application.port.BottomDuoRawSaver;
 import com.bestduo_BE.ingest.application.port.MatchSaver;
-import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,7 +31,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class IngestMatchDetailPatchFilterTest {
 
   @Mock
-  private RiotMatchLoader riotMatchLoader;
+  private RiotApiPort riotApiPort;
 
   @Mock
   private MatchSaver matchSaver;
@@ -40,14 +43,14 @@ class IngestMatchDetailPatchFilterTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new IngestMatchDetail(riotMatchLoader, matchSaver, bottomDuoRawSaver);
+    useCase = new IngestMatchDetail(riotApiPort, matchSaver, bottomDuoRawSaver, new BottomDuoExtractor());
   }
 
   @Test
   @DisplayName("expectedPatch 일치 시 모든 raw 저장")
   void execute_withMatchingPatch_savesAllRaws() {
     RiotMatchDto match = sampleMatchWithGameVersion("15.23.1");
-    given(riotMatchLoader.loadMatch("KR_1")).willReturn(match);
+    given(riotApiPort.loadMatch("KR_1")).willReturn(match);
 
     IngestResult result = useCase.execute("KR_1", Tier.GOLD, "15.23");
 
@@ -58,16 +61,15 @@ class IngestMatchDetailPatchFilterTest {
   }
 
   @Test
-  @DisplayName("expectedPatch 불일치 시 raw 폐기")
-  void execute_withMismatchedPatch_discardsRaws() {
+  @DisplayName("expectedPatch 불일치 시 match 저장 스킵, raw 저장 스킵")
+  void execute_withMismatchedPatch_skipsMatchAndRawSave() {
     RiotMatchDto match = sampleMatchWithGameVersion("15.22.1");  // 이전 패치
-    given(riotMatchLoader.loadMatch("KR_2")).willReturn(match);
+    given(riotApiPort.loadMatch("KR_2")).willReturn(match);
 
     IngestResult result = useCase.execute("KR_2", Tier.GOLD, "15.23");
 
-    ArgumentCaptor<List<BottomDuoRaw>> captor = ArgumentCaptor.forClass(List.class);
-    verify(bottomDuoRawSaver).saveAllIdempotent(captor.capture());
-    assertThat(captor.getValue()).isEmpty();
+    verify(matchSaver, never()).save("KR_2", match);
+    verify(bottomDuoRawSaver, never()).saveAllIdempotent(any());
     assertThat(result.rawCreated()).isEqualTo(0);
   }
 
@@ -75,7 +77,7 @@ class IngestMatchDetailPatchFilterTest {
   @DisplayName("expectedPatch null이면 필터링 없이 전체 저장 (하위 호환)")
   void execute_withNullExpectedPatch_savesAllRawsWithoutFiltering() {
     RiotMatchDto match = sampleMatchWithGameVersion("15.22.1");
-    given(riotMatchLoader.loadMatch("KR_3")).willReturn(match);
+    given(riotApiPort.loadMatch("KR_3")).willReturn(match);
 
     IngestResult result = useCase.execute("KR_3", Tier.GOLD, null);
 

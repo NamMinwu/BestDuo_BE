@@ -25,7 +25,7 @@ public class MatchQueueDispatcherImpl implements MatchQueueDispatcher {
   @Override
   @Transactional
   public List<Item> pickAndLock(int limit, int maxRetry, int errorCooldownMinutes) {
-    return pickAndLock(limit, maxRetry, errorCooldownMinutes, Tier.ALL_TIERS);
+    return pickAndLock(limit, maxRetry, errorCooldownMinutes, null);
   }
 
   @Override
@@ -88,14 +88,13 @@ public class MatchQueueDispatcherImpl implements MatchQueueDispatcher {
   private List<Item> toItems(List<MatchQueue> list) {
     List<Item> out = new ArrayList<>();
     for (MatchQueue mq : list) {
-      Tier tier = Tier.valueOf(mq.getCollectionTier());
-      out.add(new Item(mq.getMatchId(), tier, mq.getPriority(), mq.getPatch()));
+      out.add(new Item(mq.getMatchId(), mq.getCollectionTier(), mq.getPriority(), mq.getPatch()));
     }
     return out;
   }
 
   private String toCollectionTier(Tier requestedTier) {
-    if (requestedTier == null || requestedTier == Tier.ALL_TIERS) {
+    if (requestedTier == null) {
       return null;
     }
     return requestedTier.name();

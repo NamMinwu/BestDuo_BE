@@ -1,6 +1,8 @@
 package com.bestduo_BE.ingest.application;
 
 import com.bestduo_BE.common.domain.model.Tier;
+import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
+import com.bestduo_BE.config.PipelineProperties;
 import com.bestduo_BE.ingest.application.port.MatchQueueDispatcher;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import java.util.List;
@@ -13,38 +15,21 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class MatchIngestRunner {
 
-  private static final int STALE_MINUTES = 10;
-  private static final int ERROR_COOLDOWN_MINUTES = 10;
-  private static final int MAX_RETRY = 2;
-
   private final MatchQueueDispatcher queue;
   private final IngestMatchDetail ingestMatchDetail;
-
-  /**
-   * match_queue에서 (READY 우선, 남는 자리 ERROR 재시도)로 뽑아
-   * Phase1(IngestMatchDetail)만 수행한다.
-   */
-  public Result execute(int limit) {
-    return execute(limit, Tier.ALL_TIERS);
-  }
-
-  public Result execute(int limit, Tier requestedTier) {
-    int recovered = queue.recoverStaleRunning(STALE_MINUTES);
-    List<MatchQueueDispatcher.Item> items =
-        queue.pickAndLock(limit, MAX_RETRY, ERROR_COOLDOWN_MINUTES, requestedTier);
-    return processItems(items, recovered);
-  }
+  private final PipelineProperties props;
 
   /**
    * tier 필터 + patch+tier 우선순위 pick.
    *
-   * @param requestedTier null 또는 ALL_TIERS이면 전체 tier 대상
+   * @param requestedTier null이면 전체 tier 대상
    * @param currentPatch  현재 패치 (null이면 patch 우선순위 없이 tier 순서만 적용)
    */
   public Result executeWithPriority(int limit, Tier requestedTier, String currentPatch) {
-    int recovered = queue.recoverStaleRunning(STALE_MINUTES);
+    int recovered = queue.recoverStaleRunning(props.getIngest().getStaleMinutes());
     List<MatchQueueDispatcher.Item> items =
-        queue.pickAndLockWithPriority(limit, MAX_RETRY, ERROR_COOLDOWN_MINUTES, requestedTier, currentPatch);
+        queue.pickAndLockWithPriority(limit, props.getIngest().getMaxRetry(),
+            props.getIngest().getErrorCooldownMinutes(), requestedTier, currentPatch);
     return processItems(items, recovered);
   }
 
@@ -84,7 +69,7 @@ public class MatchIngestRunner {
 
   private String shorten(String s) {
     if (s == null) return null;
-    return s.length() <= 500 ? s : s.substring(0, 500);
+    return s.length() <= MatchQueue.LAST_ERROR_MAX_LENGTH ? s : s.substring(0, MatchQueue.LAST_ERROR_MAX_LENGTH);
   }
 
   public record Result(

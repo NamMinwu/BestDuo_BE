@@ -1,8 +1,8 @@
 package com.bestduo_BE.ingest.application;
 
+import com.bestduo_BE.common.application.port.RiotApiPort;
 import com.bestduo_BE.ingest.application.port.BottomDuoRawSaver;
 import com.bestduo_BE.ingest.application.port.MatchSaver;
-import com.bestduo_BE.ingest.application.port.RiotMatchLoader;
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;
@@ -19,16 +19,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class IngestMatchDetail {
 
-  private final RiotMatchLoader riotMatchLoader;
+  private final RiotApiPort riotApiPort;
   private final MatchSaver matchSaver;
   private final BottomDuoRawSaver bottomDuoRawSaver;
-
-  private final BottomDuoExtractor extractor = new BottomDuoExtractor();
+  private final BottomDuoExtractor extractor;
 
   @Transactional
   public IngestResult execute(String matchId, Tier tier, String expectedPatch) {
-    RiotMatchDto match = riotMatchLoader.loadMatch(matchId);
-    matchSaver.save(matchId, match);
+    RiotMatchDto match = riotApiPort.loadMatch(matchId);
     List<BottomDuoRaw> raws = extractor.extract(matchId, match, tier);
 
     if (expectedPatch != null) {
@@ -39,9 +37,14 @@ public class IngestMatchDetail {
         log.warn("[PatchFilter] Discarded {} raws for matchId={} (expected={})",
             raws.size() - filtered.size(), matchId, expectedPatch);
       }
+      if (filtered.isEmpty()) {
+        log.debug("[PatchFilter] 패치 불일치로 match 저장 스킵: matchId={}", matchId);
+        return new IngestResult(0, extractMatchStartTimeSec(match));
+      }
       raws = filtered;
     }
 
+    matchSaver.save(matchId, match);
     bottomDuoRawSaver.saveAllIdempotent(raws);
     return new IngestResult(raws.size(), extractMatchStartTimeSec(match));
   }

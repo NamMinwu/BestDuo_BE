@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.DailyPipelineState;
 import com.bestduo_BE.common.infra.persistence.repository.DailyPipelineStateJpaRepository;
 import com.bestduo_BE.config.PipelineProperties;
@@ -107,11 +108,11 @@ class DailyBudgetTrackerTest {
     given(stateRepository.findByPipelineDate(any(LocalDate.class))).willReturn(Optional.of(state));
     given(stateRepository.save(any(DailyPipelineState.class))).willReturn(state);
 
-    tracker.recordSeedCall(1, "CHALLENGER");
+    tracker.recordSeedCall(1, Tier.CHALLENGER);
 
     verify(stateRepository).save(state);
     assertThat(state.getSeedApiCallsUsed()).isEqualTo(1);
-    assertThat(state.getSeedCompletedTiers()).contains("\"CHALLENGER\"");
+    assertThat(state.getSeedCompletedTiers()).contains(Tier.CHALLENGER);
   }
 
   @Test

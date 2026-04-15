@@ -1,8 +1,8 @@
 package com.bestduo_BE.pipeline.application;
 
 import com.bestduo_BE.common.application.PatchVersionService;
-import com.bestduo_BE.common.application.port.MatchIdsFinder;
 import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
+import com.bestduo_BE.common.application.port.RiotApiPort;
 import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
@@ -33,7 +33,7 @@ import org.springframework.stereotype.Component;
 public class CollectMatchIdsRunner {
 
   private final SummonerJpaRepository summonerRepository;
-  private final MatchIdsFinder matchIdsFinder;
+  private final RiotApiPort riotApiPort;
   private final MatchQueueEnqueuer matchQueueEnqueuer;
   private final PatchVersionService patchVersionService;
   private final DailyBudgetTracker budgetTracker;
@@ -87,10 +87,8 @@ public class CollectMatchIdsRunner {
       } catch (RiotRateLimitedException e) {
         throw e;
       } catch (Exception e) {
-        // API 호출은 발생했으므로 예산은 차감한다. summoner는 재시도 대상으로 남긴다.
-        budgetTracker.recordCollectCall(1);
-        apiCalls++;
-        log.warn("matchIds 수집 실패 (재시도 예정): puuid={}", summoner.getPuuid(), e);
+        // 실패 시 예산 미차감 — summoner를 재시도 대상으로 남긴다.
+        log.warn("matchIds 수집 실패, 예산 미차감 (재시도 예정): puuid={}", summoner.getPuuid(), e);
       }
     }
 
@@ -106,12 +104,12 @@ public class CollectMatchIdsRunner {
 
     List<String> matchIds;
     if (ctx == null) {
-      matchIds = matchIdsFinder.findRecentMatchIds(summoner.getPuuid(), matchCount);
+      matchIds = riotApiPort.findRecentMatchIds(summoner.getPuuid(), matchCount);
     } else if (ctx.isInGracePeriod()) {
-      matchIds = matchIdsFinder.findMatchIdsBetween(
+      matchIds = riotApiPort.findMatchIdsBetween(
           summoner.getPuuid(), ctx.startTimeEpochSeconds(), ctx.endTimeEpochSeconds(), matchCount);
     } else {
-      matchIds = matchIdsFinder.findMatchIdsSince(
+      matchIds = riotApiPort.findMatchIdsSince(
           summoner.getPuuid(), ctx.startTimeEpochSeconds(), matchCount);
     }
 
@@ -120,7 +118,7 @@ public class CollectMatchIdsRunner {
     }
 
     String patch = ctx != null ? ctx.patch() : null;
-    Tier tier = summoner.getLastKnownTier() != null ? summoner.getLastKnownTier() : Tier.ALL_TIERS;
+    Tier tier = summoner.getLastKnownTier();
     matchQueueEnqueuer.enqueueAllIdempotent(matchIds, tier, props.getCollectPriority(), patch);
     return matchIds.size();
   }

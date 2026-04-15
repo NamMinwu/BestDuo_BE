@@ -1,5 +1,6 @@
 package com.bestduo_BE.common.infra.riot.budget;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.DailyPipelineState;
 import com.bestduo_BE.common.infra.persistence.repository.DailyPipelineStateJpaRepository;
 import com.bestduo_BE.config.PipelineProperties;
@@ -40,7 +41,7 @@ public class DailyBudgetTracker {
    * Stage 1 API 호출 {@code count}회를 기록하고, 완료된 apex 티어가 있으면 함께 저장한다.
    * 단일 DB fetch로 seedApiCallsUsed와 seedCompletedTiers를 원자적으로 저장한다.
    */
-  public void recordSeedCall(int count, String completedTier) {
+  public void recordSeedCall(int count, Tier completedTier) {
     DailyPipelineState state = getOrCreateTodayState();
     state.incrementSeedCalls(count);
     if (completedTier != null) {

@@ -143,7 +143,7 @@ public class DailyLeagueEntriesRunner {
 
     // tier 완료 기록과 seed 호출 수를 단일 DB fetch로 원자적으로 저장
     int pages = result.pagesProcessed() > 0 ? result.pagesProcessed() : 1;
-    budgetTracker.recordSeedCall(pages, tier.name());
+    budgetTracker.recordSeedCall(pages, tier);
     log.info("Stage1 apex 완료: tier={} seeded={}", tier, result.summonersSeeded());
     return ChunkResult.apexTier(tier, result.summonersSeeded());
   }

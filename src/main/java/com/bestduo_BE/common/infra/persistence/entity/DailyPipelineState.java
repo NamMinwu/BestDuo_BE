@@ -1,15 +1,23 @@
 package com.bestduo_BE.common.infra.persistence.entity;
 
 import com.bestduo_BE.common.domain.model.Tier;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.EnumSet;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -47,10 +55,16 @@ public class DailyPipelineState {
   @Column(name = "collect_api_calls_used", nullable = false)
   private int collectApiCallsUsed = 0;
 
-  /** 오늘 seed 완료된 tier 목록. JSON 배열 문자열 (예: ["MASTER","CHALLENGER"]) */
+  /** 오늘 seed 완료된 tier 목록. */
   @Builder.Default
-  @Column(name = "seed_completed_tiers", nullable = false)
-  private String seedCompletedTiers = "[]";
+  @ElementCollection(fetch = FetchType.EAGER)
+  @CollectionTable(
+      name = "daily_pipeline_seed_completed_tiers",
+      joinColumns = @JoinColumn(name = "daily_pipeline_state_id")
+  )
+  @Enumerated(EnumType.STRING)
+  @Column(name = "tier", nullable = false)
+  private Set<Tier> seedCompletedTiers = EnumSet.noneOf(Tier.class);
 
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
@@ -64,7 +78,6 @@ public class DailyPipelineState {
         .pipelineDate(date)
         .seedApiCallsUsed(0)
         .collectApiCallsUsed(0)
-        .seedCompletedTiers("[]")
         .createdAt(now)
         .updatedAt(now)
         .build();
@@ -82,21 +95,12 @@ public class DailyPipelineState {
 
   /** 오늘 해당 tier의 seed가 완료됐으면 true. */
   public boolean isSeedTierCompleted(Tier tier) {
-    return seedCompletedTiers.contains("\"" + tier.name() + "\"");
+    return seedCompletedTiers.contains(tier);
   }
 
-  /**
-   * seed 완료된 tier를 기록한다. 중복은 무시된다.
-   *
-   * <p>내부적으로 JSON 배열 문자열로 관리한다.
-   */
-  public void recordSeedCompletedTier(String tier) {
-    if (seedCompletedTiers.contains("\"" + tier + "\"")) {
-      return;
-    }
-    String withoutClose = seedCompletedTiers.substring(0, seedCompletedTiers.length() - 1);
-    String separator = seedCompletedTiers.equals("[]") ? "" : ",";
-    this.seedCompletedTiers = withoutClose + separator + "\"" + tier + "\"]";
+  /** seed 완료된 tier를 기록한다. 중복은 무시된다. */
+  public void recordSeedCompletedTier(Tier tier) {
+    seedCompletedTiers.add(tier);
     this.updatedAt = OffsetDateTime.now();
   }
 }

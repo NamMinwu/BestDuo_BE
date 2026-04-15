@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.ingest.application.port.MatchQueueDispatcher.Item;
+import com.bestduo_BE.common.domain.model.QueueStatus;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
 import com.bestduo_BE.common.infra.persistence.repository.MatchQueueJpaRepository;
@@ -99,24 +100,26 @@ class MatchQueueDispatcherImplTest {
   @DisplayName("markDone — 엔티티 상태를 DONE으로 업데이트한다")
   void markDoneUpdatesEntityStatus() {
     MatchQueue mq = match("done", Tier.GOLD, 1, "15.23");
+    mq.markRunning();
     given(repository.findById("done")).willReturn(Optional.of(mq));
 
     coordinator.markDone("done");
 
     verify(repository).findById("done");
-    assertThat(mq.getStatus()).isEqualTo("DONE");
+    assertThat(mq.getStatus()).isEqualTo(QueueStatus.DONE);
   }
 
   @Test
   @DisplayName("markError — 실패 메시지를 기록하고 상태를 ERROR로 설정한다")
   void markErrorRegistersFailureMessage() {
     MatchQueue mq = match("err", Tier.GOLD, 1, "15.23");
+    mq.markRunning();
     given(repository.findById("err")).willReturn(Optional.of(mq));
 
     coordinator.markError("err", "boom");
 
     verify(repository).findById("err");
-    assertThat(mq.getStatus()).isEqualTo("ERROR");
+    assertThat(mq.getStatus()).isEqualTo(QueueStatus.ERROR);
     assertThat(mq.getLastError()).isEqualTo("boom");
   }
 
@@ -132,9 +135,9 @@ class MatchQueueDispatcherImplTest {
     OffsetDateTime now = OffsetDateTime.now();
     return MatchQueue.builder()
         .matchId(matchId)
-        .status("READY")
+        .status(QueueStatus.READY)
         .priority(priority)
-        .collectionTier(tier.name())
+        .collectionTier(tier)
         .patch(patch)
         .retryCount(0)
         .lastError(null)

@@ -1,6 +1,6 @@
 package com.bestduo_BE.common.domain.model;
 
-import java.util.Set;
+import java.util.List;
 
 public enum Tier {
   CHALLENGER,
@@ -12,10 +12,9 @@ public enum Tier {
   GOLD,
   SILVER,
   BRONZE,
-  IRON,
-  ALL_TIERS;
+  IRON;
 
-  public static final Set<Tier> APEX_TIERS = Set.of(CHALLENGER, GRANDMASTER, MASTER);
+  public static final List<Tier> APEX_TIERS = List.of(CHALLENGER, GRANDMASTER, MASTER);
 
   public boolean isApex() {
     return APEX_TIERS.contains(this);
