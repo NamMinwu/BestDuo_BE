@@ -28,7 +28,7 @@ external:
     api-key: ${EXTERNAL_RIOT_API_KEY:}
 
 patch-sync:
-  enabled: ${PATCH_SYNC_ENABLED:false}
+  enabled: ${PATCH_SYNC_ENABLED:true}
   interval-ms: ${PATCH_SYNC_INTERVAL_MS:21600000}  # 6시간
 
 pipeline:

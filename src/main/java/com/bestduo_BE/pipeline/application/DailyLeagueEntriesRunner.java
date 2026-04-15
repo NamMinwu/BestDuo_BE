@@ -1,6 +1,7 @@
 package com.bestduo_BE.pipeline.application;
 
 import com.bestduo_BE.common.application.PatchVersionService;
+import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.LeagueEntriesFetchCommand;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.DailyPipelineState;
@@ -79,13 +80,16 @@ public class DailyLeagueEntriesRunner {
     }
 
     // Phase B: non-apex 구간 순회 (DIAMOND → EMERALD)
-    String currentPatch = patchVersionService.currentPatchVersion().orElse(null);
-    if (currentPatch == null) {
+    String effectivePatch = patchVersionService.resolveEffectivePatchContext()
+        .map(EffectivePatchContext::patch)
+        .orElse(null);
+
+    if (effectivePatch == null) {
       log.warn("non-apex seed 스킵: 현재 패치 정보 없음");
       return ChunkResult.noWork();
     }
     for (Tier tier : NON_APEX_TIERS) {
-      CoverageBucket bucket = getOrCreateBucket(currentPatch, tier);
+      CoverageBucket bucket = getOrCreateBucket(effectivePatch, tier);
       if (bucket.hasRemainingDailyQuota(props.getDiaEmeDailyPageQuota())) {
         return runNonApexPage(bucket, tier);
       }
@@ -106,12 +110,14 @@ public class DailyLeagueEntriesRunner {
   }
 
   private boolean hasUncompletedNonApexBucket() {
-    String currentPatch = patchVersionService.currentPatchVersion().orElse(null);
-    if (currentPatch == null) {
+    String effectivePatch = patchVersionService.resolveEffectivePatchContext()
+        .map(EffectivePatchContext::patch)
+        .orElse(null);
+    if (effectivePatch == null) {
       return false;
     }
     for (Tier tier : NON_APEX_TIERS) {
-      Optional<CoverageBucket> opt = coverageBucketRepository.findByPatchAndTier(currentPatch, tier);
+      Optional<CoverageBucket> opt = coverageBucketRepository.findByPatchAndTier(effectivePatch, tier);
       if (opt.isEmpty() || opt.get().hasRemainingDailyQuota(props.getDiaEmeDailyPageQuota())) {
         return true;
       }
