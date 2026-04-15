@@ -1,7 +1,6 @@
 package com.bestduo_BE.coverage.infra.persistence.entity;
 
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.coverage.domain.model.CoverageBucketStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -43,19 +42,6 @@ public class CoverageBucket {
   @Column(nullable = false)
   private Tier tier;
 
-  @Column(name = "target_match_count", nullable = false)
-  private long targetMatchCount;
-
-  @Column(name = "current_match_count", nullable = false)
-  private long currentMatchCount;
-
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private CoverageBucketStatus status;
-
-  @Column(nullable = false)
-  private int priority;
-
   // ── SEED 진행 상태 ────────────────────────────────────────────────────────
   // MASTER/GRANDMASTER/CHALLENGER는 division이 없으므로 seedPage만 증가
   // DIAMOND 이하는 I→II→III→IV 순으로 rotation하며 페이지 소진 시 다음 division으로 이동
@@ -89,9 +75,6 @@ public class CoverageBucket {
   private int dailyCycleCount = 0;
   // ─────────────────────────────────────────────────────────────────────────
 
-  @Column(name = "last_evaluated_at", nullable = false)
-  private OffsetDateTime lastEvaluatedAt;
-
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
 
@@ -102,16 +85,11 @@ public class CoverageBucket {
   /** division 구분 없이 단일 리그로 운영되는 apex 티어 */
   private static final Set<Tier> APEX_TIERS = Set.of(Tier.CHALLENGER, Tier.GRANDMASTER, Tier.MASTER);
 
-  public static CoverageBucket create(String patch, Tier tier, long targetMatchCount, int priority) {
+  public static CoverageBucket create(String patch, Tier tier) {
     OffsetDateTime now = OffsetDateTime.now();
     return CoverageBucket.builder()
         .patch(patch)
         .tier(tier)
-        .targetMatchCount(targetMatchCount)
-        .currentMatchCount(0L)
-        .status(CoverageBucketStatus.COLLECTING)
-        .priority(priority)
-        .lastEvaluatedAt(now)
         .createdAt(now)
         .updatedAt(now)
         .build();
@@ -193,15 +171,4 @@ public class CoverageBucket {
     this.updatedAt = OffsetDateTime.now();
   }
 
-  public void refreshCount(long newCount) {
-    if (this.currentMatchCount == newCount) {
-      return; // 변경 없음 → JPA dirty check 불필요, 불필요한 UPDATE 방지
-    }
-    this.currentMatchCount = newCount;
-    this.status = newCount >= targetMatchCount
-        ? CoverageBucketStatus.SUFFICIENT
-        : CoverageBucketStatus.COLLECTING;
-    this.lastEvaluatedAt = OffsetDateTime.now();
-    this.updatedAt = this.lastEvaluatedAt;
-  }
 }

@@ -12,5 +12,5 @@ public interface CoverageBucketJpaRepository extends JpaRepository<CoverageBucke
 
   Optional<CoverageBucket> findByPatchAndTier(String patch, Tier tier);
 
-  List<CoverageBucket> findAllByOrderByPriorityAscIdAsc();
+  List<CoverageBucket> findAllByOrderByIdAsc();
 }

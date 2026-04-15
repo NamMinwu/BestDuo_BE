@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class CoverageBucketCycleTest {
 
   private CoverageBucket bucket() {
-    return CoverageBucket.create("15.7", Tier.DIAMOND, 500_000L, 1);
+    return CoverageBucket.create("15.7", Tier.DIAMOND);
   }
 
   // ── advanceToNextDivision ──────────────────────────────────────────

@@ -124,9 +124,7 @@ public class DailySeedRunner {
   private CoverageBucket getOrCreateBucket(String patch, Tier tier) {
     return coverageBucketRepository.findByPatchAndTier(patch, tier)
         .orElseGet(() -> {
-          int priority = DIA_EME_TIERS.indexOf(tier) + 1;
-          CoverageBucket newBucket = CoverageBucket.create(
-              patch, tier, props.getDiaEmeCoverageTarget(), priority);
+          CoverageBucket newBucket = CoverageBucket.create(patch, tier);
           log.info("CoverageBucket 자동 생성: patch={} tier={}", patch, tier);
           return coverageBucketRepository.save(newBucket);
         });
