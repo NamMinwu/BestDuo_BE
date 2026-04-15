@@ -43,6 +43,15 @@ public class PipelineProperties {
    */
   private int maxPagesPerDivision = 5;
 
+  /**
+   * 자동 생성되는 DIA/EME CoverageBucket의 목표 매치 수.
+   * 버킷 status(COLLECTING/SUFFICIENT) 판단 기준으로만 사용된다.
+   */
+  private long diaEmeCoverageTarget = 500_000L;
+
+  /** DIA/EME 버킷당 하루에 처리할 최대 페이지 수 (per-bucket). */
+  private int diaEmeDailyPageQuota = 10;
+
   /** Stage 3(INGEST)에서 그날 먼저 처리할 tier. ALL_TIERS이면 기존 우선순위(CHALLENGER→…→기타) 유지. */
   private Tier stage3PriorityTier = Tier.ALL_TIERS;
 
