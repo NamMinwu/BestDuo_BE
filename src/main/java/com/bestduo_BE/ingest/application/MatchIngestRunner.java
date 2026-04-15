@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class MatchIngestWorker {
+public class MatchIngestRunner {
 
   private static final int STALE_MINUTES = 10;
   private static final int ERROR_COOLDOWN_MINUTES = 10;
@@ -72,7 +72,7 @@ public class MatchIngestWorker {
         throw e;
 
       } catch (Exception e) {
-        log.error("MatchIngestWorker failed. matchId={}", matchId, e);
+        log.error("MatchIngestRunner failed. matchId={}", matchId, e);
         queue.markError(matchId, shorten(e.getMessage()));
         processed++;
         error++;

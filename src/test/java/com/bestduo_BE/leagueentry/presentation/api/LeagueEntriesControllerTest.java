@@ -1,4 +1,4 @@
-package com.bestduo_BE.seed.presentation.api;
+package com.bestduo_BE.leagueentry.presentation.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -8,9 +8,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
+import com.bestduo_BE.common.domain.model.LeagueEntriesFetchCommand;
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
+import com.bestduo_BE.leagueentry.application.LeagueEntriesFetcher;
+import com.bestduo_BE.leagueentry.application.LeagueEntriesFetcher.LeagueEntriesFetchResult;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -21,19 +22,19 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-class SeedBootstrapControllerTest {
+class LeagueEntriesControllerTest {
 
   @Autowired
   private MockMvc mockMvc;
 
   @MockitoBean
-  private SeedBootstrapExecutor seedBootstrapRun;
+  private LeagueEntriesFetcher seedBootstrapRun;
 
   @Test
   @DisplayName("POST /seed/bootstrap — 명시적 파라미터로 유스케이스를 호출하고 결과를 반환한다")
   void run_withExplicitParametersInvokesUsecaseAndReturnsResult() throws Exception {
-    SeedBootstrapExecutor.SeedBootstrapResult result =
-        new SeedBootstrapExecutor.SeedBootstrapResult(1, 2, 3);
+    LeagueEntriesFetchResult result =
+        new LeagueEntriesFetchResult(1, 2, 3);
     given(seedBootstrapRun.execute(any())).willReturn(result);
 
     mockMvc.perform(post("/seed/bootstrap")
@@ -48,10 +49,10 @@ class SeedBootstrapControllerTest {
         .andExpect(jsonPath("$.entriesFetched").value(2))
         .andExpect(jsonPath("$.summonersSeeded").value(3));
 
-    ArgumentCaptor<SeedBootstrapCommand> captor =
-        ArgumentCaptor.forClass(SeedBootstrapCommand.class);
+    ArgumentCaptor<LeagueEntriesFetchCommand> captor =
+        ArgumentCaptor.forClass(LeagueEntriesFetchCommand.class);
     then(seedBootstrapRun).should().execute(captor.capture());
-    SeedBootstrapCommand command = captor.getValue();
+    LeagueEntriesFetchCommand command = captor.getValue();
     assertThat(command.queue()).isEqualTo("RANKED_SOLO_5x5");
     assertThat(command.tier()).isEqualTo("MASTER");
     assertThat(command.division()).isEqualTo("I");
@@ -63,8 +64,8 @@ class SeedBootstrapControllerTest {
   @Test
   @DisplayName("POST /seed/bootstrap — 선택 파라미터 생략 시 기본값을 사용한다")
   void run_withoutOptionalParametersUsesDefaults() throws Exception {
-    SeedBootstrapExecutor.SeedBootstrapResult result =
-        new SeedBootstrapExecutor.SeedBootstrapResult(0, 0, 0);
+    LeagueEntriesFetchResult result =
+        new LeagueEntriesFetchResult(0, 0, 0);
     given(seedBootstrapRun.execute(any())).willReturn(result);
 
     mockMvc.perform(post("/seed/bootstrap")
@@ -73,10 +74,10 @@ class SeedBootstrapControllerTest {
             .param("division", "II"))
         .andExpect(status().isOk());
 
-    ArgumentCaptor<SeedBootstrapCommand> captor =
-        ArgumentCaptor.forClass(SeedBootstrapCommand.class);
+    ArgumentCaptor<LeagueEntriesFetchCommand> captor =
+        ArgumentCaptor.forClass(LeagueEntriesFetchCommand.class);
     then(seedBootstrapRun).should().execute(captor.capture());
-    SeedBootstrapCommand command = captor.getValue();
+    LeagueEntriesFetchCommand command = captor.getValue();
     assertThat(command.seedTier()).isEqualTo(Tier.EMERALD);
     assertThat(command.page()).isEqualTo(1);
     assertThat(command.maxEntries()).isZero();

@@ -2,7 +2,7 @@ package com.bestduo_BE.ingest.presentation.api;
 
 import com.bestduo_BE.ingest.application.IngestQueueStats;
 import com.bestduo_BE.ingest.application.IngestQueueStats.Result;
-import com.bestduo_BE.ingest.application.MatchIngestWorker;
+import com.bestduo_BE.ingest.application.MatchIngestRunner;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminQueueController {
 
   private final IngestQueueStats queueStats;
-  private final MatchIngestWorker matchIngestWorker;
+  private final MatchIngestRunner matchIngestRunner;
 
   @GetMapping("/stats")
   public Result stats() {
@@ -24,7 +24,7 @@ public class AdminQueueController {
   }
 
   @PostMapping("/work")
-  public MatchIngestWorker.Result work(@RequestParam(defaultValue = "20") int limit) {
-    return matchIngestWorker.execute(limit);
+  public MatchIngestRunner.Result work(@RequestParam(defaultValue = "20") int limit) {
+    return matchIngestRunner.execute(limit);
   }
 }

@@ -1,8 +1,9 @@
-package com.bestduo_BE.seed.presentation.api;
+package com.bestduo_BE.leagueentry.presentation.api;
 
-import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
-import com.bestduo_BE.common.domain.model.SeedBootstrapCommand;
+import com.bestduo_BE.leagueentry.application.LeagueEntriesFetcher;
+import com.bestduo_BE.common.domain.model.LeagueEntriesFetchCommand;
 import com.bestduo_BE.common.domain.model.Tier;
+import com.bestduo_BE.leagueentry.application.LeagueEntriesFetcher.LeagueEntriesFetchResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,12 +13,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/seed")
-public class SeedBootstrapController {
+public class LeagueEntriesController {
 
-  private final SeedBootstrapExecutor useCase;
+  private final LeagueEntriesFetcher useCase;
 
   @PostMapping("/bootstrap")
-  public SeedBootstrapExecutor.SeedBootstrapResult run(
+  public LeagueEntriesFetchResult run(
       @RequestParam String queue,
       @RequestParam String tier,
       @RequestParam String division,
@@ -25,7 +26,7 @@ public class SeedBootstrapController {
       @RequestParam(defaultValue = "1") int page,
       @RequestParam(defaultValue = "0") int maxEntries
   ) {
-    SeedBootstrapCommand cmd = new SeedBootstrapCommand(
+    LeagueEntriesFetchCommand cmd = new LeagueEntriesFetchCommand(
         queue, tier, division, seedTier, page, maxEntries
     );
     return useCase.execute(cmd);

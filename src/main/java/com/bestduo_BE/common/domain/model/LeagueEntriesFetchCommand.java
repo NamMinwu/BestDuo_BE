@@ -1,6 +1,6 @@
 package com.bestduo_BE.common.domain.model;
 
-public record SeedBootstrapCommand(
+public record LeagueEntriesFetchCommand(
     String queue,
     String tier,
     String division,

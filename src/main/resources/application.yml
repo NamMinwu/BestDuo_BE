@@ -28,7 +28,7 @@ external:
     api-key: ${EXTERNAL_RIOT_API_KEY:}
 
 patch-sync:
-  enabled: ${PATCH_SYNC_ENABLED:true}
+  enabled: ${PATCH_SYNC_ENABLED:false}
   interval-ms: ${PATCH_SYNC_INTERVAL_MS:21600000}  # 6시간
 
 pipeline:
@@ -39,10 +39,10 @@ pipeline:
   collect-batch-size: 20
   ingest-batch-size: 10
   polling-interval-ms: 5000
-  max-pages-per-division: 5
+  max-pages-per-division: 100
   tier-match-count:
     apex-tiers: 30
-    diamond-emerald: 10
+    diamond-emerald: 100
   stage3-priority-tier: ${PIPELINE_STAGE3_PRIORITY_TIER:DIAMOND}
 
 management:

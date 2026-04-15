@@ -1,4 +1,4 @@
-package com.bestduo_BE.seed.application.port;
+package com.bestduo_BE.leagueentry.application.port;
 
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
 import java.util.List;

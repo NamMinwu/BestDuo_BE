@@ -72,8 +72,8 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
 
   /**
    * matchIds 수집 대기 중인 summoner 조회.
-   * seededAt이 있고 matchIdsCollectedAt이 null이거나 seededAt보다 이전인 summoner를
-   * seededAt 최신 순으로 반환한다.
+   * leagueEntryFetchedAt이 있고 matchIdsCollectedAt이 null이거나 leagueEntryFetchedAt보다 이전인 summoner를
+   * leagueEntryFetchedAt 최신 순으로 반환한다.
    */
   @Query(value = """
       SELECT s.*
@@ -89,11 +89,11 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
       UPDATE summoner
-      SET seeded_at = :seededAt,
+      SET seeded_at = :fetchedAt,
           updated_at = now()
       WHERE puuid = :puuid
       """, nativeQuery = true)
-  int markSeeded(@Param("puuid") String puuid, @Param("seededAt") OffsetDateTime seededAt);
+  int markLeagueEntryFetched(@Param("puuid") String puuid, @Param("fetchedAt") OffsetDateTime fetchedAt);
 
   @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -107,22 +107,22 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
 
   /**
    * Stage 1 upsert: 없으면 등록, 있으면 tier·seeded_at 갱신.
-   * 두 경우 모두 seeded_at을 주어진 시점으로 설정한다.
+   * 두 경우 모두 seeded_at(leagueEntryFetchedAt)을 주어진 시점으로 설정한다.
    */
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
       INSERT INTO summoner (puuid, last_known_tier, tier_observed_at, seeded_at, created_at, updated_at)
-      VALUES (:puuid, :tier, :seededAt, :seededAt, now(), :seededAt)
+      VALUES (:puuid, :tier, :fetchedAt, :fetchedAt, now(), :fetchedAt)
       ON CONFLICT (puuid) DO UPDATE SET
           last_known_tier  = EXCLUDED.last_known_tier,
           tier_observed_at = EXCLUDED.tier_observed_at,
           seeded_at        = EXCLUDED.seeded_at,
           updated_at       = now()
       """, nativeQuery = true)
-  int upsertSeeded(
+  int upsertLeagueEntry(
       @Param("puuid") String puuid,
       @Param("tier") String tier,
-      @Param("seededAt") OffsetDateTime seededAt
+      @Param("fetchedAt") OffsetDateTime fetchedAt
   );
 
 }
