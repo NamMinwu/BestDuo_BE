@@ -87,9 +87,9 @@ public class DailySeedRunner {
       return ChunkResult.noWork();
     }
     for (Tier tier : DIA_EME_TIERS) {
-      Optional<CoverageBucket> opt = coverageBucketRepository.findByPatchAndTier(currentPatch, tier);
-      if (opt.isPresent() && !opt.get().isDailySeedCompleted()) {
-        return runDiaEmePage(opt.get(), tier);
+      CoverageBucket bucket = getOrCreateBucket(currentPatch, tier);
+      if (bucket.hasRemainingDailyQuota(props.getDiaEmeDailyPageQuota())) {
+        return runDiaEmePage(bucket, tier);
       }
     }
 
@@ -114,11 +114,22 @@ public class DailySeedRunner {
     }
     for (Tier tier : DIA_EME_TIERS) {
       Optional<CoverageBucket> opt = coverageBucketRepository.findByPatchAndTier(currentPatch, tier);
-      if (opt.isPresent() && !opt.get().isDailySeedCompleted()) {
+      if (opt.isEmpty() || opt.get().hasRemainingDailyQuota(props.getDiaEmeDailyPageQuota())) {
         return true;
       }
     }
     return false;
+  }
+
+  private CoverageBucket getOrCreateBucket(String patch, Tier tier) {
+    return coverageBucketRepository.findByPatchAndTier(patch, tier)
+        .orElseGet(() -> {
+          int priority = DIA_EME_TIERS.indexOf(tier) + 1;
+          CoverageBucket newBucket = CoverageBucket.create(
+              patch, tier, props.getDiaEmeCoverageTarget(), priority);
+          log.info("CoverageBucket 자동 생성: patch={} tier={}", patch, tier);
+          return coverageBucketRepository.save(newBucket);
+        });
   }
 
   private ChunkResult runApexTierChunk(Tier tier) {
@@ -154,15 +165,16 @@ public class DailySeedRunner {
     budgetTracker.recordSeedCall(1);
 
     if (result.entriesFetched() == 0) {
-      // 페이지가 비었으면 해당 bucket 오늘 완료로 표시
-      bucket.markDailySeedCompleted();
-      coverageBucketRepository.save(bucket);
-      log.info("Stage1 DIA/EME bucket 완료: tier={}", tier);
+      // 빈 응답 = 해당 division 소진 → 다음 division으로 이동
+      bucket.advanceToNextDivision();
+      log.info("Stage1 DIA/EME division 소진, 다음 division으로 이동: tier={} division={}",
+          tier, bucket.getSeedDivision());
     } else {
-      // 다음 페이지/division으로 전진
+      // 정상 응답: 다음 페이지로 전진 (safety cap 도달 시 advanceToNextDivision 위임)
       bucket.advanceSeedState(props.getMaxPagesPerDivision());
-      coverageBucketRepository.save(bucket);
     }
+    bucket.incrementDailyPagesProcessed();
+    coverageBucketRepository.save(bucket);
 
     return ChunkResult.diaEmePage(tier, result.summonersSeeded());
   }
