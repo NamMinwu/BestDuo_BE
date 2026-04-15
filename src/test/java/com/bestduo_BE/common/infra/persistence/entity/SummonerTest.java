@@ -18,7 +18,6 @@ class SummonerTest {
     assertThat(summoner.getLastMatchStartTime()).isNull();
     assertThat(summoner.getLastKnownTier()).isNull();
     assertThat(summoner.getTierObservedAt()).isNull();
-    assertThat(summoner.getLastSeenPatch()).isNull();
     assertThat(summoner.getCreatedAt()).isNotNull();
     assertThat(summoner.getUpdatedAt()).isNotNull();
   }

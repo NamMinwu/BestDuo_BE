@@ -24,11 +24,7 @@ public class SeedBootstrapExecutor {
   public record SeedBootstrapResult(
       int pagesProcessed,
       int entriesFetched,
-      int summonersSeeded,
-      /** 하위 호환: 항상 0 반환 (matchIds 수집은 Stage 2로 이관) */
-      int matchIdsFetched,
-      /** 하위 호환: 항상 0 반환 (matchIds 수집은 Stage 2로 이관) */
-      int matchIdsEnqueued
+      int summonersSeeded
   ) {}
 
   /**
@@ -38,30 +34,19 @@ public class SeedBootstrapExecutor {
   public SeedBootstrapResult execute(SeedBootstrapCommand cmd) {
     SeedBootstrapProgress progress = new SeedBootstrapProgress(cmd.maxEntries());
 
-    for (int page = cmd.startPage(); page <= cmd.endPage(); page++) {
-      List<LeagueEntry> entries = leagueEntriesSeedLoader.loadEntries(
-          cmd.queue(), cmd.tier(), cmd.division(), page);
+    List<LeagueEntry> entries = leagueEntriesSeedLoader.loadEntries(
+        cmd.queue(), cmd.tier(), cmd.division(), cmd.page());
 
-      if (entries == null || entries.isEmpty()) {
-        break;
-      }
-
+    if (entries != null && !entries.isEmpty()) {
       List<LeagueEntry> toProcess = selectEntriesToProcess(entries, progress);
-      if (toProcess.isEmpty()) {
-        break;
-      }
-
-      progress.recordPage(toProcess.size());
-
-      for (LeagueEntry entry : toProcess) {
-        processEntry(entry, cmd, progress);
-        if (progress.reachedLimit()) {
-          break;
+      if (!toProcess.isEmpty()) {
+        progress.recordPage(toProcess.size());
+        for (LeagueEntry entry : toProcess) {
+          processEntry(entry, cmd, progress);
+          if (progress.reachedLimit()) {
+            break;
+          }
         }
-      }
-
-      if (progress.reachedLimit()) {
-        break;
       }
     }
 
@@ -142,7 +127,7 @@ public class SeedBootstrapExecutor {
     }
 
     SeedBootstrapResult toResult() {
-      return new SeedBootstrapResult(pagesProcessed, entriesFetched, summonersSeeded, 0, 0);
+      return new SeedBootstrapResult(pagesProcessed, entriesFetched, summonersSeeded);
     }
   }
 }

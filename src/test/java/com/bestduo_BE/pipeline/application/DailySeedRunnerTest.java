@@ -132,9 +132,9 @@ class DailySeedRunnerTest {
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
 
-    SeedBootstrapResult result = new SeedBootstrapResult(1, 5, 5, 0, 0);
+    SeedBootstrapResult result = new SeedBootstrapResult(1, 5, 5);
     given(seedBootstrapExecutor.execute(argThat(cmd ->
-        "CHALLENGER".equals(cmd.tier()) && cmd.startPage() == 1
+        "CHALLENGER".equals(cmd.tier()) && cmd.page() == 1
     ))).willReturn(result);
 
     DailySeedRunner.ChunkResult chunk = runner.runNextChunk();
@@ -160,14 +160,14 @@ class DailySeedRunnerTest {
     CoverageBucket diaBucket = bucketNotCompleted(Tier.DIAMOND, "15.23");
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.of(diaBucket));
 
-    SeedBootstrapResult seedResult = new SeedBootstrapResult(1, 10, 3, 0, 0);
+    SeedBootstrapResult seedResult = new SeedBootstrapResult(1, 10, 3);
     given(seedBootstrapExecutor.execute(argThat(cmd ->
-        "DIAMOND".equals(cmd.tier()) && cmd.startPage() == 1
+        "DIAMOND".equals(cmd.tier()) && cmd.page() == 1
     ))).willReturn(seedResult);
 
     DailySeedRunner.ChunkResult chunk = runner.runNextChunk();
 
-    assertThat(chunk.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.DIA_EME_PAGE);
+    assertThat(chunk.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.NON_APEX_PAGE);
     assertThat(chunk.tier()).isEqualTo(Tier.DIAMOND);
     verify(budgetTracker).recordSeedCall(1);
   }
@@ -190,7 +190,7 @@ class DailySeedRunnerTest {
     given(coverageBucketRepository.save(any(CoverageBucket.class))).willReturn(diaBucket);
 
     // 빈 응답 (entriesFetched = 0)
-    SeedBootstrapResult emptyResult = new SeedBootstrapResult(1, 0, 0, 0, 0);
+    SeedBootstrapResult emptyResult = new SeedBootstrapResult(1, 0, 0);
     given(seedBootstrapExecutor.execute(any())).willReturn(emptyResult);
 
     runner.runNextChunk();
@@ -220,7 +220,7 @@ class DailySeedRunnerTest {
     given(coverageBucketRepository.save(any(CoverageBucket.class))).willReturn(diaBucket);
 
     // 정상 응답
-    SeedBootstrapResult normalResult = new SeedBootstrapResult(1, 10, 5, 0, 0);
+    SeedBootstrapResult normalResult = new SeedBootstrapResult(1, 10, 5);
     given(seedBootstrapExecutor.execute(any())).willReturn(normalResult);
 
     runner.runNextChunk();
@@ -290,14 +290,14 @@ class DailySeedRunnerTest {
         b.getTier() == Tier.DIAMOND && b.getPatch().equals("15.23")
     ))).willReturn(savedBucket);
 
-    SeedBootstrapResult seedResult = new SeedBootstrapResult(1, 10, 3, 0, 0);
+    SeedBootstrapResult seedResult = new SeedBootstrapResult(1, 10, 3);
     given(seedBootstrapExecutor.execute(argThat(cmd ->
-        "DIAMOND".equals(cmd.tier()) && cmd.startPage() == 1
+        "DIAMOND".equals(cmd.tier()) && cmd.page() == 1
     ))).willReturn(seedResult);
 
     DailySeedRunner.ChunkResult chunk = runner.runNextChunk();
 
-    assertThat(chunk.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.DIA_EME_PAGE);
+    assertThat(chunk.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.NON_APEX_PAGE);
     assertThat(chunk.tier()).isEqualTo(Tier.DIAMOND);
     // 버킷 생성 시 save 1회 이상 호출됨을 검증
     verify(coverageBucketRepository, atLeastOnce()).save(argThat(b ->

@@ -22,13 +22,11 @@ public class SeedBootstrapController {
       @RequestParam String tier,
       @RequestParam String division,
       @RequestParam(defaultValue = "EMERALD") Tier seedTier,
-      @RequestParam(defaultValue = "1") int startPage,
-      @RequestParam(defaultValue = "3") int endPage,
-      @RequestParam(defaultValue = "10") int matchesPerPuuid,
+      @RequestParam(defaultValue = "1") int page,
       @RequestParam(defaultValue = "0") int maxEntries
   ) {
     SeedBootstrapCommand cmd = new SeedBootstrapCommand(
-        queue, tier, division, seedTier, startPage, endPage, matchesPerPuuid, maxEntries
+        queue, tier, division, seedTier, page, maxEntries
     );
     return useCase.execute(cmd);
   }

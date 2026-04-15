@@ -13,7 +13,6 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Set;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -76,8 +75,6 @@ public class CoverageBucket {
   private OffsetDateTime updatedAt;
 
   private static final List<String> DIVISIONS = List.of("I", "II", "III", "IV");
-  /** division 구분 없이 단일 리그로 운영되는 apex 티어 */
-  private static final Set<Tier> APEX_TIERS = Set.of(Tier.CHALLENGER, Tier.GRANDMASTER, Tier.MASTER);
 
   public static CoverageBucket create(String patch, Tier tier) {
     OffsetDateTime now = OffsetDateTime.now();
@@ -98,7 +95,7 @@ public class CoverageBucket {
    * 다음 division으로 이동한다. 정상 경로에서는 빈 응답이 먼저 division 전환을 트리거한다.
    */
   public void advanceSeedState(int maxPagesPerDivision) {
-    if (APEX_TIERS.contains(this.tier)) {
+    if (this.tier.isApex()) {
       this.seedPage++;
     } else if (this.seedPage >= maxPagesPerDivision) {
       advanceToNextDivision();

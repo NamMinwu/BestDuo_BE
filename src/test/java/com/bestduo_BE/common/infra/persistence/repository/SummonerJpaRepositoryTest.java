@@ -58,7 +58,6 @@ class SummonerJpaRepositoryTest {
         .lastMatchStartTime(null)
         .lastKnownTier(tier)
         .tierObservedAt(observedAt)
-        .lastSeenPatch(null)
         .createdAt(createdAt)
         .updatedAt(updatedAt != null ? updatedAt : OffsetDateTime.now())
         .build();

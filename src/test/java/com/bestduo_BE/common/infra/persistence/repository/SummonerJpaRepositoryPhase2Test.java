@@ -102,7 +102,6 @@ class SummonerJpaRepositoryPhase2Test {
         .lastMatchStartTime(null)
         .lastKnownTier(null)
         .tierObservedAt(null)
-        .lastSeenPatch(null)
         .seededAt(seededAt)
         .matchIdsCollectedAt(matchIdsCollectedAt)
         .createdAt(now)

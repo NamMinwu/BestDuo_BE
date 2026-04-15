@@ -36,9 +36,6 @@ public class Summoner {
   @Column(name = "tier_observed_at")
   private OffsetDateTime tierObservedAt;
 
-  @Column(name = "last_seen_patch")
-  private String lastSeenPatch;
-
   @Column(name = "seeded_at")
   private OffsetDateTime seededAt;
 
@@ -58,7 +55,6 @@ public class Summoner {
         .lastMatchStartTime(null)
         .lastKnownTier(null)
         .tierObservedAt(null)
-        .lastSeenPatch(null)
         .seededAt(null)
         .matchIdsCollectedAt(null)
         .createdAt(now)

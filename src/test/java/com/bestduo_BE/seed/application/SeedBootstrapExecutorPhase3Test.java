@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -22,10 +21,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * Phase 3 이후 SeedBootstrapExecutor 동작 검증.
- * matchIds enqueue가 제거되고 upsertSeeded가 추가된 버전.
- */
 @ExtendWith(MockitoExtension.class)
 class SeedBootstrapExecutorPhase3Test {
 
@@ -38,7 +33,7 @@ class SeedBootstrapExecutorPhase3Test {
   private SeedBootstrapExecutor executor;
 
   private final SeedBootstrapCommand command = new SeedBootstrapCommand(
-      "RANKED_SOLO_5x5", "DIAMOND", "I", Tier.DIAMOND, 1, 1, 0, 0
+      "RANKED_SOLO_5x5", "DIAMOND", "I", Tier.DIAMOND, 1, 0
   );
 
   @BeforeEach
@@ -74,19 +69,6 @@ class SeedBootstrapExecutorPhase3Test {
   }
 
   @Test
-  @DisplayName("신규 summoner뿐 아니라 기존 summoner도 upsertSeeded 호출 (기존 registerIfAbsent 없음)")
-  void execute_upsertCalledForAllEntriesRegardlessOfExistence() {
-    given(leagueEntriesSeedLoader.loadEntries(
-        command.queue(), command.tier(), command.division(), 1))
-        .willReturn(List.of(entry("existing-1"), entry("existing-2")));
-
-    executor.execute(command);
-
-    verify(summonerSeedRegistry, times(2)).upsertSeeded(any(), any(), any());
-    verify(summonerSeedRegistry, never()).registerIfAbsent(any(), any(), any());
-  }
-
-  @Test
   @DisplayName("puuid가 null이거나 blank인 엔트리는 건너뜀")
   void execute_skipsEntriesWithBlankPuuid() {
     given(leagueEntriesSeedLoader.loadEntries(
@@ -103,7 +85,7 @@ class SeedBootstrapExecutorPhase3Test {
   @DisplayName("maxEntries 제한이 적용된다")
   void execute_respectsMaxEntries() {
     SeedBootstrapCommand limited = new SeedBootstrapCommand(
-        "RANKED_SOLO_5x5", "DIAMOND", "I", Tier.DIAMOND, 1, 1, 0, 1
+        "RANKED_SOLO_5x5", "DIAMOND", "I", Tier.DIAMOND, 1, 1
     );
     given(leagueEntriesSeedLoader.loadEntries(
         limited.queue(), limited.tier(), limited.division(), 1))
