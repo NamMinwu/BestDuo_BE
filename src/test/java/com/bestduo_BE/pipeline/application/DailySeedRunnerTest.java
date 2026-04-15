@@ -287,7 +287,7 @@ class DailySeedRunnerTest {
 
     CoverageBucket savedBucket = CoverageBucket.create("15.23", Tier.DIAMOND);
     given(coverageBucketRepository.save(argThat(b ->
-        b.getTier() == Tier.DIAMOND && b.getPatch().equals("15.23") && b.isDailySeedCompleted() == false
+        b.getTier() == Tier.DIAMOND && b.getPatch().equals("15.23")
     ))).willReturn(savedBucket);
 
     SeedBootstrapResult seedResult = new SeedBootstrapResult(1, 10, 3, 0, 0);
@@ -350,12 +350,6 @@ class DailySeedRunnerTest {
 
   private CoverageBucket bucketNotCompleted(Tier tier, String patch) {
     return CoverageBucket.create(patch, tier);
-  }
-
-  private CoverageBucket bucketWithDailySeedCompleted(Tier tier, String patch) {
-    CoverageBucket bucket = CoverageBucket.create(patch, tier);
-    bucket.markDailySeedCompleted();
-    return bucket;
   }
 
   /** dailyPagesProcessed = quota(기본값 10)로 설정한 버킷 */
