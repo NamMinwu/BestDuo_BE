@@ -16,7 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class MatchIngestWorkerTest {
+class MatchIngestRunnerTest {
 
   @Mock
   private MatchQueueDispatcher queue;
@@ -24,11 +24,11 @@ class MatchIngestWorkerTest {
   @Mock
   private IngestMatchDetail ingestMatchDetail;
 
-  private MatchIngestWorker useCase;
+  private MatchIngestRunner useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new MatchIngestWorker(queue, ingestMatchDetail);
+    useCase = new MatchIngestRunner(queue, ingestMatchDetail);
   }
 
   @Test
@@ -40,7 +40,7 @@ class MatchIngestWorkerTest {
     given(ingestMatchDetail.execute("match-1", Tier.GOLD, "15.23"))
         .willReturn(new IngestResult(1, 10L));
 
-    MatchIngestWorker.Result result = useCase.execute(3, Tier.GOLD);
+    MatchIngestRunner.Result result = useCase.execute(3, Tier.GOLD);
 
     verify(queue).pickAndLock(3, 2, 10, Tier.GOLD);
     verify(ingestMatchDetail).execute("match-1", Tier.GOLD, "15.23");
@@ -56,7 +56,7 @@ class MatchIngestWorkerTest {
     given(queue.recoverStaleRunning(10)).willReturn(0);
     given(queue.pickAndLock(1, 2, 10, Tier.ALL_TIERS)).willReturn(List.of());
 
-    MatchIngestWorker.Result result = useCase.execute(1);
+    MatchIngestRunner.Result result = useCase.execute(1);
 
     verify(queue).pickAndLock(1, 2, 10, Tier.ALL_TIERS);
     assertThat(result.picked()).isZero();

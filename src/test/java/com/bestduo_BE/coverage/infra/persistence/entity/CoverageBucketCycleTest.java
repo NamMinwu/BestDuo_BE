@@ -22,8 +22,8 @@ class CoverageBucketCycleTest {
     CoverageBucket b = bucket(); // 기본 I/1
     b.advanceToNextDivision();
 
-    assertThat(b.getSeedDivision()).isEqualTo("II");
-    assertThat(b.getSeedPage()).isEqualTo(1);
+    assertThat(b.getCurrentDivision()).isEqualTo("II");
+    assertThat(b.getCurrentPage()).isEqualTo(1);
   }
 
   @Test
@@ -34,8 +34,8 @@ class CoverageBucketCycleTest {
 
     b.advanceToNextDivision(); // II → III
 
-    assertThat(b.getSeedDivision()).isEqualTo("III");
-    assertThat(b.getSeedPage()).isEqualTo(1);
+    assertThat(b.getCurrentDivision()).isEqualTo("III");
+    assertThat(b.getCurrentPage()).isEqualTo(1);
   }
 
   @Test
@@ -47,12 +47,12 @@ class CoverageBucketCycleTest {
 
     b.advanceToNextDivision(); // III → IV
 
-    assertThat(b.getSeedDivision()).isEqualTo("IV");
-    assertThat(b.getSeedPage()).isEqualTo(1);
+    assertThat(b.getCurrentDivision()).isEqualTo("IV");
+    assertThat(b.getCurrentPage()).isEqualTo(1);
   }
 
   @Test
-  @DisplayName("advanceToNextDivision() — IV에서 호출하면 I/1로 wrap되고 dailyCycleCount가 증가한다")
+  @DisplayName("advanceToNextDivision() — IV에서 호출하면 I/1로 wrap되고 divisionCycleCount가 증가한다")
   void advanceToNextDivision_fromIV_wrapsToIAndIncrementsCycleCount() {
     CoverageBucket b = bucket();
     b.advanceToNextDivision(); // I → II
@@ -61,19 +61,19 @@ class CoverageBucketCycleTest {
 
     b.advanceToNextDivision(); // IV → I (사이클 완주)
 
-    assertThat(b.getSeedDivision()).isEqualTo("I");
-    assertThat(b.getSeedPage()).isEqualTo(1);
-    assertThat(b.getDailyCycleCount()).isEqualTo(1);
+    assertThat(b.getCurrentDivision()).isEqualTo("I");
+    assertThat(b.getCurrentPage()).isEqualTo(1);
+    assertThat(b.getDivisionCycleCount()).isEqualTo(1);
   }
 
   @Test
-  @DisplayName("advanceToNextDivision() — 사이클이 아닌 전환에서는 dailyCycleCount가 증가하지 않는다")
+  @DisplayName("advanceToNextDivision() — 사이클이 아닌 전환에서는 divisionCycleCount가 증가하지 않는다")
   void advanceToNextDivision_nonWrap_doesNotIncrementCycleCount() {
     CoverageBucket b = bucket();
 
     b.advanceToNextDivision(); // I → II
 
-    assertThat(b.getDailyCycleCount()).isEqualTo(0);
+    assertThat(b.getDivisionCycleCount()).isEqualTo(0);
   }
 
   // ── hasRemainingDailyQuota ─────────────────────────────────────────
@@ -121,29 +121,29 @@ class CoverageBucketCycleTest {
     assertThat(b.getDailyPagesProcessed()).isEqualTo(2);
   }
 
-  // ── resetDailySeedIfNeeded (Phase 2 동작) ─────────────────────────
+  // ── resetDailyPagesIfNeeded (Phase 2 동작) ────────────────────────
 
   @Test
-  @DisplayName("resetDailySeedIfNeeded() — dailyPagesProcessed를 0으로 리셋하고 seedPage·seedDivision은 유지한다")
-  void resetDailySeedIfNeeded_resetsPagesProcessed_preservesSeedPosition() {
+  @DisplayName("resetDailyPagesIfNeeded() — dailyPagesProcessed를 0으로 리셋하고 currentPage·currentDivision은 유지한다")
+  void resetDailyPagesIfNeeded_resetsPagesProcessed_preservesPagePosition() {
     CoverageBucket b = bucket();
     b.advanceToNextDivision(); // I → II
-    b.advanceSeedState(100);   // seedPage = 2
+    b.advancePageState(100);   // currentPage = 2
     for (int i = 0; i < 5; i++) {
       b.incrementDailyPagesProcessed();
     }
 
     OffsetDateTime yesterday = OffsetDateTime.now().minusDays(1);
-    b.resetDailySeedIfNeeded(yesterday, LocalDate.now());
+    b.resetDailyPagesIfNeeded(yesterday, LocalDate.now());
 
     assertThat(b.getDailyPagesProcessed()).isEqualTo(0);
-    assertThat(b.getSeedDivision()).isEqualTo("II");
-    assertThat(b.getSeedPage()).isEqualTo(2);
+    assertThat(b.getCurrentDivision()).isEqualTo("II");
+    assertThat(b.getCurrentPage()).isEqualTo(2);
   }
 
   @Test
-  @DisplayName("resetDailySeedIfNeeded() — 오늘 이미 리셋했으면 dailyPagesProcessed를 변경하지 않는다")
-  void resetDailySeedIfNeeded_alreadyResetToday_doesNotReset() {
+  @DisplayName("resetDailyPagesIfNeeded() — 오늘 이미 리셋했으면 dailyPagesProcessed를 변경하지 않는다")
+  void resetDailyPagesIfNeeded_alreadyResetToday_doesNotReset() {
     CoverageBucket b = bucket();
     for (int i = 0; i < 5; i++) {
       b.incrementDailyPagesProcessed();
@@ -151,7 +151,7 @@ class CoverageBucketCycleTest {
 
     OffsetDateTime todayMidnight = LocalDate.now().atStartOfDay()
         .atOffset(OffsetDateTime.now().getOffset());
-    b.resetDailySeedIfNeeded(todayMidnight, LocalDate.now());
+    b.resetDailyPagesIfNeeded(todayMidnight, LocalDate.now());
 
     assertThat(b.getDailyPagesProcessed()).isEqualTo(5);
   }

@@ -11,7 +11,6 @@ import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.config.PipelineProperties;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -31,9 +30,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Slf4j
 public class CollectMatchIdsRunner {
-
-  private static final Set<Tier> APEX_TIERS =
-      Set.of(Tier.CHALLENGER, Tier.GRANDMASTER, Tier.MASTER);
 
   private final SummonerJpaRepository summonerRepository;
   private final MatchIdsFinder matchIdsFinder;
@@ -125,7 +121,7 @@ public class CollectMatchIdsRunner {
   }
 
   private int matchCountFor(Tier tier) {
-    if (tier != null && APEX_TIERS.contains(tier)) {
+    if (tier != null && tier.isApex()) {
       return props.getTierMatchCount().getApexTiers();
     }
     return props.getTierMatchCount().getDiamondEmerald();

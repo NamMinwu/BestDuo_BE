@@ -36,11 +36,8 @@ public class Summoner {
   @Column(name = "tier_observed_at")
   private OffsetDateTime tierObservedAt;
 
-  @Column(name = "last_seen_patch")
-  private String lastSeenPatch;
-
   @Column(name = "seeded_at")
-  private OffsetDateTime seededAt;
+  private OffsetDateTime leagueEntryFetchedAt;
 
   @Column(name = "match_ids_collected_at")
   private OffsetDateTime matchIdsCollectedAt;
@@ -58,16 +55,15 @@ public class Summoner {
         .lastMatchStartTime(null)
         .lastKnownTier(null)
         .tierObservedAt(null)
-        .lastSeenPatch(null)
-        .seededAt(null)
+        .leagueEntryFetchedAt(null)
         .matchIdsCollectedAt(null)
         .createdAt(now)
         .updatedAt(now)
         .build();
   }
 
-  public void markSeeded(OffsetDateTime seededAt) {
-    this.seededAt = seededAt;
+  public void markLeagueEntryFetched(OffsetDateTime fetchedAt) {
+    this.leagueEntryFetchedAt = fetchedAt;
     this.updatedAt = OffsetDateTime.now();
   }
 
@@ -79,19 +75,19 @@ public class Summoner {
   /**
    * matchIds 수집 대기 상태인지 판단한다.
    * <ul>
-   *   <li>seededAt이 null이면 Stage 1을 거치지 않은 summoner → 대상 아님</li>
+   *   <li>leagueEntryFetchedAt이 null이면 Stage 1을 거치지 않은 summoner → 대상 아님</li>
    *   <li>matchIdsCollectedAt이 null이면 한 번도 수집 안 함 → 대상</li>
-   *   <li>matchIdsCollectedAt이 seededAt 이전이면 재수집 필요 → 대상</li>
+   *   <li>matchIdsCollectedAt이 leagueEntryFetchedAt 이전이면 재수집 필요 → 대상</li>
    * </ul>
    */
   public boolean needsMatchIdsCollection() {
-    if (seededAt == null) {
+    if (leagueEntryFetchedAt == null) {
       return false;
     }
     if (matchIdsCollectedAt == null) {
       return true;
     }
-    return matchIdsCollectedAt.isBefore(seededAt);
+    return matchIdsCollectedAt.isBefore(leagueEntryFetchedAt);
   }
 
   public void observeTier(Tier tier, OffsetDateTime observedAt) {

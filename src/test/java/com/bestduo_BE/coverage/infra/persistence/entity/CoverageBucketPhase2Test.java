@@ -15,50 +15,50 @@ class CoverageBucketPhase2Test {
   }
 
   @Test
-  @DisplayName("create() — dailySeedResetAt은 null로 초기화된다")
-  void createInitializesDailySeedResetAtAsNull() {
+  @DisplayName("create() — dailyPagesResetAt은 null로 초기화된다")
+  void createInitializesDailyPagesResetAtAsNull() {
     CoverageBucket b = bucket();
 
-    assertThat(b.getDailySeedResetAt()).isNull();
+    assertThat(b.getDailyPagesResetAt()).isNull();
   }
 
   @Test
-  @DisplayName("resetDailySeedIfNeeded() — dailySeedResetAt이 오늘 이전이면 리셋한다")
-  void resetDailySeedIfNeededResetsWhenOutdated() {
+  @DisplayName("resetDailyPagesIfNeeded() — dailyPagesResetAt이 오늘 이전이면 리셋한다")
+  void resetDailyPagesIfNeededResetsWhenOutdated() {
     CoverageBucket b = bucket();
     OffsetDateTime yesterday = OffsetDateTime.now().minusDays(1);
 
-    b.resetDailySeedIfNeeded(yesterday, LocalDate.now());
+    b.resetDailyPagesIfNeeded(yesterday, LocalDate.now());
 
-    assertThat(b.getDailySeedResetAt()).isNotNull();
+    assertThat(b.getDailyPagesResetAt()).isNotNull();
     assertThat(b.getDailyPagesProcessed()).isZero();
   }
 
   @Test
-  @DisplayName("resetDailySeedIfNeeded() — dailySeedResetAt이 오늘이면 리셋하지 않는다")
-  void resetDailySeedIfNeededSkipsWhenAlreadyResetToday() {
+  @DisplayName("resetDailyPagesIfNeeded() — dailyPagesResetAt이 오늘이면 리셋하지 않는다")
+  void resetDailyPagesIfNeededSkipsWhenAlreadyResetToday() {
     CoverageBucket b = bucket();
     for (int i = 0; i < 3; i++) {
       b.incrementDailyPagesProcessed();
     }
     OffsetDateTime todayTime = OffsetDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
 
-    b.resetDailySeedIfNeeded(todayTime, LocalDate.now());
+    b.resetDailyPagesIfNeeded(todayTime, LocalDate.now());
 
     assertThat(b.getDailyPagesProcessed()).isEqualTo(3);
   }
 
   @Test
-  @DisplayName("resetDailySeedIfNeeded() — dailySeedResetAt이 null이면 리셋한다")
-  void resetDailySeedIfNeededResetsWhenNullResetAt() {
+  @DisplayName("resetDailyPagesIfNeeded() — dailyPagesResetAt이 null이면 리셋한다")
+  void resetDailyPagesIfNeededResetsWhenNullResetAt() {
     CoverageBucket b = bucket();
     for (int i = 0; i < 3; i++) {
       b.incrementDailyPagesProcessed();
     }
 
-    b.resetDailySeedIfNeeded(null, LocalDate.now());
+    b.resetDailyPagesIfNeeded(null, LocalDate.now());
 
     assertThat(b.getDailyPagesProcessed()).isZero();
-    assertThat(b.getDailySeedResetAt()).isNotNull();
+    assertThat(b.getDailyPagesResetAt()).isNotNull();
   }
 }

@@ -1,6 +1,6 @@
 package com.bestduo_BE.common.infra.riot;
 
-import com.bestduo_BE.seed.application.port.LeagueEntriesSeedLoader;
+import com.bestduo_BE.leagueentry.application.port.LeagueEntriesSeedLoader;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
 import com.bestduo_BE.common.infra.riot.dto.LeagueList;

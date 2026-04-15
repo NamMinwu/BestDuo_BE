@@ -15,10 +15,9 @@ import com.bestduo_BE.common.infra.riot.budget.DailyBudgetTracker;
 import com.bestduo_BE.config.PipelineProperties;
 import com.bestduo_BE.coverage.infra.persistence.entity.CoverageBucket;
 import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketJpaRepository;
-import com.bestduo_BE.seed.application.SeedBootstrapExecutor;
-import com.bestduo_BE.seed.application.SeedBootstrapExecutor.SeedBootstrapResult;
+import com.bestduo_BE.leagueentry.application.LeagueEntriesFetcher;
+import com.bestduo_BE.leagueentry.application.LeagueEntriesFetcher.LeagueEntriesFetchResult;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,10 +27,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class DailySeedRunnerTest {
+class DailyLeagueEntriesRunnerTest {
 
   @Mock
-  private SeedBootstrapExecutor seedBootstrapExecutor;
+  private LeagueEntriesFetcher leagueEntriesFetcher;
 
   @Mock
   private CoverageBucketJpaRepository coverageBucketRepository;
@@ -43,13 +42,13 @@ class DailySeedRunnerTest {
   private PatchVersionService patchVersionService;
 
   private PipelineProperties props;
-  private DailySeedRunner runner;
+  private DailyLeagueEntriesRunner runner;
 
   @BeforeEach
   void setUp() {
     props = new PipelineProperties();
-    runner = new DailySeedRunner(
-        seedBootstrapExecutor, coverageBucketRepository, budgetTracker, patchVersionService, props);
+    runner = new DailyLeagueEntriesRunner(
+        leagueEntriesFetcher, coverageBucketRepository, budgetTracker, patchVersionService, props);
   }
 
   // ── hasWorkToday ────────────────────────────────────────────────────
@@ -118,28 +117,28 @@ class DailySeedRunnerTest {
   void runNextChunk_whenBudgetExhausted_returnsBudgetExhausted() {
     given(budgetTracker.canSeed()).willReturn(false);
 
-    DailySeedRunner.ChunkResult result = runner.runNextChunk();
+    DailyLeagueEntriesRunner.ChunkResult result = runner.runNextChunk();
 
-    assertThat(result.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.BUDGET_EXHAUSTED);
-    verify(seedBootstrapExecutor, never()).execute(any());
+    assertThat(result.type()).isEqualTo(DailyLeagueEntriesRunner.ChunkResult.Type.BUDGET_EXHAUSTED);
+    verify(leagueEntriesFetcher, never()).execute(any());
   }
 
   @Test
-  @DisplayName("CHALLENGER 티어가 미완료면 SeedBootstrapExecutor를 호출하고 완료 기록")
+  @DisplayName("CHALLENGER 티어가 미완료면 LeagueEntriesFetcher를 호출하고 완료 기록")
   void runNextChunk_whenChallengerNotDone_executesSeedAndRecordsCompletion() {
     given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
 
-    SeedBootstrapResult result = new SeedBootstrapResult(1, 5, 5, 0, 0);
-    given(seedBootstrapExecutor.execute(argThat(cmd ->
-        "CHALLENGER".equals(cmd.tier()) && cmd.startPage() == 1
+    LeagueEntriesFetchResult result = new LeagueEntriesFetchResult(1, 5, 5);
+    given(leagueEntriesFetcher.execute(argThat(cmd ->
+        "CHALLENGER".equals(cmd.tier()) && cmd.page() == 1
     ))).willReturn(result);
 
-    DailySeedRunner.ChunkResult chunk = runner.runNextChunk();
+    DailyLeagueEntriesRunner.ChunkResult chunk = runner.runNextChunk();
 
-    assertThat(chunk.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.APEX_TIER_CHUNK);
+    assertThat(chunk.type()).isEqualTo(DailyLeagueEntriesRunner.ChunkResult.Type.APEX_TIER_CHUNK);
     assertThat(chunk.tier()).isEqualTo(Tier.CHALLENGER);
     verify(budgetTracker).recordSeedCall(1, "CHALLENGER");
   }
@@ -160,14 +159,14 @@ class DailySeedRunnerTest {
     CoverageBucket diaBucket = bucketNotCompleted(Tier.DIAMOND, "15.23");
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.of(diaBucket));
 
-    SeedBootstrapResult seedResult = new SeedBootstrapResult(1, 10, 3, 0, 0);
-    given(seedBootstrapExecutor.execute(argThat(cmd ->
-        "DIAMOND".equals(cmd.tier()) && cmd.startPage() == 1
+    LeagueEntriesFetchResult seedResult = new LeagueEntriesFetchResult(1, 10, 3);
+    given(leagueEntriesFetcher.execute(argThat(cmd ->
+        "DIAMOND".equals(cmd.tier()) && cmd.page() == 1
     ))).willReturn(seedResult);
 
-    DailySeedRunner.ChunkResult chunk = runner.runNextChunk();
+    DailyLeagueEntriesRunner.ChunkResult chunk = runner.runNextChunk();
 
-    assertThat(chunk.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.DIA_EME_PAGE);
+    assertThat(chunk.type()).isEqualTo(DailyLeagueEntriesRunner.ChunkResult.Type.NON_APEX_PAGE);
     assertThat(chunk.tier()).isEqualTo(Tier.DIAMOND);
     verify(budgetTracker).recordSeedCall(1);
   }
@@ -190,14 +189,14 @@ class DailySeedRunnerTest {
     given(coverageBucketRepository.save(any(CoverageBucket.class))).willReturn(diaBucket);
 
     // 빈 응답 (entriesFetched = 0)
-    SeedBootstrapResult emptyResult = new SeedBootstrapResult(1, 0, 0, 0, 0);
-    given(seedBootstrapExecutor.execute(any())).willReturn(emptyResult);
+    LeagueEntriesFetchResult emptyResult = new LeagueEntriesFetchResult(1, 0, 0);
+    given(leagueEntriesFetcher.execute(any())).willReturn(emptyResult);
 
     runner.runNextChunk();
 
     // 빈 응답 → division 전환 (I → II), quota 카운트
-    assertThat(diaBucket.getSeedDivision()).isEqualTo("II");
-    assertThat(diaBucket.getSeedPage()).isEqualTo(1);
+    assertThat(diaBucket.getCurrentDivision()).isEqualTo("II");
+    assertThat(diaBucket.getCurrentPage()).isEqualTo(1);
     assertThat(diaBucket.getDailyPagesProcessed()).isEqualTo(1);
     verify(coverageBucketRepository).save(diaBucket);
   }
@@ -220,12 +219,12 @@ class DailySeedRunnerTest {
     given(coverageBucketRepository.save(any(CoverageBucket.class))).willReturn(diaBucket);
 
     // 정상 응답
-    SeedBootstrapResult normalResult = new SeedBootstrapResult(1, 10, 5, 0, 0);
-    given(seedBootstrapExecutor.execute(any())).willReturn(normalResult);
+    LeagueEntriesFetchResult normalResult = new LeagueEntriesFetchResult(1, 10, 5);
+    given(leagueEntriesFetcher.execute(any())).willReturn(normalResult);
 
     runner.runNextChunk();
 
-    assertThat(diaBucket.getSeedPage()).isEqualTo(2);
+    assertThat(diaBucket.getCurrentPage()).isEqualTo(2);
     assertThat(diaBucket.getDailyPagesProcessed()).isEqualTo(1);
     verify(coverageBucketRepository).save(diaBucket);
   }
@@ -247,9 +246,9 @@ class DailySeedRunnerTest {
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.EMERALD))
         .willReturn(Optional.of(bucketWithQuotaExhausted(Tier.EMERALD, "15.23")));
 
-    DailySeedRunner.ChunkResult result = runner.runNextChunk();
+    DailyLeagueEntriesRunner.ChunkResult result = runner.runNextChunk();
 
-    assertThat(result.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.NO_WORK);
+    assertThat(result.type()).isEqualTo(DailyLeagueEntriesRunner.ChunkResult.Type.NO_WORK);
   }
 
   // ── Phase 1: 버킷 자동 생성 ────────────────────────────────────────
@@ -290,14 +289,14 @@ class DailySeedRunnerTest {
         b.getTier() == Tier.DIAMOND && b.getPatch().equals("15.23")
     ))).willReturn(savedBucket);
 
-    SeedBootstrapResult seedResult = new SeedBootstrapResult(1, 10, 3, 0, 0);
-    given(seedBootstrapExecutor.execute(argThat(cmd ->
-        "DIAMOND".equals(cmd.tier()) && cmd.startPage() == 1
+    LeagueEntriesFetchResult seedResult = new LeagueEntriesFetchResult(1, 10, 3);
+    given(leagueEntriesFetcher.execute(argThat(cmd ->
+        "DIAMOND".equals(cmd.tier()) && cmd.page() == 1
     ))).willReturn(seedResult);
 
-    DailySeedRunner.ChunkResult chunk = runner.runNextChunk();
+    DailyLeagueEntriesRunner.ChunkResult chunk = runner.runNextChunk();
 
-    assertThat(chunk.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.DIA_EME_PAGE);
+    assertThat(chunk.type()).isEqualTo(DailyLeagueEntriesRunner.ChunkResult.Type.NON_APEX_PAGE);
     assertThat(chunk.tier()).isEqualTo(Tier.DIAMOND);
     // 버킷 생성 시 save 1회 이상 호출됨을 검증
     verify(coverageBucketRepository, atLeastOnce()).save(argThat(b ->
@@ -317,10 +316,10 @@ class DailySeedRunnerTest {
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
     given(patchVersionService.currentPatchVersion()).willReturn(Optional.empty());
 
-    DailySeedRunner.ChunkResult result = runner.runNextChunk();
+    DailyLeagueEntriesRunner.ChunkResult result = runner.runNextChunk();
 
-    assertThat(result.type()).isEqualTo(DailySeedRunner.ChunkResult.Type.NO_WORK);
-    verify(seedBootstrapExecutor, never()).execute(any());
+    assertThat(result.type()).isEqualTo(DailyLeagueEntriesRunner.ChunkResult.Type.NO_WORK);
+    verify(leagueEntriesFetcher, never()).execute(any());
     verify(coverageBucketRepository, never()).findByPatchAndTier(any(), any());
   }
 

@@ -249,7 +249,7 @@ class CollectMatchIdsRunnerTest {
     return Summoner.builder()
         .puuid(puuid)
         .lastKnownTier(tier)
-        .seededAt(OffsetDateTime.now().minusHours(1))
+        .leagueEntryFetchedAt(OffsetDateTime.now().minusHours(1))
         .createdAt(OffsetDateTime.now())
         .updatedAt(OffsetDateTime.now())
         .build();

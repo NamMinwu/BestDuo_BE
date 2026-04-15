@@ -9,26 +9,26 @@ import org.junit.jupiter.api.Test;
 class SummonerPhase2Test {
 
   @Test
-  @DisplayName("create() 시 seededAt, matchIdsCollectedAt은 null로 초기화된다")
-  void createInitializesSeededAtAndMatchIdsCollectedAtAsNull() {
+  @DisplayName("create() 시 leagueEntryFetchedAt, matchIdsCollectedAt은 null로 초기화된다")
+  void createInitializesLeagueEntryFetchedAtAndMatchIdsCollectedAtAsNull() {
     Summoner summoner = Summoner.create("p-phase2");
 
-    assertThat(summoner.getSeededAt()).isNull();
+    assertThat(summoner.getLeagueEntryFetchedAt()).isNull();
     assertThat(summoner.getMatchIdsCollectedAt()).isNull();
   }
 
   @Test
-  @DisplayName("markSeeded()는 seededAt을 갱신한다")
-  void markSeededSetsSeededAtAndClearsOldValue() {
+  @DisplayName("markLeagueEntryFetched()는 leagueEntryFetchedAt을 갱신한다")
+  void markLeagueEntryFetchedSetsTimestampAndUpdatesOnSubsequentCall() {
     Summoner summoner = Summoner.create("p-seed");
     OffsetDateTime t1 = OffsetDateTime.now().minusMinutes(10);
     OffsetDateTime t2 = OffsetDateTime.now().minusMinutes(1);
 
-    summoner.markSeeded(t1);
-    assertThat(summoner.getSeededAt()).isEqualTo(t1);
+    summoner.markLeagueEntryFetched(t1);
+    assertThat(summoner.getLeagueEntryFetchedAt()).isEqualTo(t1);
 
-    summoner.markSeeded(t2);
-    assertThat(summoner.getSeededAt()).isEqualTo(t2);
+    summoner.markLeagueEntryFetched(t2);
+    assertThat(summoner.getLeagueEntryFetchedAt()).isEqualTo(t2);
   }
 
   @Test
@@ -46,39 +46,39 @@ class SummonerPhase2Test {
   @DisplayName("needsMatchIdsCollection() — matchIdsCollectedAt이 null이면 true")
   void needsMatchIdsCollectionReturnsTrueWhenNeverCollected() {
     Summoner summoner = Summoner.create("p-needs");
-    OffsetDateTime seededAt = OffsetDateTime.now().minusMinutes(5);
-    summoner.markSeeded(seededAt);
+    OffsetDateTime fetchedAt = OffsetDateTime.now().minusMinutes(5);
+    summoner.markLeagueEntryFetched(fetchedAt);
 
     assertThat(summoner.needsMatchIdsCollection()).isTrue();
   }
 
   @Test
-  @DisplayName("needsMatchIdsCollection() — 수집 시점이 seeded 이전이면 true")
-  void needsMatchIdsCollectionReturnsTrueWhenCollectedBeforeSeeded() {
+  @DisplayName("needsMatchIdsCollection() — 수집 시점이 leagueEntryFetchedAt 이전이면 true")
+  void needsMatchIdsCollectionReturnsTrueWhenCollectedBeforeFetched() {
     Summoner summoner = Summoner.create("p-stale");
     OffsetDateTime collectedAt = OffsetDateTime.now().minusHours(2);
-    OffsetDateTime seededAt = OffsetDateTime.now().minusHours(1);
+    OffsetDateTime fetchedAt = OffsetDateTime.now().minusHours(1);
     summoner.markMatchIdsCollected(collectedAt);
-    summoner.markSeeded(seededAt);
+    summoner.markLeagueEntryFetched(fetchedAt);
 
     assertThat(summoner.needsMatchIdsCollection()).isTrue();
   }
 
   @Test
-  @DisplayName("needsMatchIdsCollection() — 수집 시점이 seeded 이후이면 false")
-  void needsMatchIdsCollectionReturnsFalseWhenCollectedAfterSeeded() {
+  @DisplayName("needsMatchIdsCollection() — 수집 시점이 leagueEntryFetchedAt 이후이면 false")
+  void needsMatchIdsCollectionReturnsFalseWhenCollectedAfterFetched() {
     Summoner summoner = Summoner.create("p-fresh");
-    OffsetDateTime seededAt = OffsetDateTime.now().minusHours(2);
+    OffsetDateTime fetchedAt = OffsetDateTime.now().minusHours(2);
     OffsetDateTime collectedAt = OffsetDateTime.now().minusHours(1);
-    summoner.markSeeded(seededAt);
+    summoner.markLeagueEntryFetched(fetchedAt);
     summoner.markMatchIdsCollected(collectedAt);
 
     assertThat(summoner.needsMatchIdsCollection()).isFalse();
   }
 
   @Test
-  @DisplayName("needsMatchIdsCollection() — seededAt이 null이면 false")
-  void needsMatchIdsCollectionReturnsFalseWhenNeverSeeded() {
+  @DisplayName("needsMatchIdsCollection() — leagueEntryFetchedAt이 null이면 false")
+  void needsMatchIdsCollectionReturnsFalseWhenNeverFetched() {
     Summoner summoner = Summoner.create("p-notseeded");
 
     assertThat(summoner.needsMatchIdsCollection()).isFalse();

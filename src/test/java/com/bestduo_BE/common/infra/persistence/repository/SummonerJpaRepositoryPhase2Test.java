@@ -26,16 +26,16 @@ class SummonerJpaRepositoryPhase2Test {
   private SummonerJpaRepository repository;
 
   @Test
-  @DisplayName("findMatchIdsPendingSummoners — seededAt 최신 순, 미수집 summoner 우선 반환")
+  @DisplayName("findMatchIdsPendingSummoners — leagueEntryFetchedAt 최신 순, 미수집 summoner 우선 반환")
   void findMatchIdsPendingSummonersReturnsNeverCollectedFirst() {
     OffsetDateTime base = OffsetDateTime.now().minusHours(3);
 
-    // seededAt만 있고 수집 이력 없음 → 대상
+    // leagueEntryFetchedAt만 있고 수집 이력 없음 → 대상
     Summoner newer = savedSummoner("newer", base.plusHours(2), null);
     Summoner older = savedSummoner("older", base.plusHours(1), null);
-    // 수집 시점이 seededAt 이후 → 제외
+    // 수집 시점이 leagueEntryFetchedAt 이후 → 제외
     Summoner done = savedSummoner("done", base, base.plusMinutes(30));
-    // seededAt 없음 → 제외
+    // leagueEntryFetchedAt 없음 → 제외
     savedSummoner("no-seed", null, null);
 
     List<Summoner> targets = repository.findMatchIdsPendingSummoners(10);
@@ -46,12 +46,12 @@ class SummonerJpaRepositoryPhase2Test {
   }
 
   @Test
-  @DisplayName("findMatchIdsPendingSummoners — 수집 시점이 seededAt 이전이면 재수집 대상에 포함된다")
-  void findMatchIdsPendingSummonersIncludesSummonerWhereCollectedBeforeSeeded() {
-    OffsetDateTime seededAt = OffsetDateTime.now().minusHours(1);
-    OffsetDateTime collectedAt = OffsetDateTime.now().minusHours(2); // seededAt보다 이전
+  @DisplayName("findMatchIdsPendingSummoners — 수집 시점이 leagueEntryFetchedAt 이전이면 재수집 대상에 포함된다")
+  void findMatchIdsPendingSummonersIncludesSummonerWhereCollectedBeforeFetched() {
+    OffsetDateTime fetchedAt = OffsetDateTime.now().minusHours(1);
+    OffsetDateTime collectedAt = OffsetDateTime.now().minusHours(2); // fetchedAt보다 이전
 
-    Summoner stale = savedSummoner("stale", seededAt, collectedAt);
+    Summoner stale = savedSummoner("stale", fetchedAt, collectedAt);
 
     List<Summoner> targets = repository.findMatchIdsPendingSummoners(10);
 
@@ -72,15 +72,15 @@ class SummonerJpaRepositoryPhase2Test {
   }
 
   @Test
-  @DisplayName("markSeeded — seededAt 컬럼이 DB에 저장된다")
-  void markSeededPersistsToDb() {
+  @DisplayName("markLeagueEntryFetched — seeded_at 컬럼이 DB에 저장된다")
+  void markLeagueEntryFetchedPersistsToDb() {
     repository.save(Summoner.create("p-mark"));
-    OffsetDateTime seededAt = OffsetDateTime.now().minusMinutes(5);
+    OffsetDateTime fetchedAt = OffsetDateTime.now().minusMinutes(5);
 
-    repository.markSeeded("p-mark", seededAt);
+    repository.markLeagueEntryFetched("p-mark", fetchedAt);
 
     Summoner updated = repository.findById("p-mark").orElseThrow();
-    assertThat(updated.getSeededAt()).isNotNull();
+    assertThat(updated.getLeagueEntryFetchedAt()).isNotNull();
   }
 
   @Test
@@ -95,15 +95,14 @@ class SummonerJpaRepositoryPhase2Test {
     assertThat(updated.getMatchIdsCollectedAt()).isNotNull();
   }
 
-  private Summoner savedSummoner(String puuid, OffsetDateTime seededAt, OffsetDateTime matchIdsCollectedAt) {
+  private Summoner savedSummoner(String puuid, OffsetDateTime leagueEntryFetchedAt, OffsetDateTime matchIdsCollectedAt) {
     OffsetDateTime now = OffsetDateTime.now();
     Summoner s = Summoner.builder()
         .puuid(puuid)
         .lastMatchStartTime(null)
         .lastKnownTier(null)
         .tierObservedAt(null)
-        .lastSeenPatch(null)
-        .seededAt(seededAt)
+        .leagueEntryFetchedAt(leagueEntryFetchedAt)
         .matchIdsCollectedAt(matchIdsCollectedAt)
         .createdAt(now)
         .updatedAt(now)

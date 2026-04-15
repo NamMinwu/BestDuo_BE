@@ -4,7 +4,7 @@ import com.bestduo_BE.common.application.PatchVersionService;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.config.PipelineProperties;
-import com.bestduo_BE.ingest.application.MatchIngestWorker;
+import com.bestduo_BE.ingest.application.MatchIngestRunner;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -17,9 +17,9 @@ import org.springframework.stereotype.Component;
  *
  * <p>Stage 우선순위:
  * <ol>
- *   <li>Stage 1 — {@link DailySeedRunner}: summoner 등록/갱신 (일일 예산 소진 전)</li>
+ *   <li>Stage 1 — {@link DailyLeagueEntriesRunner}: summoner 등록/갱신 (일일 예산 소진 전)</li>
  *   <li>Stage 2 — {@link CollectMatchIdsRunner}: matchIds 수집 (일일 예산 소진 전)</li>
- *   <li>Stage 3 — {@link MatchIngestWorker}: match 상세 수집 (상시)</li>
+ *   <li>Stage 3 — {@link MatchIngestRunner}: match 상세 수집 (상시)</li>
  * </ol>
  *
  * <p>429 발생 시 {@code rateLimitSleepMs}(기본 60초) sleep 후 재시도.
@@ -33,9 +33,9 @@ public class PipelineRunner {
 
   private static final long RATE_LIMIT_SLEEP_MS = 60_000L;
 
-  private final DailySeedRunner dailySeedRunner;
+  private final DailyLeagueEntriesRunner dailyLeagueEntriesRunner;
   private final CollectMatchIdsRunner collectMatchIdsRunner;
-  private final MatchIngestWorker matchIngestWorker;
+  private final MatchIngestRunner matchIngestRunner;
   private final PatchVersionService patchVersionService;
   private final PipelineProperties props;
 
@@ -79,9 +79,9 @@ public class PipelineRunner {
    */
   void executeTick() throws InterruptedException {
     // Stage 1: Seed (일일 예산 내)
-    if (dailySeedRunner.hasWorkToday()) {
+    if (dailyLeagueEntriesRunner.hasWorkToday()) {
       log.debug("Stage 1 실행");
-      dailySeedRunner.runNextChunk();
+      dailyLeagueEntriesRunner.runNextChunk();
       return;
     }
 
@@ -96,7 +96,7 @@ public class PipelineRunner {
     String currentPatch = patchVersionService.currentPatchVersion().orElse(null);
     Tier priorityTier = props.getStage3PriorityTier();
     log.debug("Stage 3 실행 (currentPatch={}, priorityTier={})", currentPatch, priorityTier);
-    MatchIngestWorker.Result result = matchIngestWorker.executeWithPriority(
+    MatchIngestRunner.Result result = matchIngestRunner.executeWithPriority(
         props.getIngestBatchSize(), priorityTier, currentPatch);
 
     if (result.picked() == 0) {
