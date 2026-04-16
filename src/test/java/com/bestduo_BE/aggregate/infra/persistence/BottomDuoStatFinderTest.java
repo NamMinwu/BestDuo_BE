@@ -6,7 +6,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.bestduo_BE.aggregate.application.port.BottomDuoStatFinder;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAggregate;
 import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggregateJpaRepository;
@@ -21,16 +20,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class BottomDuoStatFinderImplTest {
+class BottomDuoStatFinderTest {
 
   @Mock
   private BottomDuoStatAggregateJpaRepository repository;
 
-  private BottomDuoStatFinderImpl finder;
+  private BottomDuoStatFinder finder;
 
   @BeforeEach
   void setUp() {
-    finder = new BottomDuoStatFinderImpl(repository);
+    finder = new BottomDuoStatFinder(repository);
   }
 
   @Test

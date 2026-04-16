@@ -13,16 +13,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class BottomDuoMatchupAggregatorImplTest {
+class BottomDuoMatchupAggregatorTest {
 
   @Mock
   private BottomDuoMatchupAggregateJpaRepository repository;
 
-  private BottomDuoMatchupAggregatorImpl aggregator;
+  private BottomDuoMatchupAggregator aggregator;
 
   @BeforeEach
   void setUp() {
-    aggregator = new BottomDuoMatchupAggregatorImpl(repository);
+    aggregator = new BottomDuoMatchupAggregator(repository);
   }
 
   @Test

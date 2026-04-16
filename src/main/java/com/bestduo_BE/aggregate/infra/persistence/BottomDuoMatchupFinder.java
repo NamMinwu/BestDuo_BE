@@ -1,19 +1,36 @@
 package com.bestduo_BE.aggregate.infra.persistence;
 
-import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupFinder;
-import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggregateJpaRepository;
+import com.bestduo_BE.common.domain.model.Tier;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service
 @RequiredArgsConstructor
-public class BottomDuoMatchupFinderImpl implements BottomDuoMatchupFinder {
+public class BottomDuoMatchupFinder {
 
   private final BottomDuoMatchupAggregateJpaRepository repository;
 
-  @Override
+  public enum SortKey {
+    PICKRATE_ASC, PICKRATE_DESC,
+    WINRATE_ASC,  WINRATE_DESC
+  }
+
+  public record MatchupRow(
+      String myAdcChampionId,
+      String mySupChampionId,
+      String oppAdcChampionId,
+      String oppSupChampionId,
+      Tier tier,
+      int wins,
+      int games
+  ) {
+    public double winRate() {
+      return games == 0 ? 0 : (double) wins / games;
+    }
+  }
+
   public int findMyDuoTotalGames(Tier tier, String patchVersionOrNull, String myAdcChampionId, String mySupChampionId) {
     String patchVersion = resolvePatchVersion(patchVersionOrNull);
     if (patchVersion == null) {
@@ -22,7 +39,6 @@ public class BottomDuoMatchupFinderImpl implements BottomDuoMatchupFinder {
     return repository.sumGamesOfMyDuo(patchVersion, tier.name(), myAdcChampionId, mySupChampionId);
   }
 
-  @Override
   public List<MatchupRow> findMatchups(
       Tier tier,
       String patchVersionOrNull,
@@ -64,7 +80,6 @@ public class BottomDuoMatchupFinderImpl implements BottomDuoMatchupFinder {
         .toList();
   }
 
-  @Override
   public List<MatchupRow> findCountersByLowestWinRate(
       Tier tier,
       String patchVersionOrNull,
@@ -106,7 +121,6 @@ public class BottomDuoMatchupFinderImpl implements BottomDuoMatchupFinder {
     return t.isEmpty() ? null : t;
   }
 
-  @Override
   public String resolvePatchVersion(String patchVersionOrNull) {
     String patchVersion = blankToNull(patchVersionOrNull);
     if (patchVersion != null) {

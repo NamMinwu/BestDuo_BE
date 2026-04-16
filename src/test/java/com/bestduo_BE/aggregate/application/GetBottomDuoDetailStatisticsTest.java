@@ -6,8 +6,8 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
-import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupFinder;
-import com.bestduo_BE.aggregate.application.port.ChampionMetaClient;
+import com.bestduo_BE.aggregate.infra.persistence.BottomDuoMatchupFinder;
+import com.bestduo_BE.common.application.port.ChampionMetaClient;
 import com.bestduo_BE.common.domain.model.ChampionMeta;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoDetailStatisticsResponse;

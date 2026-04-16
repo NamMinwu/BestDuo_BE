@@ -1,6 +1,6 @@
 package com.bestduo_BE.aggregate.application;
 
-import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupAggregator;
+import com.bestduo_BE.aggregate.infra.persistence.BottomDuoMatchupAggregator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

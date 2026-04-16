@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
-import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupFinder;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoMatchupAggregate;
 import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggregateJpaRepository;
@@ -21,16 +20,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class BottomDuoMatchupFinderImplTest {
+class BottomDuoMatchupFinderTest {
 
   @Mock
   private BottomDuoMatchupAggregateJpaRepository repository;
 
-  private BottomDuoMatchupFinderImpl finder;
+  private BottomDuoMatchupFinder finder;
 
   @BeforeEach
   void setUp() {
-    finder = new BottomDuoMatchupFinderImpl(repository);
+    finder = new BottomDuoMatchupFinder(repository);
   }
 
   @Test

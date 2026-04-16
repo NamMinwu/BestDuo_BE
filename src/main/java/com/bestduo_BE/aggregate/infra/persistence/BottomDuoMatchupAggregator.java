@@ -1,18 +1,15 @@
 package com.bestduo_BE.aggregate.infra.persistence;
 
-import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupAggregator;
 import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggregateJpaRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-
-@Component
+@Service
 @RequiredArgsConstructor
-public class BottomDuoMatchupAggregatorImpl implements BottomDuoMatchupAggregator {
+public class BottomDuoMatchupAggregator {
 
   private final BottomDuoMatchupAggregateJpaRepository repository;
 
-  @Override
   public int aggregateAll() {
     return repository.upsertAllFromRaw();
   }

@@ -1,18 +1,39 @@
 package com.bestduo_BE.aggregate.infra.persistence;
 
-import com.bestduo_BE.aggregate.application.port.BottomDuoStatFinder;
-import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggregateJpaRepository;
+import com.bestduo_BE.common.domain.model.Tier;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service
 @RequiredArgsConstructor
-public class BottomDuoStatFinderImpl implements BottomDuoStatFinder {
+public class BottomDuoStatFinder {
+
   private final BottomDuoStatAggregateJpaRepository repository;
 
-  @Override
+  public enum SortKey {
+    PICKRATE_ASC, PICKRATE_DESC,
+    WINRATE_ASC,  WINRATE_DESC,
+    DUO_TIER_ASC, DUO_TIER_DESC,
+    RANKING_ASC,  RANKING_DESC
+  }
+
+  public record StatRow(
+      String adcChampionId,
+      String supChampionId,
+      Tier tier,
+      int wins,
+      int games,
+      Integer duoTier,
+      Integer ranking,
+      Integer rankDelta
+  ) {
+    public double winRate() {
+      return games == 0 ? 0 : (double) wins / games;
+    }
+  }
+
   public int findTierTotalGames(Tier tier, String patchVersionOrNull) {
     String patchVersion = resolvePatchVersion(patchVersionOrNull);
     if (patchVersion == null) {
@@ -21,15 +42,15 @@ public class BottomDuoStatFinderImpl implements BottomDuoStatFinder {
     return repository.sumGamesByTier(patchVersion, tier.name());
   }
 
-  @Override
-  public List<StatRow> findStats(Tier tier,
+  public List<StatRow> findStats(
+      Tier tier,
       String patchVersionOrNull,
       String adcChampionIdOrNull,
       String supChampionIdOrNull,
       SortKey sortKey,
       int tierTotalGamesForPickRate,
-      int maxRows) {
-
+      int maxRows
+  ) {
     int limit = Math.max(1, maxRows);
 
     String adc = blankToNull(adcChampionIdOrNull);
@@ -71,17 +92,11 @@ public class BottomDuoStatFinderImpl implements BottomDuoStatFinder {
     return t.isEmpty() ? null : t;
   }
 
-  @Override
   public String resolvePatchVersion(String patchVersionOrNull) {
-    return doResolvePatchVersion(patchVersionOrNull);
-  }
-
-  private String doResolvePatchVersion(String patchVersionOrNull) {
     String patchVersion = blankToNull(patchVersionOrNull);
     if (patchVersion != null) {
       return patchVersion;
     }
     return repository.findLatestPatchVersion();
   }
-
 }

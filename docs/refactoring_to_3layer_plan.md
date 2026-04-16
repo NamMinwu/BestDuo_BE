@@ -34,7 +34,7 @@ $ find src/main/java -path "*/infra/persistence/*Impl.java" | wc -l
 
 ---
 
-## 1. 목표 구조 (Phase 6 종료 시점)
+## 1. 목표 구조 (리팩토링 종료 시점)
 
 ```
 com.bestduo_BE/
@@ -100,7 +100,7 @@ com.bestduo_BE/
 
 **목표**: 리팩토링 중 회귀 방지
 
-- [ ] **0-1.** 현재 `dev` 브랜치에서 `refactor/phase6-3layer` 브랜치 생성
+- [ ] **0-1.** 현재 `dev` 브랜치에서 `refactor/3layer-transition` 브랜치 생성
 - [ ] **0-2.** 현재 통합 테스트가 모두 green인지 확인
   ```bash
   ./gradlew test
@@ -178,7 +178,7 @@ public class IngestMatchDetail {
 - [ ] `./gradlew compileJava` 통과
 - [ ] `./gradlew test` 통과
 - [ ] smoke test (Match ingest) 통과
-- [ ] **커밋**: `refactor: Phase 6-1 ingest 모듈 Port/Adapter 제거`
+- [ ] **커밋**: `refactor: 3-layer 전환 1단계 — ingest 모듈 Port/Adapter 제거`
 
 ---
 
@@ -220,7 +220,7 @@ public class IngestMatchDetail {
 #### 2-4. 검증 및 커밋
 - [ ] 컴파일 + 전체 테스트 통과
 - [ ] BottomDuo aggregate smoke test 통과
-- [ ] **커밋**: `refactor: Phase 6-2 aggregate 모듈 정리 + ChampionMetaClient common 이동`
+- [ ] **커밋**: `refactor: 3-layer 전환 2단계 — aggregate 모듈 정리 + ChampionMetaClient common 이동`
 
 ---
 
@@ -238,7 +238,7 @@ public class IngestMatchDetail {
 
 #### 3-3. 검증 및 커밋
 - [ ] 컴파일 + 전체 테스트 통과
-- [ ] **커밋**: `refactor: Phase 6-3 leagueentry/common 모듈 Port 제거`
+- [ ] **커밋**: `refactor: 3-layer 전환 3단계 — leagueentry/common 모듈 Port 제거`
 
 ---
 
@@ -258,21 +258,21 @@ public class IngestMatchDetail {
 
 #### 4-4. 검증 및 커밋
 - [ ] 컴파일 + 전체 테스트 통과
-- [ ] **커밋**: `refactor: Phase 6-4 폴더 구조 3-layer 일관화`
+- [ ] **커밋**: `refactor: 3-layer 전환 4단계 — 폴더 구조 일관화`
 
 ---
 
 ### Phase 5: 문서화 + ADR 갱신 (0.5일)
 
 #### 5-1. 새 ADR 작성
-- [ ] `docs/adr_phase6_3layer_transition.md` 신규 작성
+- [ ] `docs/adr_3layer_transition.md` 신규 작성
    - Phase 5의 "경량 헥사고날" 결정을 어떻게 재평가했는지
    - 무엇을 제거했고 왜 제거했는지
    - Riot API와 ChampionMetaClient만 Port로 남긴 이유
    - 향후 Port 추가 기준 (체크리스트)
 
 #### 5-2. 기존 ADR 업데이트
-- [ ] `docs/adr_phase5_lightweight_hexagonal.md` 상단에 "Superseded by Phase 6" 표기
+- [ ] `docs/adr_phase5_lightweight_hexagonal.md` 상단에 "Superseded by 3-Layer Transition" 표기
 
 #### 5-3. README/architecture.md 갱신
 - [ ] `docs/architecture.md`에 새 폴더 구조 다이어그램 추가
@@ -280,7 +280,7 @@ public class IngestMatchDetail {
 
 #### 5-4. 최종 PR
 - [ ] `dev` 브랜치로 PR 생성
-   - 제목: `refactor: Phase 6 — 경량 헥사고날에서 3-Layer로 전환`
+   - 제목: `refactor: 경량 헥사고날에서 3-Layer로 전환`
    - 본문: "왜 전환했는지" + "무엇이 바뀌었는지" + "테스트 결과"
 
 ---
@@ -346,5 +346,5 @@ JPA Repository, 단순 wrapper, 사내 유틸 → 항상 직접 사용.
 ## 7. 다음 액션
 
 1. 이 계획을 검토하고 동의/수정
-2. `Phase 0` 시작 (`refactor/phase6-3layer` 브랜치 생성)
+2. `Phase 0` 시작 (`refactor/3layer-transition` 브랜치 생성)
 3. 매 Phase 완료마다 커밋 + 사용자 확인

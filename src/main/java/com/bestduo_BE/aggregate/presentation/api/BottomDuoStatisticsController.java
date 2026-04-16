@@ -2,7 +2,7 @@ package com.bestduo_BE.aggregate.presentation.api;
 
 
 import com.bestduo_BE.aggregate.application.GetBottomDuoStatistics;
-import com.bestduo_BE.aggregate.application.port.BottomDuoStatFinder;
+import com.bestduo_BE.aggregate.infra.persistence.BottomDuoStatFinder;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoStatisticsResponse;
 import io.swagger.v3.oas.annotations.Operation;
