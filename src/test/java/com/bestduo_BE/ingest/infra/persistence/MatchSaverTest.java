@@ -18,7 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
-class MatchSaverImplTest {
+class MatchSaverTest {
 
   @Mock
   private MatchJpaRepository matchRepository;
@@ -26,11 +26,11 @@ class MatchSaverImplTest {
   @Mock
   private ObjectMapper objectMapper;
 
-  private MatchSaverImpl saver;
+  private MatchSaver saver;
 
   @BeforeEach
   void setUp() {
-    saver = new MatchSaverImpl(matchRepository, objectMapper);
+    saver = new MatchSaver(matchRepository, objectMapper);
   }
 
   @Test

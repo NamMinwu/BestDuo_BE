@@ -1,34 +1,30 @@
 package com.bestduo_BE.ingest.infra.persistence;
 
-import com.bestduo_BE.ingest.application.port.MatchQueueDispatcher;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
 import com.bestduo_BE.common.infra.persistence.repository.MatchQueueJpaRepository;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Component
+@Service
 @RequiredArgsConstructor
-public class MatchQueueDispatcherImpl implements MatchQueueDispatcher {
+public class MatchQueueDispatcher {
 
   private final MatchQueueJpaRepository repo;
 
-  @Override
   @Transactional
   public int recoverStaleRunning(int staleMinutes) {
     return repo.recoverStaleRunning(staleMinutes);
   }
 
-  @Override
   @Transactional
   public List<Item> pickAndLock(int limit, int maxRetry, int errorCooldownMinutes) {
     return pickAndLock(limit, maxRetry, errorCooldownMinutes, null);
   }
 
-  @Override
   @Transactional
   public List<Item> pickAndLock(int limit, int maxRetry, int errorCooldownMinutes, Tier requestedTier) {
     List<Item> out = new ArrayList<>();
@@ -46,27 +42,23 @@ public class MatchQueueDispatcherImpl implements MatchQueueDispatcher {
     return out;
   }
 
-  @Override
   @Transactional
   public void markDone(String matchId) {
     MatchQueue mq = repo.findById(matchId).orElseThrow();
     mq.markDone();
   }
 
-  @Override
   @Transactional
   public void markError(String matchId, String message) {
     MatchQueue mq = repo.findById(matchId).orElseThrow();
     mq.markError(message);
   }
 
-  @Override
   @Transactional
   public void unlockToReady(String matchId) {
     repo.unlockToReady(matchId);
   }
 
-  @Override
   @Transactional
   public List<Item> pickAndLockWithPriority(int limit, int maxRetry, int errorCooldownMinutes,
       Tier requestedTier, String currentPatch) {
@@ -99,4 +91,6 @@ public class MatchQueueDispatcherImpl implements MatchQueueDispatcher {
     }
     return requestedTier.name();
   }
+
+  public record Item(String matchId, Tier tier, int priority, String patch) {}
 }

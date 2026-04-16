@@ -1,9 +1,9 @@
 package com.bestduo_BE.common.infra.persistence.repository;
 
-import com.bestduo_BE.ingest.application.port.MatchQueueErrorTop;
-import com.bestduo_BE.ingest.application.port.MatchQueueRetryCount;
-import com.bestduo_BE.ingest.application.port.MatchQueueStatusCount;
 import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
+import com.bestduo_BE.common.infra.persistence.projection.MatchQueueErrorTop;
+import com.bestduo_BE.common.infra.persistence.projection.MatchQueueRetryCount;
+import com.bestduo_BE.common.infra.persistence.projection.MatchQueueStatusCount;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.jpa.repository.Query;

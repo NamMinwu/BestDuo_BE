@@ -22,16 +22,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
 @ExtendWith(MockitoExtension.class)
-class BottomDuoRawSaverImplTest {
+class BottomDuoRawSaverTest {
 
   @Mock
   private BottomDuoRawJpaRepository repository;
 
-  private BottomDuoRawSaverImpl saver;
+  private BottomDuoRawSaver saver;
 
   @BeforeEach
   void setUp() {
-    saver = new BottomDuoRawSaverImpl(repository);
+    saver = new BottomDuoRawSaver(repository);
   }
 
   @Test

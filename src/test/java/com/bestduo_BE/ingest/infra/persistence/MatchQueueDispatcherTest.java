@@ -6,11 +6,11 @@ import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.bestduo_BE.ingest.application.port.MatchQueueDispatcher.Item;
 import com.bestduo_BE.common.domain.model.QueueStatus;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
 import com.bestduo_BE.common.infra.persistence.repository.MatchQueueJpaRepository;
+import com.bestduo_BE.ingest.infra.persistence.MatchQueueDispatcher.Item;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -22,16 +22,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class MatchQueueDispatcherImplTest {
+class MatchQueueDispatcherTest {
 
   @Mock
   private MatchQueueJpaRepository repository;
 
-  private MatchQueueDispatcherImpl coordinator;
+  private MatchQueueDispatcher coordinator;
 
   @BeforeEach
   void setUp() {
-    coordinator = new MatchQueueDispatcherImpl(repository);
+    coordinator = new MatchQueueDispatcher(repository);
   }
 
   @Test

@@ -7,7 +7,7 @@ import static org.mockito.Mockito.verify;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.config.PipelineProperties;
-import com.bestduo_BE.ingest.application.port.MatchQueueDispatcher;
+import com.bestduo_BE.ingest.infra.persistence.MatchQueueDispatcher;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

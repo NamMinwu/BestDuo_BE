@@ -1,6 +1,5 @@
 package com.bestduo_BE.ingest.infra.persistence;
 
-import com.bestduo_BE.ingest.application.port.BottomDuoRawSaver;
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.infra.persistence.entity.BottomDuoRawEntity;
 import com.bestduo_BE.common.infra.persistence.repository.BottomDuoRawJpaRepository;
@@ -8,16 +7,15 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service
 @RequiredArgsConstructor
 @Slf4j
-public class BottomDuoRawSaverImpl implements BottomDuoRawSaver {
+public class BottomDuoRawSaver {
 
   private final BottomDuoRawJpaRepository repository;
 
-  @Override
   public void saveAllIdempotent(List<BottomDuoRaw> raws) {
     if (raws == null || raws.isEmpty()) return;
 

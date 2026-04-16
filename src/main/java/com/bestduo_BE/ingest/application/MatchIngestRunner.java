@@ -3,7 +3,7 @@ package com.bestduo_BE.ingest.application;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
 import com.bestduo_BE.config.PipelineProperties;
-import com.bestduo_BE.ingest.application.port.MatchQueueDispatcher;
+import com.bestduo_BE.ingest.infra.persistence.MatchQueueDispatcher;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
