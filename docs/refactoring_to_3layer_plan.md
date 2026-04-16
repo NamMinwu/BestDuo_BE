@@ -242,23 +242,40 @@ public class IngestMatchDetail {
 
 ---
 
-### Phase 4: 폴더 구조 정리 + 패키지 일관화 (1일)
+### Phase 4: 폴더 구조 정합성 검증 + 의도적 편차 문서화 (0.5일)
 
-#### 4-1. 누락된 `presentation/` 폴더 생성
-- [ ] `pipeline/`에 `presentation/api/` 생성, 기존 Controller 이동
-- [ ] 모든 모듈이 `presentation/ + application/ + infra/` 3개 폴더를 갖도록 일관화
+> **Phase 1~3 완료 시점에서 재평가한 결과**, 원안의 4-1/4-2는 실제로 적용할 대상이 없음.
+> Phase 4의 본질은 "구조의 일관성"이 아니라 **"의존성 방향의 일관성"** (presentation → application → infra)이며,
+> 이 기준은 Phase 1~3에서 이미 달성됨. 따라서 이 단계는 **검증 + 편차 문서화**로 축소.
 
-#### 4-2. 빈 `domain/` 폴더 정리
-- [ ] 각 모듈별로 `domain/`이 있는지 확인
-- [ ] 비어있으면 삭제, 내용이 있으면 `common/domain/`으로 통합 검토
+#### 4-1. ~~누락된 `presentation/` 폴더 생성~~ → **N/A (의도적 편차)**
+- [x] **`pipeline/` — `application/`만 존재**
+   - 사유: `@Scheduled` 배치 오케스트레이션 모듈로 HTTP 엔드포인트가 없음. `presentation/`이 없는 것이 누락이 아니라 **모듈 성격을 정확히 표현하는 결과**.
+   - 빈 placeholder 폴더 생성은 YAGNI 위반 → 만들지 않음.
+- [x] **`leagueentry/` — `infra/` 없음, `common/infra` 공유**
+   - 사유: 자체 엔티티가 없고 `common/infra/persistence`의 Repository를 직접 사용. 모듈마다 동일 Repository를 복제하는 것은 DRY 위반 → 현 구조 유지.
 
-#### 4-3. import 정리
-- [ ] IDE의 "Optimize Imports" 일괄 실행
-- [ ] 사용 안 하는 import 제거
+#### 4-2. ~~빈 `domain/` 폴더 정리~~ → **N/A**
+- [x] `common/domain/`은 `exception/model/service` 하위에 실제 코드 존재 (정리 불필요).
+- [x] 다른 모듈에는 `domain/` 폴더 자체가 없음 (정리 대상 없음).
+
+#### 4-3. import 정리 (선택)
+- [ ] 사용 안 하는 import 제거 (빌드/테스트 통과 시 생략 가능, IDE optimize로 일괄 처리하는 것이 효율적)
 
 #### 4-4. 검증 및 커밋
-- [ ] 컴파일 + 전체 테스트 통과
-- [ ] **커밋**: `refactor: 3-layer 전환 4단계 — 폴더 구조 일관화`
+- [ ] `./gradlew compileJava compileTestJava` 통과
+- [ ] `./gradlew test` 전체 green
+- [ ] **커밋**: `refactor: 3-layer 전환 4단계 — Phase 4 구조 검증 + 의도적 편차 문서화`
+
+#### 4-5. 모듈 구조 최종 스냅샷
+| 모듈 | presentation | application | infra | 비고 |
+|---|:---:|:---:|:---:|---|
+| `aggregate` | ✓ | ✓ | ✓ | 표준 3-layer |
+| `coverage` | ✓ | ✓ | ✓ | 표준 3-layer |
+| `ingest` | ✓ | ✓ | ✓ | 표준 3-layer |
+| `common` | ✓ | ✓ | ✓ | 공유 커널 + 외부 어댑터 (Port 2개 보존) |
+| `leagueentry` | ✓ | ✓ | — | 공유 인프라 사용 (DRY) |
+| `pipeline` | — | ✓ | — | 배치 오케스트레이션 (`@Scheduled` 전용) |
 
 ---
 
@@ -302,9 +319,9 @@ public class IngestMatchDetail {
 
 ## 4. 완료 기준 (Definition of Done)
 
-- [ ] `find src -path "*/application/port/*" | wc -l` → **2** (RiotApiPort + ChampionMetaClient)
-- [ ] `find src -name "*Impl.java" -path "*/infra/persistence/*" | wc -l` → **0**
-- [ ] 모든 모듈이 `presentation/ + application/ + infra/` 구조로 통일됨
+- [x] `find src -path "*/application/port/*" | wc -l` → **2** (RiotApiPort + ChampionMetaClient)
+- [x] `find src -name "*Impl.java" -path "*/infra/persistence/*" | wc -l` → **0**
+- [x] ~~모든 모듈이 `presentation/ + application/ + infra/` 구조로 통일됨~~ → **의존성 방향(presentation → application → infra) 일관성**으로 재정의. 모듈 성격에 따른 의도적 편차는 Phase 4-5 표 참조 (`pipeline`, `leagueentry`).
 - [ ] 전체 테스트 green
 - [ ] smoke test 5개 통과
 - [ ] 새 ADR 작성됨
