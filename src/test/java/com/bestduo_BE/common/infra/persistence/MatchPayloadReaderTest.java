@@ -21,7 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
-class MatchPayloadReaderImplTest {
+class MatchPayloadReaderTest {
 
   @Mock
   private MatchJpaRepository matchRepository;
@@ -29,11 +29,11 @@ class MatchPayloadReaderImplTest {
   @Mock
   private ObjectMapper objectMapper;
 
-  private MatchPayloadReaderImpl reader;
+  private MatchPayloadReader reader;
 
   @BeforeEach
   void setUp() {
-    reader = new MatchPayloadReaderImpl(matchRepository, objectMapper);
+    reader = new MatchPayloadReader(matchRepository, objectMapper);
   }
 
   @Test

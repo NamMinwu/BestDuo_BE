@@ -11,8 +11,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.common.application.PatchVersionService;
-import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
 import com.bestduo_BE.common.application.port.RiotApiPort;
+import com.bestduo_BE.common.infra.persistence.MatchQueueEnqueuer;
 import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;

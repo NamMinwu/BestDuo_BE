@@ -1,20 +1,18 @@
 package com.bestduo_BE.common.infra.persistence;
 
-import com.bestduo_BE.common.application.port.MatchPayloadReader;
 import com.bestduo_BE.common.infra.persistence.repository.MatchJpaRepository;
 import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
-@Component
+@Service
 @RequiredArgsConstructor
-public class MatchPayloadReaderImpl implements MatchPayloadReader {
+public class MatchPayloadReader {
 
   private final MatchJpaRepository matchRepository;
   private final ObjectMapper objectMapper;
 
-  @Override
   public RiotMatchDto read(String matchId) {
     var match = matchRepository.findById(matchId)
         .orElseThrow(() -> new IllegalStateException("Match not found: " + matchId));
