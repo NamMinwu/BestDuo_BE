@@ -39,6 +39,7 @@ public class PipelineRunner {
   private final MatchIngestRunner matchIngestRunner;
   private final PatchVersionService patchVersionService;
   private final PipelineProperties props;
+  private final PipelineMetrics pipelineMetrics;
 
   private Thread pipelineThread;
 
@@ -90,14 +91,26 @@ public class PipelineRunner {
     // Stage 1: Seed (일일 예산 내)
     if (dailyLeagueEntriesRunner.hasWorkToday()) {
       log.debug("Stage 1 실행");
-      dailyLeagueEntriesRunner.runNextChunk();
+      try {
+        dailyLeagueEntriesRunner.runNextChunk();
+        pipelineMetrics.recordStageCompleted(1, "success");
+      } catch (RuntimeException e) {
+        pipelineMetrics.recordStageCompleted(1, "error");
+        throw e;
+      }
       return;
     }
 
     // Stage 2: CollectMatchIds (일일 예산 내)
     if (collectMatchIdsRunner.hasPending()) {
       log.debug("Stage 2 실행");
-      collectMatchIdsRunner.runBatch();
+      try {
+        collectMatchIdsRunner.runBatch();
+        pipelineMetrics.recordStageCompleted(2, "success");
+      } catch (RuntimeException e) {
+        pipelineMetrics.recordStageCompleted(2, "error");
+        throw e;
+      }
       return;
     }
 
@@ -108,8 +121,15 @@ public class PipelineRunner {
         .orElse(null);
     Tier priorityTier = props.getStage3PriorityTier();
     log.debug("Stage 3 실행 (effectivePatch={}, priorityTier={})", effectivePatch, priorityTier);
-    MatchIngestRunner.Result result = matchIngestRunner.executeWithPriority(
-        props.getIngestBatchSize(), priorityTier, effectivePatch);
+    MatchIngestRunner.Result result;
+    try {
+      result = matchIngestRunner.executeWithPriority(
+          props.getIngestBatchSize(), priorityTier, effectivePatch);
+      pipelineMetrics.recordStageCompleted(3, "success");
+    } catch (RuntimeException e) {
+      pipelineMetrics.recordStageCompleted(3, "error");
+      throw e;
+    }
 
     if (result.picked() == 0) {
       log.debug("match_queue 비어있음. {}ms 대기", props.getPollingIntervalMs());
