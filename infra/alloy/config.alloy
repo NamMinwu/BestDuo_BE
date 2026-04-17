@@ -1,0 +1,29 @@
+// Grafana Alloy config — scrapes Spring Boot /actuator/prometheus and forwards to Grafana Cloud.
+//
+// Required env vars on the Railway Alloy service:
+//   GRAFANA_CLOUD_URL    e.g. https://prometheus-prod-XX-prod-XX-XXXX.grafana.net/api/prom/push
+//   GRAFANA_CLOUD_USER   numeric instance id
+//   GRAFANA_CLOUD_TOKEN  Access Policy Token with scope: metrics:write
+//   TARGET_APP_ADDRESS   Spring Boot private-network address, e.g. bestduo-be.railway.internal:8080
+
+prometheus.scrape "bestduo_be" {
+  targets = [{
+    __address__      = sys.env("TARGET_APP_ADDRESS"),
+    __metrics_path__ = "/actuator/prometheus",
+  }]
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  job_name        = "bestduo-be"
+  scrape_interval = "30s"
+  scrape_timeout  = "10s"
+}
+
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_CLOUD_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_CLOUD_USER")
+      password = sys.env("GRAFANA_CLOUD_TOKEN")
+    }
+  }
+}
