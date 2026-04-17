@@ -18,7 +18,7 @@ spring:
 #      hibernate.order_inserts: true
 #      hibernate.order_updates: true
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
 
 logging:
   level:

@@ -1,0 +1,4 @@
+-- V1 baseline marker
+-- 실제 스키마는 기존 프로덕션 DB가 이미 보유하고 있으며(ddl-auto: update 로 생성된 상태),
+-- spring.flyway.baseline-on-migrate=true 설정에 의해 Flyway 가 이 버전을 baseline 으로 기록하고 건너뜁니다.
+-- 이후 모든 스키마 변경은 V2 부터 Flyway 마이그레이션으로만 관리합니다.
