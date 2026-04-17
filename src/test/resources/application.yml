@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  flyway:
+    enabled: false
+
+external:
+  riot:
+    api-key: dummy
+    platform-base-url: https://kr.api.riotgames.com
+    regional-base-url: https://asia.api.riotgames.com
+
+pipeline:
+  runner:
+    enabled: false
+
+admin:
+  api:
+    key: test-admin-key

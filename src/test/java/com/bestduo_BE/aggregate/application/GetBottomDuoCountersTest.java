@@ -4,13 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
-import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupFinder;
-import com.bestduo_BE.aggregate.application.port.ChampionMetaClient;
+import com.bestduo_BE.aggregate.infra.persistence.BottomDuoMatchupFinder;
+import com.bestduo_BE.common.application.port.ChampionMetaClient;
 import com.bestduo_BE.common.domain.model.ChampionMeta;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoCounterResponse;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -33,6 +34,7 @@ class GetBottomDuoCountersTest {
   }
 
   @Test
+  @DisplayName("execute — 기본 카운터 사이즈를 사용하고 응답을 매핑한다")
   void executeUsesDefaultCounterSizeAndMapsResponse() {
     given(matchupFinder.resolvePatchVersion(null)).willReturn("14.10");
     given(matchupFinder.findMyDuoTotalGames(Tier.DIAMOND, "14.10", "ashe", "lux")).willReturn(80);
@@ -70,6 +72,7 @@ class GetBottomDuoCountersTest {
   }
 
   @Test
+  @DisplayName("execute — 카운터 사이즈를 최소 1로 제한한다")
   void executeClampsCounterSizeToAtLeastOne() {
     given(matchupFinder.resolvePatchVersion(null)).willReturn("14.9");
     given(matchupFinder.findMyDuoTotalGames(Tier.GOLD, "14.9", "ashe", "lux")).willReturn(0);
@@ -85,6 +88,7 @@ class GetBottomDuoCountersTest {
   }
 
   @Test
+  @DisplayName("execute — 카운터 사이즈를 최대 50으로 제한한다")
   void executeClampsCounterSizeToAtMostFifty() {
     given(matchupFinder.resolvePatchVersion(null)).willReturn("14.7");
     given(matchupFinder.findMyDuoTotalGames(Tier.PLATINUM, "14.7", "ashe", "lux")).willReturn(0);

@@ -145,11 +145,9 @@ public class ComputeBottomDuoRanking {
     if (previousPatch == null) {
       return Map.of();
     }
-
     List<BottomDuoStatAggregate> previousStats = tier == null
         ? repository.findByPatchVersion(previousPatch)
         : repository.findByPatchVersionAndTier(previousPatch, tier);
-
     return previousStats.stream()
         .filter(e -> e.getRanking() != null)
         .collect(Collectors.toMap(BottomDuoStatAggregate::duoKey, BottomDuoStatAggregate::getRanking, (left, right) -> left, HashMap::new));

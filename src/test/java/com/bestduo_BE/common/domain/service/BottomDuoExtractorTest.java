@@ -5,12 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.common.domain.service.BottomDuoExtractor;
 import com.bestduo_BE.common.infra.riot.dto.InfoDto;
 import com.bestduo_BE.common.infra.riot.dto.ParticipantDto;
 import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import com.bestduo_BE.common.infra.riot.dto.TeamDto;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class BottomDuoExtractorTest {
@@ -18,6 +18,7 @@ class BottomDuoExtractorTest {
   private final BottomDuoExtractor extractor = new BottomDuoExtractor();
 
   @Test
+  @DisplayName("extract — 팀에 바텀·서포터가 있으면 BottomDuoRaw 행을 반환한다")
   void extract_returnsBottomDuoRows_whenTeamsHaveBottomAndSupport() {
     List<ParticipantDto> participants = List.of(
         participant(100, "BOTTOM", 222),
@@ -37,12 +38,14 @@ class BottomDuoExtractorTest {
   }
 
   @Test
+  @DisplayName("extract — match 또는 info가 없으면 빈 리스트를 반환한다")
   void extract_returnsEmptyList_whenMatchOrInfoMissing() {
     assertTrue(extractor.extract("KR_1", null, Tier.GOLD).isEmpty());
     assertTrue(extractor.extract("KR_1", new RiotMatchDto(null, null), Tier.GOLD).isEmpty());
   }
 
   @Test
+  @DisplayName("extract — 바텀·서포터가 모두 없는 팀은 건너뛴다")
   void extract_skipsTeamsWithoutBothRoles() {
     List<ParticipantDto> participants = List.of(
         participant(100, "BOTTOM", 222),

@@ -1,7 +1,12 @@
 package com.bestduo_BE.common.infra.persistence.entity;
 
+import com.bestduo_BE.common.domain.exception.IllegalStateTransitionException;
+import com.bestduo_BE.common.domain.model.QueueStatus;
+import com.bestduo_BE.common.domain.model.Tier;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
@@ -18,20 +23,25 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class MatchQueue {
-  private static final int LAST_ERROR_MAX_LENGTH = 255;
+  public static final int LAST_ERROR_MAX_LENGTH = 255;
 
   @Id
   @Column(name = "match_id", nullable = false)
   private String matchId;
 
+  @Enumerated(EnumType.STRING)
   @Column(name = "status", nullable = false)
-  private String status; // READY/RUNNING/DONE/ERROR
+  private QueueStatus status;
 
   @Column(name = "priority", nullable = false)
   private int priority;
 
+  @Enumerated(EnumType.STRING)
   @Column(name = "collection_tier", nullable = false)
-  private String collectionTier; // Tier enum name
+  private Tier collectionTier;
+
+  @Column(name = "patch")
+  private String patch;
 
   @Column(name = "retry_count", nullable = false)
   private int retryCount;
@@ -48,13 +58,14 @@ public class MatchQueue {
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
 
-  public static MatchQueue newReady(String matchId, String collectionTier, int priority) {
+  public static MatchQueue newReady(String matchId, Tier collectionTier, int priority, String patch) {
     OffsetDateTime now = OffsetDateTime.now();
     return MatchQueue.builder()
         .matchId(matchId)
-        .status("READY")
+        .status(QueueStatus.READY)
         .priority(priority)
         .collectionTier(collectionTier)
+        .patch(patch)
         .retryCount(0)
         .lastError(null)
         .lockedAt(null)
@@ -64,23 +75,33 @@ public class MatchQueue {
   }
 
   public void markRunning() {
-    this.status = "RUNNING";
+    requireStatus(QueueStatus.READY);
+    this.status = QueueStatus.RUNNING;
     this.lockedAt = OffsetDateTime.now();
     this.updatedAt = OffsetDateTime.now();
   }
 
   public void markDone() {
-    this.status = "DONE";
+    requireStatus(QueueStatus.RUNNING);
+    this.status = QueueStatus.DONE;
     this.lockedAt = null;
     this.updatedAt = OffsetDateTime.now();
   }
 
   public void markError(String message) {
-    this.status = "ERROR";
+    requireStatus(QueueStatus.RUNNING);
+    this.status = QueueStatus.ERROR;
     this.retryCount += 1;
     this.lastError = truncate(message, LAST_ERROR_MAX_LENGTH);
     this.lockedAt = null;
     this.updatedAt = OffsetDateTime.now();
+  }
+
+  private void requireStatus(QueueStatus expected) {
+    if (this.status != expected) {
+      throw new IllegalStateTransitionException(
+          "Expected status " + expected + " but was " + this.status + " for matchId=" + matchId);
+    }
   }
 
   private static String truncate(String message, int maxLength) {

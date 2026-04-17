@@ -18,8 +18,7 @@ public class BottomDuoAggregateController {
   @PostMapping("/bottom-duo-stat")
   public AggregateBottomDuoStats.Result aggregate(
       @RequestParam String patchVersion,
-      @RequestParam(required = false) Tier tier
-  ) {
+      @RequestParam(required = false) Tier tier) {
     return useCase.execute(patchVersion, tier);
   }
 }

@@ -1,9 +1,9 @@
 package com.bestduo_BE.common.infra.persistence.repository;
 
-import com.bestduo_BE.ingest.application.port.MatchQueueErrorTop;
-import com.bestduo_BE.ingest.application.port.MatchQueueRetryCount;
-import com.bestduo_BE.ingest.application.port.MatchQueueStatusCount;
 import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
+import com.bestduo_BE.common.infra.persistence.projection.MatchQueueErrorTop;
+import com.bestduo_BE.common.infra.persistence.projection.MatchQueueRetryCount;
+import com.bestduo_BE.common.infra.persistence.projection.MatchQueueStatusCount;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.jpa.repository.Query;
@@ -23,7 +23,7 @@ public interface IngestQueueStatsJpaRepository extends Repository<MatchQueue, St
     from match_queue mq
     where mq.status = 'RUNNING'
       and mq.locked_at is not null
-      and mq.locked_at <= now() - (:staleMinutes || ' minutes')::interval
+      and mq.locked_at <= now() - (:staleMinutes * interval '1 minute')
     """, nativeQuery = true)
   long countStaleRunning(@Param("staleMinutes") int staleMinutes);
 
@@ -58,7 +58,24 @@ public interface IngestQueueStatsJpaRepository extends Repository<MatchQueue, St
     select count(*)
     from match_queue mq
     where mq.status = 'DONE'
-      and mq.updated_at >= now() - (:minutes || ' minutes')::interval
+      and mq.updated_at >= now() - (:minutes * interval '1 minute')
     """, nativeQuery = true)
   long countDoneInLastMinutes(@Param("minutes") int minutes);
+
+  @Query(value = """
+    select count(*)
+    from match_queue mq
+    where mq.status = 'READY'
+      and (:collectionTier is null or mq.collection_tier = :collectionTier)
+    """, nativeQuery = true)
+  long countReadyByTier(@Param("collectionTier") String collectionTier);
+
+  @Query(value = """
+    select count(*)
+    from match_queue mq
+    where mq.status = 'DONE'
+      and mq.updated_at >= now() - (:minutes * interval '1 minute')
+      and (:collectionTier is null or mq.collection_tier = :collectionTier)
+    """, nativeQuery = true)
+  long countDoneInLastMinutesByTier(@Param("minutes") int minutes, @Param("collectionTier") String collectionTier);
 }

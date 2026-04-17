@@ -8,12 +8,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.bestduo_BE.aggregate.application.GetBottomDuoCounters;
 import com.bestduo_BE.aggregate.application.GetBottomDuoDetailStatistics;
-import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupFinder;
+import com.bestduo_BE.aggregate.infra.persistence.BottomDuoMatchupFinder;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoCounterResponse;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoDetailStatisticsResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -35,6 +36,7 @@ class BottomDuoDetailStatisticsControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @Test
+  @DisplayName("GET /bottom-duo/matchups — 유스케이스 응답을 반환한다")
   void listReturnsUseCaseResponse() throws Exception {
     BottomDuoDetailStatisticsResponse response = new BottomDuoDetailStatisticsResponse(
         "GOLD",
@@ -87,6 +89,7 @@ class BottomDuoDetailStatisticsControllerTest {
   }
 
   @Test
+  @DisplayName("GET /bottom-duo/counters — 카운터 유스케이스 응답을 반환한다")
   void countersReturnsCounterUseCaseResponse() throws Exception {
     BottomDuoCounterResponse response = new BottomDuoCounterResponse(
         "DIAMOND",

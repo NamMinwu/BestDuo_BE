@@ -1,6 +1,6 @@
 package com.bestduo_BE.aggregate.application;
 
-import com.bestduo_BE.aggregate.application.port.BottomDuoStatAggregator;
+import com.bestduo_BE.aggregate.infra.persistence.BottomDuoStatAggregator;
 import com.bestduo_BE.common.domain.model.Tier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

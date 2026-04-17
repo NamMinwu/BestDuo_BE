@@ -4,8 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
-import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupAggregator;
+import com.bestduo_BE.aggregate.infra.persistence.BottomDuoMatchupAggregator;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -25,6 +26,7 @@ class AggregateBottomDuoMatchupTest {
   }
 
   @Test
+  @DisplayName("execute — 집계를 실행하고 영향받은 행 수를 반환한다")
   void executeReturnsAffectedRows() {
     given(aggregator.aggregateAll()).willReturn(73);
 

@@ -2,6 +2,7 @@ package com.bestduo_BE.aggregate.infra.persistence.repository;
 
 import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAggregate;
 import com.bestduo_BE.aggregate.infra.persistence.entity.BottomDuoStatAggregateId;
+import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -12,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface BottomDuoStatAggregateJpaRepository extends JpaRepository<BottomDuoStatAggregate, BottomDuoStatAggregateId> {
+
   Pattern PATCH_VERSION_PATTERN = Pattern.compile("^(\\d+)\\.(\\d+)$");
 
   // ✅ Phase3 집계: raw -> agg upsert
@@ -78,8 +80,7 @@ public interface BottomDuoStatAggregateJpaRepository extends JpaRepository<Botto
       """, nativeQuery = true)
   int upsertFromRawByScope(
       @Param("patchVersion") String patchVersion,
-      @Param("tier") String tier
-  );
+      @Param("tier") String tier);
 
   @Query(value = """
       select coalesce(sum(games), 0)
@@ -103,19 +104,20 @@ public interface BottomDuoStatAggregateJpaRepository extends JpaRepository<Botto
   default String findLatestPatchVersion() {
     return findCandidatePatchVersions().stream()
         .filter(BottomDuoStatAggregateJpaRepository::isParseablePatchVersion)
-        .max(BottomDuoStatAggregateJpaRepository::comparePatchVersion)
+        .max(Comparator.comparingInt(BottomDuoStatAggregateJpaRepository::patchMajor)
+            .thenComparingInt(BottomDuoStatAggregateJpaRepository::patchMinor))
         .orElse(null);
   }
 
-  default String findPreviousPatchVersion(@Param("currentPatch") String currentPatch) {
-    if (!isParseablePatchVersion(currentPatch)) {
+  default String findPreviousPatchVersion(String currentPatch) {
+    if (currentPatch == null || !isParseablePatchVersion(currentPatch)) {
       return null;
     }
-
     return findCandidatePatchVersions().stream()
         .filter(BottomDuoStatAggregateJpaRepository::isParseablePatchVersion)
         .filter(candidate -> comparePatchVersion(candidate, currentPatch) < 0)
-        .max(BottomDuoStatAggregateJpaRepository::comparePatchVersion)
+        .max(Comparator.comparingInt(BottomDuoStatAggregateJpaRepository::patchMajor)
+            .thenComparingInt(BottomDuoStatAggregateJpaRepository::patchMinor))
         .orElse(null);
   }
 
@@ -124,26 +126,30 @@ public interface BottomDuoStatAggregateJpaRepository extends JpaRepository<Botto
   List<BottomDuoStatAggregate> findByPatchVersionAndTier(String patchVersion, String tier);
 
   private static boolean isParseablePatchVersion(String raw) {
-    return raw != null && PATCH_VERSION_PATTERN.matcher(raw.trim()).matches();
+    return raw != null && PATCH_VERSION_PATTERN.matcher(raw).matches();
   }
 
   private static int comparePatchVersion(String left, String right) {
-    int byMajor = Integer.compare(patchMajor(left), patchMajor(right));
-    if (byMajor != 0) {
-      return byMajor;
+    int majorCompare = Integer.compare(patchMajor(left), patchMajor(right));
+    if (majorCompare != 0) {
+      return majorCompare;
     }
     return Integer.compare(patchMinor(left), patchMinor(right));
   }
 
   private static int patchMajor(String raw) {
-    Matcher matcher = PATCH_VERSION_PATTERN.matcher(raw.trim());
-    matcher.matches();
+    Matcher matcher = PATCH_VERSION_PATTERN.matcher(raw);
+    if (!matcher.matches()) {
+      throw new IllegalArgumentException("Unparseable patch version: " + raw);
+    }
     return Integer.parseInt(matcher.group(1));
   }
 
   private static int patchMinor(String raw) {
-    Matcher matcher = PATCH_VERSION_PATTERN.matcher(raw.trim());
-    matcher.matches();
+    Matcher matcher = PATCH_VERSION_PATTERN.matcher(raw);
+    if (!matcher.matches()) {
+      throw new IllegalArgumentException("Unparseable patch version: " + raw);
+    }
     return Integer.parseInt(matcher.group(2));
   }
 

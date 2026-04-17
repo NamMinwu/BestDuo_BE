@@ -1,4 +1,10 @@
+server:
+  shutdown: graceful
+
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:}
     username: ${SPRING_DATASOURCE_USERNAME:}
@@ -15,11 +21,22 @@ spring:
     hibernate:
       ddl-auto: update
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
+
 logging:
   level:
-    org.hibernate.SQL: WARN
-    org.hibernate.orm.jdbc.bind: WARN
-    com.bestduo_BE.SQL: WARN
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: DEBUG
+    com.bestduo_BE.SQL: DEBUG
+    # HTTP wire-level 로거는 절대 DEBUG 이상 금지 — X-Riot-Token 헤더 유출 방지
+    org.apache.hc: WARN
+    org.apache.http: WARN
+    jdk.internal.httpclient: WARN
+    org.springframework.web.client.RestTemplate: INFO
 
 external:
   riot:
@@ -27,40 +44,54 @@ external:
     regional-base-url: https://asia.api.riotgames.com
     api-key: ${EXTERNAL_RIOT_API_KEY:}
 
-collector:
-  seed-puuids: [] # TODO populate with seed accounts to crawl
-  queue-id: 420
-  match-count: 20
-  poll-delay-ms: 60000
+patch-sync:
+  enabled: ${PATCH_SYNC_ENABLED:true}
+  interval-ms: ${PATCH_SYNC_INTERVAL_MS:21600000}  # 6시간
 
-daily-run:
-  run-seed: true
-  run-refresh: true
-  seed-ratio: 0.2      # budgetTotal 대비 seed 전용 비율
-  refresh-ratio: 0.2   # budgetTotal 대비 refresh 전용 비율
-  refresh-limit: 5
-  seed:
-    queue: RANKED_SOLO_5x5
-    tier: GOLD
-    division: I
-    seed-tier: GOLD
-    start-page: 1
-    end-page: 1
-    matches-per-puuid: 20
-
-execution-request:
-  worker:
-    enabled: ${EXECUTION_REQUEST_WORKER_ENABLED:false}
+pipeline:
+  runner:
+    enabled: ${PIPELINE_RUNNER_ENABLED:true}
+  seed-daily-budget: ${PIPELINE_SEED_DAILY_BUDGET:2000}
+  collect-daily-budget: ${PIPELINE_COLLECT_DAILY_BUDGET:8000}
+  collect-batch-size: ${PIPELINE_COLLECT_BATCH_SIZE:20}
+  ingest-batch-size: ${PIPELINE_INGEST_BATCH_SIZE:10}
+  polling-interval-ms: ${PIPELINE_POLLING_INTERVAL_MS:5000}
+  max-pages-per-division: ${PIPELINE_MAX_PAGES_PER_DIVISION:100}
+  tier-match-count:
+    apex-tiers: ${PIPELINE_TIER_APEX:100}
+    diamond-emerald: ${PIPELINE_TIER_DIA_EME:100}
+  stage3-priority-tier: ${PIPELINE_STAGE3_PRIORITY_TIER:DIAMOND}
+  ingest:
+    stale-minutes: ${PIPELINE_INGEST_STALE_MINUTES:10}
+    error-cooldown-minutes: ${PIPELINE_INGEST_ERROR_COOLDOWN_MINUTES:10}
+    max-retry: ${PIPELINE_INGEST_MAX_RETRY:2}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,metrics,prometheus
+        include: health,prometheus
   endpoint:
     health:
-      show-details: always
+      show-details: never
+
+admin:
+  api:
+    key: ${ADMIN_API_KEY:}
 
 monitoring:
   datasource:
     enabled: false
+
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:local}
+  release: ${SENTRY_RELEASE:bestduo-be@${RAILWAY_GIT_COMMIT_SHA:local}}
+  send-default-pii: false
+  traces-sample-rate: 0.0
+  enable-tracing: false
+  logging:
+    minimum-event-level: warn
+    minimum-breadcrumb-level: info
+  ignored-exceptions-for-type:
+    - com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException

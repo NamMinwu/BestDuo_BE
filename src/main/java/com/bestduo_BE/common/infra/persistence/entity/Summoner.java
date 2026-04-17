@@ -1,7 +1,10 @@
 package com.bestduo_BE.common.infra.persistence.entity;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
@@ -26,6 +29,19 @@ public class Summoner {
   @Column(name = "last_match_start_time")
   private Long lastMatchStartTime; // epoch seconds
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "last_known_tier")
+  private Tier lastKnownTier;
+
+  @Column(name = "tier_observed_at")
+  private OffsetDateTime tierObservedAt;
+
+  @Column(name = "seeded_at")
+  private OffsetDateTime leagueEntryFetchedAt;
+
+  @Column(name = "match_ids_collected_at")
+  private OffsetDateTime matchIdsCollectedAt;
+
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
 
@@ -37,9 +53,47 @@ public class Summoner {
     return Summoner.builder()
         .puuid(puuid)
         .lastMatchStartTime(null)
+        .lastKnownTier(null)
+        .tierObservedAt(null)
+        .leagueEntryFetchedAt(null)
+        .matchIdsCollectedAt(null)
         .createdAt(now)
         .updatedAt(now)
         .build();
+  }
+
+  public void markLeagueEntryFetched(OffsetDateTime fetchedAt) {
+    this.leagueEntryFetchedAt = fetchedAt;
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  public void markMatchIdsCollected(OffsetDateTime collectedAt) {
+    this.matchIdsCollectedAt = collectedAt;
+    this.updatedAt = OffsetDateTime.now();
+  }
+
+  /**
+   * matchIds 수집 대기 상태인지 판단한다.
+   * <ul>
+   *   <li>leagueEntryFetchedAt이 null이면 Stage 1을 거치지 않은 summoner → 대상 아님</li>
+   *   <li>matchIdsCollectedAt이 null이면 한 번도 수집 안 함 → 대상</li>
+   *   <li>matchIdsCollectedAt이 leagueEntryFetchedAt 이전이면 재수집 필요 → 대상</li>
+   * </ul>
+   */
+  public boolean needsMatchIdsCollection() {
+    if (leagueEntryFetchedAt == null) {
+      return false;
+    }
+    if (matchIdsCollectedAt == null) {
+      return true;
+    }
+    return matchIdsCollectedAt.isBefore(leagueEntryFetchedAt);
+  }
+
+  public void observeTier(Tier tier, OffsetDateTime observedAt) {
+    this.lastKnownTier = tier;
+    this.tierObservedAt = observedAt;
+    this.updatedAt = OffsetDateTime.now();
   }
 
   public void advanceLastMatchStartTime(Long newLastMatchStartTimeOrNull) {

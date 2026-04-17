@@ -11,6 +11,7 @@ import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggreg
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -30,7 +31,8 @@ class ComputeBottomDuoRankingTest {
   }
 
   @Test
-  void returnZeroWhenPatchVersionIsMissing() {
+  @DisplayName("execute — patchVersion이 null이면 즉시 0을 반환한다")
+  void returnZeroWhenPatchVersionIsNull() {
     ComputeBottomDuoRanking.Result result = useCase.execute(null, null);
 
     assertThat(result.patchVersion()).isNull();
@@ -39,6 +41,19 @@ class ComputeBottomDuoRankingTest {
   }
 
   @Test
+  @DisplayName("execute — 해당 patch에 데이터가 없으면 0을 반환한다")
+  void returnZeroWhenNoPatchDataExists() {
+    when(repository.findByPatchVersion("14.10")).thenReturn(List.of());
+
+    ComputeBottomDuoRanking.Result result = useCase.execute("14.10", null);
+
+    assertThat(result.patchVersion()).isEqualTo("14.10");
+    assertThat(result.updatedRows()).isZero();
+    verify(repository, never()).saveAll(anyList());
+  }
+
+  @Test
+  @DisplayName("execute — 랭킹을 계산하고 이전 패치 대비 델타를 적용한다")
   void computeRankingAndApplyPreviousPatchDelta() {
     OffsetDateTime now = OffsetDateTime.now();
     BottomDuoStatAggregate asheLux = BottomDuoStatAggregate.builder()
@@ -123,6 +138,7 @@ class ComputeBottomDuoRankingTest {
   }
 
   @Test
+  @DisplayName("execute — 게임 수가 임계값 미만이면 INSUFFICIENT로 표시한다")
   void markInsufficientDataWhenGamesBelowThreshold() {
     OffsetDateTime now = OffsetDateTime.now();
     BottomDuoStatAggregate lowSample = BottomDuoStatAggregate.builder()
@@ -159,18 +175,19 @@ class ComputeBottomDuoRankingTest {
   }
 
   @Test
-  void computeRankingUsesRequestedTierScopeForCurrentAndPreviousPatch() {
+  @DisplayName("execute — tier가 지정되면 tier 범위로 필터링한다")
+  void executeFiltersByTierWhenTierScopeProvided() {
     OffsetDateTime now = OffsetDateTime.now();
-    BottomDuoStatAggregate emeraldCurrent = BottomDuoStatAggregate.builder()
+    BottomDuoStatAggregate emeraldOnly = BottomDuoStatAggregate.builder()
         .patchVersion("14.10")
-        .adcChampionId("Ashe")
-        .supChampionId("Lux")
+        .adcChampionId("Caitlyn")
+        .supChampionId("Morgana")
         .tier("EMERALD")
-        .wins(20)
-        .games(25)
-        .winRate(0.8)
+        .wins(30)
+        .games(50)
+        .winRate(0.6)
         .pickRate(0)
-        .adjustedWinRate(0.72)
+        .adjustedWinRate(0.58)
         .rankScore(0)
         .ranking(null)
         .duoTier(null)
@@ -180,39 +197,16 @@ class ComputeBottomDuoRankingTest {
         .createdAt(now)
         .updatedAt(now)
         .build();
-    BottomDuoStatAggregate emeraldPrevious = BottomDuoStatAggregate.builder()
-        .patchVersion("14.9")
-        .adcChampionId("Ashe")
-        .supChampionId("Lux")
-        .tier("EMERALD")
-        .wins(10)
-        .games(15)
-        .winRate(0.66)
-        .pickRate(0)
-        .adjustedWinRate(0.6)
-        .rankScore(0)
-        .ranking(3)
-        .duoTier(2)
-        .previousRanking(null)
-        .rankDelta(null)
-        .rankingStatus(BottomDuoStatAggregate.RankingStatus.RANKED)
-        .createdAt(now.minusDays(10))
-        .updatedAt(now.minusDays(5))
-        .build();
 
     when(repository.findByPatchVersionAndTier("14.10", "EMERALD"))
-        .thenReturn(List.of(emeraldCurrent));
-    when(repository.findPreviousPatchVersion("14.10")).thenReturn("14.9");
-    when(repository.findByPatchVersionAndTier("14.9", "EMERALD"))
-        .thenReturn(List.of(emeraldPrevious));
+        .thenReturn(List.of(emeraldOnly));
+    when(repository.findPreviousPatchVersion("14.10")).thenReturn(null);
 
     ComputeBottomDuoRanking.Result result = useCase.execute("14.10", "EMERALD");
 
     assertThat(result.patchVersion()).isEqualTo("14.10");
     assertThat(result.updatedRows()).isEqualTo(1);
-    verify(repository).findByPatchVersionAndTier("14.10", "EMERALD");
-    verify(repository).findByPatchVersionAndTier("14.9", "EMERALD");
-    verify(repository).saveAll(List.of(emeraldCurrent));
-    assertThat(emeraldCurrent.getPreviousRanking()).isEqualTo(3);
+    verify(repository).saveAll(List.of(emeraldOnly));
+    assertThat(emeraldOnly.getRanking()).isEqualTo(1);
   }
 }

@@ -1,6 +1,6 @@
 package com.bestduo_BE.ingest.application;
 
-import com.bestduo_BE.ingest.application.port.MatchQueueStatusCount;
+import com.bestduo_BE.common.infra.persistence.projection.MatchQueueStatusCount;
 import com.bestduo_BE.common.infra.persistence.repository.IngestQueueStatsJpaRepository;
 import java.time.Instant;
 import java.time.OffsetDateTime;
