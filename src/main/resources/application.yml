@@ -1,4 +1,10 @@
+server:
+  shutdown: graceful
+
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:}
     username: ${SPRING_DATASOURCE_USERNAME:}
@@ -40,20 +46,20 @@ patch-sync:
 pipeline:
   runner:
     enabled: ${PIPELINE_RUNNER_ENABLED:true}
-  seed-daily-budget: 2000
-  collect-daily-budget: 8000
-  collect-batch-size: 20
-  ingest-batch-size: 10
-  polling-interval-ms: 5000
-  max-pages-per-division: 100
+  seed-daily-budget: ${PIPELINE_SEED_DAILY_BUDGET:2000}
+  collect-daily-budget: ${PIPELINE_COLLECT_DAILY_BUDGET:8000}
+  collect-batch-size: ${PIPELINE_COLLECT_BATCH_SIZE:20}
+  ingest-batch-size: ${PIPELINE_INGEST_BATCH_SIZE:10}
+  polling-interval-ms: ${PIPELINE_POLLING_INTERVAL_MS:5000}
+  max-pages-per-division: ${PIPELINE_MAX_PAGES_PER_DIVISION:100}
   tier-match-count:
-    apex-tiers: 100
-    diamond-emerald: 100
+    apex-tiers: ${PIPELINE_TIER_APEX:100}
+    diamond-emerald: ${PIPELINE_TIER_DIA_EME:100}
   stage3-priority-tier: ${PIPELINE_STAGE3_PRIORITY_TIER:DIAMOND}
   ingest:
-    stale-minutes: 10
-    error-cooldown-minutes: 10
-    max-retry: 2
+    stale-minutes: ${PIPELINE_INGEST_STALE_MINUTES:10}
+    error-cooldown-minutes: ${PIPELINE_INGEST_ERROR_COOLDOWN_MINUTES:10}
+    max-retry: ${PIPELINE_INGEST_MAX_RETRY:2}
 
 management:
   endpoints:
