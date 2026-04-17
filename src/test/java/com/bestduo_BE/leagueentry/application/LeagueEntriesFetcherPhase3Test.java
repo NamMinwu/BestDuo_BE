@@ -12,7 +12,7 @@ import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
 import com.bestduo_BE.common.application.port.RiotApiPort;
 import com.bestduo_BE.leagueentry.application.LeagueEntriesFetcher.LeagueEntriesFetchResult;
-import com.bestduo_BE.leagueentry.application.port.SummonerSeedRegistry;
+import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +29,7 @@ class LeagueEntriesFetcherPhase3Test {
   private RiotApiPort riotApiPort;
 
   @Mock
-  private SummonerSeedRegistry summonerSeedRegistry;
+  private SummonerJpaRepository summonerJpaRepository;
 
   private LeagueEntriesFetcher executor;
 
@@ -39,7 +39,7 @@ class LeagueEntriesFetcherPhase3Test {
 
   @BeforeEach
   void setUp() {
-    executor = new LeagueEntriesFetcher(riotApiPort, summonerSeedRegistry);
+    executor = new LeagueEntriesFetcher(riotApiPort, summonerJpaRepository);
   }
 
   @Test
@@ -65,8 +65,8 @@ class LeagueEntriesFetcherPhase3Test {
 
     executor.execute(command);
 
-    verify(summonerSeedRegistry).upsertLeagueEntry(eq("puuid-1"), eq(Tier.DIAMOND), any(OffsetDateTime.class));
-    verify(summonerSeedRegistry).upsertLeagueEntry(eq("puuid-2"), eq(Tier.DIAMOND), any(OffsetDateTime.class));
+    verify(summonerJpaRepository).upsertLeagueEntry(eq("puuid-1"), eq("DIAMOND"), any(OffsetDateTime.class));
+    verify(summonerJpaRepository).upsertLeagueEntry(eq("puuid-2"), eq("DIAMOND"), any(OffsetDateTime.class));
   }
 
   @Test
@@ -78,7 +78,7 @@ class LeagueEntriesFetcherPhase3Test {
 
     LeagueEntriesFetchResult result = executor.execute(command);
 
-    verify(summonerSeedRegistry, times(1)).upsertLeagueEntry(any(), any(), any());
+    verify(summonerJpaRepository, times(1)).upsertLeagueEntry(any(), any(), any());
     assertThat(result.summonersSeeded()).isEqualTo(1);
   }
 
@@ -94,7 +94,7 @@ class LeagueEntriesFetcherPhase3Test {
 
     LeagueEntriesFetchResult result = executor.execute(limited);
 
-    verify(summonerSeedRegistry, times(1)).upsertLeagueEntry(any(), any(), any());
+    verify(summonerJpaRepository, times(1)).upsertLeagueEntry(any(), any(), any());
     assertThat(result.summonersSeeded()).isEqualTo(1);
   }
 
@@ -108,7 +108,7 @@ class LeagueEntriesFetcherPhase3Test {
 
     executor.execute(command);
 
-    verify(summonerSeedRegistry).upsertLeagueEntry(eq("puuid-m"), eq(Tier.MASTER), any(OffsetDateTime.class));
+    verify(summonerJpaRepository).upsertLeagueEntry(eq("puuid-m"), eq("MASTER"), any(OffsetDateTime.class));
   }
 
   @Test
@@ -121,7 +121,7 @@ class LeagueEntriesFetcherPhase3Test {
 
     executor.execute(command);
 
-    verify(summonerSeedRegistry).upsertLeagueEntry(eq("puuid-x"), eq(Tier.DIAMOND), any(OffsetDateTime.class));
+    verify(summonerJpaRepository).upsertLeagueEntry(eq("puuid-x"), eq("DIAMOND"), any(OffsetDateTime.class));
   }
 
   private LeagueEntry entry(String puuid) {

@@ -3,8 +3,8 @@ package com.bestduo_BE.leagueentry.application;
 import com.bestduo_BE.common.application.port.RiotApiPort;
 import com.bestduo_BE.common.domain.model.LeagueEntriesFetchCommand;
 import com.bestduo_BE.common.domain.model.Tier;
+import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
 import com.bestduo_BE.common.infra.riot.dto.LeagueEntry;
-import com.bestduo_BE.leagueentry.application.port.SummonerSeedRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 public class LeagueEntriesFetcher {
 
   private final RiotApiPort riotApiPort;
-  private final SummonerSeedRegistry summonerSeedRegistry;
+  private final SummonerJpaRepository summonerJpaRepository;
 
   public record LeagueEntriesFetchResult(
       int pagesProcessed,
@@ -76,7 +76,7 @@ public class LeagueEntriesFetcher {
     }
 
     Tier tier = parseTier(entry.tier(), cmd.seedTier());
-    summonerSeedRegistry.upsertLeagueEntry(puuid, tier, OffsetDateTime.now());
+    summonerJpaRepository.upsertLeagueEntry(puuid, tier != null ? tier.name() : null, OffsetDateTime.now());
     progress.incrementSeeded();
   }
 

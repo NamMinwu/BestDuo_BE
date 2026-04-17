@@ -41,7 +41,7 @@ pipeline:
   polling-interval-ms: 5000
   max-pages-per-division: 100
   tier-match-count:
-    apex-tiers: 30
+    apex-tiers: 100
     diamond-emerald: 100
   stage3-priority-tier: ${PIPELINE_STAGE3_PRIORITY_TIER:DIAMOND}
   ingest:

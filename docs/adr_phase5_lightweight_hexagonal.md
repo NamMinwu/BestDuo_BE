@@ -1,8 +1,14 @@
 # ADR-001: Riot API 경계 포트화 — 경량 헥사고날 채택
 
 > 작성일: 2026-04-15
-> 상태: 채택(Accepted)
+> **상태: Superseded by [ADR-002 — 3-Layer 전환](./adr_3layer_transition.md) (2026-04-16)**
 > 대상 Phase: Phase 5 (Riot API Port 경량 추출)
+
+> ⚠️ **이 결정은 ADR-002에 의해 대체되었습니다.**
+> Phase 5에서 채택한 "경량 헥사고날"은 이후 Port 인터페이스가 14개로 점진 확장되며
+> DB-layer까지 이중 추상화하는 부작용을 낳았습니다. 2026-04-16 재평가에서 3-Layer 구조로
+> 단순화하는 [ADR-002](./adr_3layer_transition.md)를 채택했고, 본 ADR은 역사적 기록으로 유지합니다.
+> Port 보존 결정은 `RiotApiPort` 1개 → 2개 (`+ChampionMetaClient`)로 확장되었습니다.
 
 ---
 

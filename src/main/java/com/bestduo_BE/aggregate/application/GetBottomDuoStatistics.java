@@ -1,7 +1,7 @@
 package com.bestduo_BE.aggregate.application;
 
-import com.bestduo_BE.aggregate.application.port.BottomDuoStatFinder;
-import com.bestduo_BE.aggregate.application.port.ChampionMetaClient;
+import com.bestduo_BE.aggregate.infra.persistence.BottomDuoStatFinder;
+import com.bestduo_BE.common.application.port.ChampionMetaClient;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoStatisticsResponse;
 import java.util.List;

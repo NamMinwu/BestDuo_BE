@@ -2,7 +2,7 @@ package com.bestduo_BE.common.infra.champion;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.bestduo_BE.aggregate.application.port.ChampionMetaClient;
+import com.bestduo_BE.common.application.port.ChampionMetaClient;
 import com.bestduo_BE.common.domain.model.ChampionMeta;
 import com.bestduo_BE.common.infra.champion.ChampionMetaClientImpl;
 import com.bestduo_BE.common.infra.champion.DataDragonChampionDataSource;

@@ -5,8 +5,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.common.application.port.RiotApiPort;
-import com.bestduo_BE.ingest.application.port.BottomDuoRawSaver;
-import com.bestduo_BE.ingest.application.port.MatchSaver;
+import com.bestduo_BE.ingest.infra.persistence.BottomDuoRawSaver;
+import com.bestduo_BE.ingest.infra.persistence.MatchSaver;
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;

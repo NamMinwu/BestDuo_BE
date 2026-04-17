@@ -1,8 +1,8 @@
 package com.bestduo_BE.pipeline.application;
 
 import com.bestduo_BE.common.application.PatchVersionService;
-import com.bestduo_BE.common.application.port.MatchQueueEnqueuer;
 import com.bestduo_BE.common.application.port.RiotApiPort;
+import com.bestduo_BE.common.infra.persistence.MatchQueueEnqueuer;
 import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;

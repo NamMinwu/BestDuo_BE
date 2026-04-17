@@ -1,6 +1,6 @@
 package com.bestduo_BE.common.infra.champion;
 
-import com.bestduo_BE.aggregate.application.port.ChampionMetaClient;
+import com.bestduo_BE.common.application.port.ChampionMetaClient;
 import com.bestduo_BE.common.domain.model.ChampionMeta;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

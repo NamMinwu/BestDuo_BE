@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.MatchQueue;
 import com.bestduo_BE.common.infra.persistence.repository.MatchQueueJpaRepository;
-import com.bestduo_BE.ingest.application.port.MatchQueueDispatcher;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,11 +27,11 @@ class MatchQueueDispatcherPhase5Test {
   @Mock
   private MatchQueueJpaRepository repo;
 
-  private MatchQueueDispatcherImpl dispatcher;
+  private MatchQueueDispatcher dispatcher;
 
   @BeforeEach
   void setUp() {
-    dispatcher = new MatchQueueDispatcherImpl(repo);
+    dispatcher = new MatchQueueDispatcher(repo);
   }
 
   @Test

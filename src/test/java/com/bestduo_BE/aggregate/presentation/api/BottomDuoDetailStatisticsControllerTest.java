@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.bestduo_BE.aggregate.application.GetBottomDuoCounters;
 import com.bestduo_BE.aggregate.application.GetBottomDuoDetailStatistics;
-import com.bestduo_BE.aggregate.application.port.BottomDuoMatchupFinder;
+import com.bestduo_BE.aggregate.infra.persistence.BottomDuoMatchupFinder;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoCounterResponse;
 import com.bestduo_BE.common.presentation.api.dto.BottomDuoDetailStatisticsResponse;
