@@ -109,6 +109,7 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
    * Stage 1 upsert: 없으면 등록, 있으면 tier·seeded_at 갱신.
    * 두 경우 모두 seeded_at(leagueEntryFetchedAt)을 주어진 시점으로 설정한다.
    */
+  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
       INSERT INTO summoner (puuid, last_known_tier, tier_observed_at, seeded_at, created_at, updated_at)
