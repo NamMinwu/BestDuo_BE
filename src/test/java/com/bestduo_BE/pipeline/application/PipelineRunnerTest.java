@@ -14,6 +14,7 @@ import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.config.PipelineProperties;
 import com.bestduo_BE.ingest.application.MatchIngestRunner;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,8 +39,9 @@ class PipelineRunnerTest {
     props = new PipelineProperties();
     props.setIngestBatchSize(10);
     props.setPollingIntervalMs(100);
+    PipelineMetrics pipelineMetrics = new PipelineMetrics(new SimpleMeterRegistry());
     runner = new PipelineRunner(dailyLeagueEntriesRunner, collectMatchIdsRunner, matchIngestRunner,
-        patchVersionService, props);
+        patchVersionService, props, pipelineMetrics);
   }
 
   @Test

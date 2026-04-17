@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+  <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="bestduo-be"/>
+
+  <!-- 기본(local/dev): 사람 읽기 쉬운 패턴, MDC 포함 -->
+  <springProfile name="!prod">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [requestId=%X{requestId:-}] %logger{36} - %msg%n</pattern>
+        <charset>UTF-8</charset>
+      </encoder>
+    </appender>
+
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+  </springProfile>
+
+  <!-- prod: JSON 구조화 로그 (Logstash encoder), MDC를 최상위 필드로 노출 -->
+  <springProfile name="prod">
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <includeMdcKeyName>requestId</includeMdcKeyName>
+        <customFields>{"app":"${appName}"}</customFields>
+        <timeZone>UTC</timeZone>
+      </encoder>
+    </appender>
+
+    <root level="INFO">
+      <appender-ref ref="JSON_CONSOLE"/>
+    </root>
+  </springProfile>
+
+</configuration>

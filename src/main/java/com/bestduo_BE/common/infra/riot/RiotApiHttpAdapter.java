@@ -33,84 +33,95 @@ public class RiotApiHttpAdapter implements RiotApiPort {
 
   private final RestTemplate regionalRestTemplate;
   private final RestTemplate platformRestTemplate;
+  private final RiotApiMetrics metrics;
 
   public RiotApiHttpAdapter(
       @Qualifier("riotRegionalRestTemplate") RestTemplate regionalRestTemplate,
-      @Qualifier("riotPlatformRestTemplate") RestTemplate platformRestTemplate) {
+      @Qualifier("riotPlatformRestTemplate") RestTemplate platformRestTemplate,
+      RiotApiMetrics metrics) {
     this.regionalRestTemplate = regionalRestTemplate;
     this.platformRestTemplate = platformRestTemplate;
+    this.metrics = metrics;
   }
 
   // ── Match IDs ──────────────────────────────────────────────────────────
 
   @Override
   public List<String> findRecentMatchIds(String puuid, int count) {
-    try {
-      String[] matchIds = regionalRestTemplate.getForObject(
-          "/lol/match/v5/matches/by-puuid/{puuid}/ids?count={count}",
-          String[].class,
-          puuid,
-          count
-      );
-      return matchIds == null ? List.of() : Arrays.asList(matchIds);
-    } catch (RestClientException e) {
-      log.error("matchIds 조회 실패. puuid={}, count={}", puuid, count, e);
-      throw new RiotApiException("Failed to load match ids from Riot API", e);
-    }
+    return metrics.record("findRecentMatchIds", () -> {
+      try {
+        String[] matchIds = regionalRestTemplate.getForObject(
+            "/lol/match/v5/matches/by-puuid/{puuid}/ids?count={count}",
+            String[].class,
+            puuid,
+            count
+        );
+        return matchIds == null ? List.<String>of() : Arrays.asList(matchIds);
+      } catch (RestClientException e) {
+        log.error("matchIds 조회 실패. puuid={}, count={}", puuid, count, e);
+        throw new RiotApiException("Failed to load match ids from Riot API", e);
+      }
+    });
   }
 
   @Override
   public List<String> findMatchIdsSince(String puuid, long startTimeEpochSeconds, int count) {
-    try {
-      String[] matchIds = regionalRestTemplate.getForObject(
-          "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&count={count}",
-          String[].class,
-          puuid,
-          startTimeEpochSeconds,
-          count
-      );
-      return matchIds == null ? List.of() : Arrays.asList(matchIds);
-    } catch (RestClientException e) {
-      log.error("matchIds(since) 조회 실패. puuid={}, startTime={}, count={}",
-          puuid, startTimeEpochSeconds, count, e);
-      throw new RiotApiException("Failed to load match ids since startTime from Riot API", e);
-    }
+    return metrics.record("findMatchIdsSince", () -> {
+      try {
+        String[] matchIds = regionalRestTemplate.getForObject(
+            "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&count={count}",
+            String[].class,
+            puuid,
+            startTimeEpochSeconds,
+            count
+        );
+        return matchIds == null ? List.<String>of() : Arrays.asList(matchIds);
+      } catch (RestClientException e) {
+        log.error("matchIds(since) 조회 실패. puuid={}, startTime={}, count={}",
+            puuid, startTimeEpochSeconds, count, e);
+        throw new RiotApiException("Failed to load match ids since startTime from Riot API", e);
+      }
+    });
   }
 
   @Override
   public List<String> findMatchIdsBetween(
       String puuid, long startTimeEpochSeconds, long endTimeEpochSeconds, int count) {
-    try {
-      String[] matchIds = regionalRestTemplate.getForObject(
-          "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&endTime={endTime}&count={count}",
-          String[].class,
-          puuid,
-          startTimeEpochSeconds,
-          endTimeEpochSeconds,
-          count
-      );
-      return matchIds == null ? List.of() : Arrays.asList(matchIds);
-    } catch (RestClientException e) {
-      log.error("matchIds(between) 조회 실패. puuid={}, startTime={}, endTime={}, count={}",
-          puuid, startTimeEpochSeconds, endTimeEpochSeconds, count, e);
-      throw new RiotApiException("Failed to load match ids between timerange from Riot API", e);
-    }
+    return metrics.record("findMatchIdsBetween", () -> {
+      try {
+        String[] matchIds = regionalRestTemplate.getForObject(
+            "/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={startTime}&endTime={endTime}&count={count}",
+            String[].class,
+            puuid,
+            startTimeEpochSeconds,
+            endTimeEpochSeconds,
+            count
+        );
+        return matchIds == null ? List.<String>of() : Arrays.asList(matchIds);
+      } catch (RestClientException e) {
+        log.error("matchIds(between) 조회 실패. puuid={}, startTime={}, endTime={}, count={}",
+            puuid, startTimeEpochSeconds, endTimeEpochSeconds, count, e);
+        throw new RiotApiException("Failed to load match ids between timerange from Riot API", e);
+      }
+    });
   }
 
   // ── Match Detail ───────────────────────────────────────────────────────
 
   @Override
   public RiotMatchDto loadMatch(String matchId) {
-    try {
-      return regionalRestTemplate.getForObject(
-          "/lol/match/v5/matches/{matchId}",
-          RiotMatchDto.class,
-          matchId
-      );
-    } catch (RestClientException e) {
-      log.error("match 조회 실패. matchId={}", matchId, e);
-      throw new RiotApiException("Failed to load match from Riot API", e);
-    }
+    return metrics.record("loadMatch", () -> {
+      try {
+        return regionalRestTemplate.getForObject(
+            "/lol/match/v5/matches/{matchId}",
+            RiotMatchDto.class,
+            matchId
+        );
+      } catch (RestClientException e) {
+        log.error("match 조회 실패. matchId={}", matchId, e);
+        throw new RiotApiException("Failed to load match from Riot API", e);
+      }
+    });
   }
 
   // ── League Entries ─────────────────────────────────────────────────────
@@ -118,26 +129,28 @@ public class RiotApiHttpAdapter implements RiotApiPort {
   @Override
   public List<LeagueEntry> loadLeagueEntries(
       String queue, String tier, String division, int page) {
-    try {
-      Tier resolvedTier = resolveTier(tier);
-      if (isApexTier(resolvedTier)) {
-        return page > 1 ? List.of() : loadApexTierEntries(queue, resolvedTier);
-      }
+    return metrics.record("loadLeagueEntries", () -> {
+      try {
+        Tier resolvedTier = resolveTier(tier);
+        if (isApexTier(resolvedTier)) {
+          return page > 1 ? List.<LeagueEntry>of() : loadApexTierEntries(queue, resolvedTier);
+        }
 
-      LeagueEntry[] entries = platformRestTemplate.getForObject(
-          "/lol/league/v4/entries/{queue}/{tier}/{division}?page={page}",
-          LeagueEntry[].class,
-          queue,
-          tier,
-          division,
-          page
-      );
-      return entries == null ? List.of() : Arrays.asList(entries);
-    } catch (RestClientException e) {
-      log.error("league entries 조회 실패. queue={}, tier={}, division={}, page={}",
-          queue, tier, division, page, e);
-      throw new RiotApiException("Failed to load league entries from Riot API", e);
-    }
+        LeagueEntry[] entries = platformRestTemplate.getForObject(
+            "/lol/league/v4/entries/{queue}/{tier}/{division}?page={page}",
+            LeagueEntry[].class,
+            queue,
+            tier,
+            division,
+            page
+        );
+        return entries == null ? List.<LeagueEntry>of() : Arrays.asList(entries);
+      } catch (RestClientException e) {
+        log.error("league entries 조회 실패. queue={}, tier={}, division={}, page={}",
+            queue, tier, division, page, e);
+        throw new RiotApiException("Failed to load league entries from Riot API", e);
+      }
+    });
   }
 
   // ── private helpers ─────────────────────────────────────────────────────
