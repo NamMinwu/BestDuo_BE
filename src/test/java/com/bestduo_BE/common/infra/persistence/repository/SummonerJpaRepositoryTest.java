@@ -56,6 +56,45 @@ class SummonerJpaRepositoryTest {
   }
 
   @Test
+  @DisplayName("advanceLastMatchStartTime — @Modifying 쿼리는 자체 @Transactional 을 가져야 한다")
+  void advanceLastMatchStartTime_mustDeclareTransactional() throws NoSuchMethodException {
+    Method method = SummonerJpaRepository.class.getMethod(
+        "advanceLastMatchStartTime", String.class, Long.class);
+
+    assertThat(method.getAnnotation(Transactional.class))
+        .as("advanceLastMatchStartTime must be annotated with @Transactional — "
+            + "@Modifying(flushAutomatically = true) requires an active transaction, "
+            + "and future callers may invoke it outside a managed transaction")
+        .isNotNull();
+  }
+
+  @Test
+  @DisplayName("insertIfAbsent — @Modifying 쿼리는 자체 @Transactional 을 가져야 한다")
+  void insertIfAbsent_mustDeclareTransactional() throws NoSuchMethodException {
+    Method method = SummonerJpaRepository.class.getMethod(
+        "insertIfAbsent", String.class, OffsetDateTime.class);
+
+    assertThat(method.getAnnotation(Transactional.class))
+        .as("insertIfAbsent must be annotated with @Transactional — "
+            + "@Modifying(flushAutomatically = true) requires an active transaction, "
+            + "and future callers may invoke it outside a managed transaction")
+        .isNotNull();
+  }
+
+  @Test
+  @DisplayName("updateTierMetadata — @Modifying 쿼리는 자체 @Transactional 을 가져야 한다")
+  void updateTierMetadata_mustDeclareTransactional() throws NoSuchMethodException {
+    Method method = SummonerJpaRepository.class.getMethod(
+        "updateTierMetadata", String.class, String.class, OffsetDateTime.class);
+
+    assertThat(method.getAnnotation(Transactional.class))
+        .as("updateTierMetadata must be annotated with @Transactional — "
+            + "@Modifying(flushAutomatically = true) requires an active transaction, "
+            + "and future callers may invoke it outside a managed transaction")
+        .isNotNull();
+  }
+
+  @Test
   @DisplayName("updateTierMetadata — 관측된 tier 정보를 DB에 저장한다")
   void updateTierMetadataStoresObservedTier() {
     repository.save(Summoner.create("p-1"));

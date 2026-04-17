@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
 
+  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
       update summoner
@@ -25,6 +26,7 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
       """, nativeQuery = true)
   int advanceLastMatchStartTime(@Param("puuid") String puuid, @Param("candidateCursor") Long candidateCursor);
 
+  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
       INSERT INTO summoner (
@@ -37,6 +39,7 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
       """, nativeQuery = true)
   int insertIfAbsent(@Param("puuid") String puuid, @Param("now") OffsetDateTime now);
 
+  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
       update summoner
