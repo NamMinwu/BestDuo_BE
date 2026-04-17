@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, String> {
   @Query(value = """
@@ -23,6 +24,7 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
   List<MatchQueue> pickReadyOrRetry(@Param("limit") int limit);
 
   // 1) RUNNING stale 복구: lockedAt 오래된 RUNNING을 READY로 되돌림
+  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
     update match_queue
@@ -36,6 +38,7 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
   int recoverStaleRunning(@Param("staleMinutes") int staleMinutes);
 
   // 2) READY만 먼저 pick&lock (RUNNING으로 바꾸고 반환)
+  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
     with candidates as (
@@ -58,6 +61,7 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
   List<MatchQueue> pickReadyAndLock(@Param("limit") int limit, @Param("collectionTier") String collectionTier);
 
   // 3) ERROR 중 재시도 가능한 것만 pick&lock (cooldown + maxRetry)
+  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
     with candidates as (
@@ -88,6 +92,7 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
       @Param("collectionTier") String collectionTier
   );
 
+  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
     update match_queue
@@ -110,6 +115,7 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
    *   <li>updated_at ASC</li>
    * </ol>
    */
+  @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
     with candidates as (
