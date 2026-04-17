@@ -27,6 +27,11 @@ logging:
     com.bestduo_BE.SQL: WARN          # datasource-proxy / SqlExecutionLoggingListener 로깅 비활성화
     org.hibernate.SQL: WARN
     org.hibernate.orm.jdbc.bind: WARN
+    # HTTP wire-level 로거는 절대 DEBUG 이상 금지 — X-Riot-Token 헤더 유출 방지
+    org.apache.hc: WARN
+    org.apache.http: WARN
+    jdk.internal.httpclient: WARN
+    org.springframework.web.client.RestTemplate: INFO
 
 monitoring:
   datasource:
