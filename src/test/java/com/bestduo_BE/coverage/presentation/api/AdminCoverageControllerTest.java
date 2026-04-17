@@ -33,7 +33,8 @@ class AdminCoverageControllerTest {
         new CoverageBucketResponse(1L, "15.7", Tier.MASTER)
     ));
 
-    mockMvc.perform(get("/admin/coverage"))
+    mockMvc.perform(get("/admin/coverage")
+            .header("X-Admin-Key", "test-admin-key"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].tier").value("MASTER"))
         .andExpect(jsonPath("$[0].patch").value("15.7"));
@@ -46,7 +47,8 @@ class AdminCoverageControllerTest {
         new CoverageBucketResponse(1L, "15.7", Tier.MASTER)
     );
 
-    mockMvc.perform(get("/admin/coverage/1"))
+    mockMvc.perform(get("/admin/coverage/1")
+            .header("X-Admin-Key", "test-admin-key"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(1))
         .andExpect(jsonPath("$.tier").value("MASTER"));
@@ -57,7 +59,8 @@ class AdminCoverageControllerTest {
   void getReturnsNotFoundWhenBucketIsMissing() throws Exception {
     given(coverageBucketService.get(99L)).willThrow(new CoverageBucketNotFoundException(99L));
 
-    mockMvc.perform(get("/admin/coverage/99"))
+    mockMvc.perform(get("/admin/coverage/99")
+            .header("X-Admin-Key", "test-admin-key"))
         .andExpect(status().isNotFound());
   }
 }

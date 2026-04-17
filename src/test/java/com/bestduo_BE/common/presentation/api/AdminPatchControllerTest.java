@@ -35,6 +35,7 @@ class AdminPatchControllerTest {
     given(patchVersionService.registerIfAbsent(eq("15.23"), any())).willReturn(true);
 
     mockMvc.perform(post("/admin/patch")
+            .header("X-Admin-Key", "test-admin-key")
             .param("patch", "15.23")
             .param("releasedAt", "2026-04-02T00:00:00Z"))
         .andExpect(status().isCreated())
@@ -49,6 +50,7 @@ class AdminPatchControllerTest {
     given(patchVersionService.registerIfAbsent(eq("15.23"), any())).willReturn(false);
 
     mockMvc.perform(post("/admin/patch")
+            .header("X-Admin-Key", "test-admin-key")
             .param("patch", "15.23")
             .param("releasedAt", "2026-04-02T00:00:00Z"))
         .andExpect(status().isConflict());
@@ -61,7 +63,8 @@ class AdminPatchControllerTest {
     PatchVersion patchVersion = PatchVersion.of("15.23", releasedAt);
     given(patchVersionService.currentPatch()).willReturn(Optional.of(patchVersion));
 
-    mockMvc.perform(get("/admin/patch/current"))
+    mockMvc.perform(get("/admin/patch/current")
+            .header("X-Admin-Key", "test-admin-key"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.patch").value("15.23"));
   }
@@ -71,7 +74,8 @@ class AdminPatchControllerTest {
   void current_whenNoPatch_returns404() throws Exception {
     given(patchVersionService.currentPatch()).willReturn(Optional.empty());
 
-    mockMvc.perform(get("/admin/patch/current"))
+    mockMvc.perform(get("/admin/patch/current")
+            .header("X-Admin-Key", "test-admin-key"))
         .andExpect(status().isNotFound());
   }
 }
