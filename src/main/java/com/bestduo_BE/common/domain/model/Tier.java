@@ -12,7 +12,8 @@ public enum Tier {
   GOLD,
   SILVER,
   BRONZE,
-  IRON;
+  IRON,
+  ALL_TIERS;
 
   public static final List<Tier> APEX_TIERS = List.of(CHALLENGER, GRANDMASTER, MASTER);
 

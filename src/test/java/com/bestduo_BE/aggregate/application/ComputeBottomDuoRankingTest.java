@@ -31,13 +31,23 @@ class ComputeBottomDuoRankingTest {
   }
 
   @Test
-  @DisplayName("execute — 패치 데이터가 없으면 0을 반환한다")
-  void returnZeroWhenNoPatchDataExists() {
-    when(repository.findLatestPatchVersion()).thenReturn(null);
-
-    ComputeBottomDuoRanking.Result result = useCase.execute();
+  @DisplayName("execute — patchVersion이 null이면 즉시 0을 반환한다")
+  void returnZeroWhenPatchVersionIsNull() {
+    ComputeBottomDuoRanking.Result result = useCase.execute(null, null);
 
     assertThat(result.patchVersion()).isNull();
+    assertThat(result.updatedRows()).isZero();
+    verify(repository, never()).saveAll(anyList());
+  }
+
+  @Test
+  @DisplayName("execute — 해당 patch에 데이터가 없으면 0을 반환한다")
+  void returnZeroWhenNoPatchDataExists() {
+    when(repository.findByPatchVersion("14.10")).thenReturn(List.of());
+
+    ComputeBottomDuoRanking.Result result = useCase.execute("14.10", null);
+
+    assertThat(result.patchVersion()).isEqualTo("14.10");
     assertThat(result.updatedRows()).isZero();
     verify(repository, never()).saveAll(anyList());
   }
@@ -105,7 +115,6 @@ class ComputeBottomDuoRankingTest {
         .updatedAt(now.minusDays(5))
         .build();
 
-    when(repository.findLatestPatchVersion()).thenReturn("14.10");
     when(repository.findByPatchVersion("14.10"))
         .thenReturn(List.of(asheLux, jinxThresh));
     when(repository.findPreviousPatchVersion("14.10"))
@@ -113,7 +122,7 @@ class ComputeBottomDuoRankingTest {
     when(repository.findByPatchVersion("14.9"))
         .thenReturn(List.of(prevAsheLux));
 
-    ComputeBottomDuoRanking.Result result = useCase.execute();
+    ComputeBottomDuoRanking.Result result = useCase.execute("14.10", null);
 
     assertThat(result.patchVersion()).isEqualTo("14.10");
     assertThat(result.updatedRows()).isEqualTo(2);
@@ -152,17 +161,52 @@ class ComputeBottomDuoRankingTest {
         .updatedAt(now)
         .build();
 
-    when(repository.findLatestPatchVersion()).thenReturn("14.10");
     when(repository.findByPatchVersion("14.10"))
         .thenReturn(List.of(lowSample));
     when(repository.findPreviousPatchVersion("14.10")).thenReturn(null);
 
-    ComputeBottomDuoRanking.Result result = useCase.execute();
+    ComputeBottomDuoRanking.Result result = useCase.execute("14.10", null);
 
     assertThat(result.updatedRows()).isEqualTo(1);
     verify(repository).saveAll(List.of(lowSample));
     assertThat(lowSample.getRanking()).isNull();
     assertThat(lowSample.getDuoTier()).isEqualTo(5);
     assertThat(lowSample.getRankingStatus()).isEqualTo(BottomDuoStatAggregate.RankingStatus.INSUFFICIENT);
+  }
+
+  @Test
+  @DisplayName("execute — tier가 지정되면 tier 범위로 필터링한다")
+  void executeFiltersByTierWhenTierScopeProvided() {
+    OffsetDateTime now = OffsetDateTime.now();
+    BottomDuoStatAggregate emeraldOnly = BottomDuoStatAggregate.builder()
+        .patchVersion("14.10")
+        .adcChampionId("Caitlyn")
+        .supChampionId("Morgana")
+        .tier("EMERALD")
+        .wins(30)
+        .games(50)
+        .winRate(0.6)
+        .pickRate(0)
+        .adjustedWinRate(0.58)
+        .rankScore(0)
+        .ranking(null)
+        .duoTier(null)
+        .previousRanking(null)
+        .rankDelta(null)
+        .rankingStatus(BottomDuoStatAggregate.RankingStatus.PENDING)
+        .createdAt(now)
+        .updatedAt(now)
+        .build();
+
+    when(repository.findByPatchVersionAndTier("14.10", "EMERALD"))
+        .thenReturn(List.of(emeraldOnly));
+    when(repository.findPreviousPatchVersion("14.10")).thenReturn(null);
+
+    ComputeBottomDuoRanking.Result result = useCase.execute("14.10", "EMERALD");
+
+    assertThat(result.patchVersion()).isEqualTo("14.10");
+    assertThat(result.updatedRows()).isEqualTo(1);
+    verify(repository).saveAll(List.of(emeraldOnly));
+    assertThat(emeraldOnly.getRanking()).isEqualTo(1);
   }
 }

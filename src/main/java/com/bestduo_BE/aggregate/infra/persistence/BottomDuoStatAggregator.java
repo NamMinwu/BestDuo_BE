@@ -10,7 +10,7 @@ public class BottomDuoStatAggregator {
 
   private final BottomDuoStatAggregateJpaRepository repository;
 
-  public int aggregateAll() {
-    return repository.upsertAllFromRaw();
+  public int aggregate(String patchVersion, String tier) {
+    return repository.upsertFromRawByScope(patchVersion, tier);
   }
 }

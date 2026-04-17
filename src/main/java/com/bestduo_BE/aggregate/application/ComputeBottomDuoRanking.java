@@ -23,25 +23,24 @@ public class ComputeBottomDuoRanking {
   private final BottomDuoStatAggregateJpaRepository repository;
 
   @Transactional
-  public Result execute() {
-    String currentPatch = findCurrentPatch();
-    if (currentPatch == null) {
+  public Result execute(String patchVersion, String tier) {
+    if (patchVersion == null) {
       return new Result(null, 0);
     }
 
-    List<BottomDuoStatAggregate> currentStats = loadCurrentStats(currentPatch);
+    List<BottomDuoStatAggregate> currentStats = loadCurrentStats(patchVersion, tier);
     if (currentStats.isEmpty()) {
-      return new Result(currentPatch, 0);
+      return new Result(patchVersion, 0);
     }
 
     Map<String, Integer> totalGamesByTier = calculateTotalGamesByTier(currentStats);
-    Map<String, Integer> previousRankings = loadPreviousRankings(currentPatch);
+    Map<String, Integer> previousRankings = loadPreviousRankings(patchVersion, tier);
     Map<String, List<BottomDuoStatAggregate>> statsByTier = groupStatsByTier(currentStats);
 
     int updatedRows = applyRankings(statsByTier, totalGamesByTier, previousRankings);
 
     repository.saveAll(currentStats);
-    return new Result(currentPatch, updatedRows);
+    return new Result(patchVersion, updatedRows);
   }
 
   private int applyRankings(Map<String, List<BottomDuoStatAggregate>> statsByTier,
@@ -134,20 +133,22 @@ public class ComputeBottomDuoRanking {
             Collectors.summingInt(BottomDuoStatAggregate::getGames)));
   }
 
-  private String findCurrentPatch() {
-    return repository.findLatestPatchVersion();
+  private List<BottomDuoStatAggregate> loadCurrentStats(String patchVersion, String tier) {
+    if (tier == null) {
+      return repository.findByPatchVersion(patchVersion);
+    }
+    return repository.findByPatchVersionAndTier(patchVersion, tier);
   }
 
-  private List<BottomDuoStatAggregate> loadCurrentStats(String patchVersion) {
-    return repository.findByPatchVersion(patchVersion);
-  }
-
-  private Map<String, Integer> loadPreviousRankings(String currentPatch) {
+  private Map<String, Integer> loadPreviousRankings(String currentPatch, String tier) {
     String previousPatch = repository.findPreviousPatchVersion(currentPatch);
     if (previousPatch == null) {
       return Map.of();
     }
-    return repository.findByPatchVersion(previousPatch).stream()
+    List<BottomDuoStatAggregate> previousStats = tier == null
+        ? repository.findByPatchVersion(previousPatch)
+        : repository.findByPatchVersionAndTier(previousPatch, tier);
+    return previousStats.stream()
         .filter(e -> e.getRanking() != null)
         .collect(Collectors.toMap(BottomDuoStatAggregate::duoKey, BottomDuoStatAggregate::getRanking, (left, right) -> left, HashMap::new));
   }

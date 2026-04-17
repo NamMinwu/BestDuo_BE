@@ -1,63 +1,91 @@
 # BestDuo_BE
 
+리그 오브 레전드 바텀 듀오(ADC + 서포터) 시너지 분석 서비스 **bestduo** 의 백엔드. Riot `league-v4` / `match-v5` API에서 에메랄드 이상 솔로 랭크 매치를 수집·저장하고, 패치 단위로 듀오 조합의 승률·픽률·랭킹·매치업 카운터를 집계해 REST로 제공합니다. 모든 데이터는 Riot 공식 API에서만 수집하며 순수 통계 제공 목적으로만 사용합니다.
+
+- **Stack**: Spring Boot 4 · Java 21 · Gradle · JPA/Hibernate · PostgreSQL · Micrometer + Prometheus / Grafana
+- **Architecture**: 3-Layer (presentation / application / infra) + 8 bounded contexts
+- **External boundaries**: `RiotApiPort`, `ChampionMetaClient` 2개만 Port로 추상화
+
 ## Overview (English)
-BestDuo_BE is the backend that powers **bestduo**, a League of Legends analytics tool that focuses on bottom-lane duo synergy. The service collects Emerald+ solo-queue summoners, keeps their match history up to date, and aggregates win rate, pick rate, ranking, and counter data for every ADC/support pairing per patch. All data is sourced directly from Riot's league-v4 and match-v5 APIs and is used strictly for educational statistics—there are no automation hooks or gameplay advantages.
+
+BestDuo_BE ingests solo-queue matches from Riot's APIs, stores raw match payloads, extracts bottom-lane duos, and serves patch-scoped synergy statistics.
 
 ### Key Capabilities
-- **Seed -> Refresh -> Ingest pipeline** guarded by Riot request budgets to continuously bring fresh solo-queue data.
-- **Match payload storage** so the raw Riot match-v5 JSON is saved before domain-specific parsing.
-- **Bottom duo extraction & aggregation** to compute synergy scores, tier-based rankings, and matchup counters from historical matches.
-- **Public REST APIs** such as `/bottom-duo/stats`, `/bottom-duo/detail`, and `/bottom-duo/counters` that the frontend consumes.
-- **Admin tooling** (`/admin/run`, `/ingest`, etc.) to manually trigger sessions, enqueue matches, or inspect the collection queue.
+- **Seed → Collect → Ingest pipeline** that respects Riot request budgets and resumes from failure via `DailyPipelineState` + `MatchQueue` status.
+- **Raw-first persistence**: match-v5 JSON is saved before domain-specific parsing so downstream aggregators can replay.
+- **Bottom duo aggregation**: synergy scores, tier-scoped rankings, and matchup counters are written to materialized tables.
+- **Public REST APIs** (`/bottom-duo/stats`, `/bottom-duo/matchups`, `/bottom-duo/counters`) consumed by the frontend.
+- **Admin tooling** (`/admin/queue`, `/admin/aggregate`, `/admin/patch`, `/admin/coverage`, `/ingest`, `/seed`) for manual orchestration and inspection.
 
 ### High-Level Flow
-1. `SeedBootstrapExecutor` pulls league entries by tier/division and registers new summoner seeds.
-2. `MatchIdsFinder` fetches recent match IDs which are pushed into the `match_queue`.
-3. `IngestMatchDetail` loads match-v5 payloads, stores them, extracts bottom duos, and schedules new participants for expansion.
-4. Aggregators compute tier-scoped stats and write them into materialized tables that the presentation layer reads.
-5. `GetBottomDuo*` use cases resolve patch versions, look up champion metadata, and expose the aggregated insights through controllers.
+1. `DailyLeagueEntriesRunner` pulls league entries by tier/division and registers new summoner seeds.
+2. `CollectMatchIdsRunner` fetches recent match IDs and `MatchQueueEnqueuer` pushes them into `match_queue`.
+3. `PipelineRunner` → `MatchIngestRunner` → `MatchQueueDispatcher` loads match-v5 payloads, `MatchSaver` / `BottomDuoRawSaver` persist them, and new participants are enqueued for expansion.
+4. `BottomDuoStatAggregator` / `BottomDuoMatchupAggregator` compute tier-scoped stats into aggregate tables.
+5. `GetBottomDuo*` use cases resolve the current patch / champion metadata and expose insights through controllers.
 
 ### API Surface (Selected)
-- `GET /bottom-duo/stats`: global stats (win/pick/ban rate, ranking, tier delta) with filtering by tier, patch, or specific champions.
-- `GET /bottom-duo/detail`: matchup breakdown for a specific duo versus opposing duos.
-- `GET /bottom-duo/counters`: lowest-win-rate counters for a selected duo.
-- `POST /ingest/match/{matchId}`: manual ingestion of a Riot match with a chosen tier label.
-- `POST /admin/run`: kick off a budgeted run that executes the seed, refresh, and ingest phases sequentially.
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/bottom-duo/stats` | Global win/pick/ban, ranking, tier delta (filter by tier, patch, champions) |
+| `GET` | `/bottom-duo/matchups` | Duo-vs-duo matchup breakdown |
+| `GET` | `/bottom-duo/counters` | Lowest win-rate counters for a selected duo |
+| `POST` | `/ingest/match/{matchId}` | Manual match ingestion with tier label |
+| `POST` | `/seed/bootstrap` | Register seed summoners from a league entry page |
+| `GET` | `/admin/queue/stats` | MatchQueue status/error/retry counts |
+| `POST` | `/admin/queue/work` | Dispatch pending matches |
+| `POST` | `/admin/aggregate/bottom-duo-stat` | Trigger stat aggregation |
+| `POST` | `/admin/aggregate/bottom-duo-matchup` | Trigger matchup aggregation |
+| `GET` / `POST` | `/admin/patch(/current)` | Inspect or update the current patch |
+| `GET` | `/admin/coverage[/{id}]` | Inspect collection coverage buckets |
 
-### Tech & Monitoring
-- Spring Boot + Gradle project structure with layered `application`, `domain`, `infra`, and `presentation` packages.
-- Persistence via JPA repositories for matches, queues, and aggregated stats.
-- Rate limiting handled by `DualWindowRateLimiter` + `RiotRateLimitInterceptor` to respect API quotas.
-- Prometheus/Grafana dashboards (see `monitoring/`) to observe JVM metrics, SQL counts, and session timings.
-
----
+### Architecture & Monitoring
+- **3-Layer (presentation → application → infra)**: single-direction dependency graph. DB 접근은 `infra/persistence`의 단일 Service 클래스가 JPA Repository를 직접 사용하며, `*Impl` 접미사와 불필요한 Port 추상화는 제거되었습니다. 자세한 의사결정은 [ADR-002](./docs/adr_3layer_transition.md).
+- **Bounded contexts**: `pipeline`, `ingest`, `aggregate`, `coverage`, `leagueentry`, `common`, `monitoring`, `config`. 모듈 성격에 따라 `presentation/application/infra` 중 필요한 폴더만 둡니다 (YAGNI).
+- **Ports (2)**: `RiotApiPort`(Riot API), `ChampionMetaClient`(DataDragon). 외부 HTTP 경계만 추상화.
+- **Rate limiting**: `DualWindowRateLimiter` + `RiotRateLimitInterceptor` 로 Riot API 레이트 리밋 준수.
+- **Observability**: Actuator + Micrometer + Prometheus 로 큐 길이, 수집 처리량, JVM/SQL 지표 노출. Grafana 대시보드 구성은 `monitoring/` 참고.
 
 ## 시스템 개요 (Korean)
-BestDuo_BE는 리그 오브 레전드 바텀 듀오 시너지를 분석하는 **bestduo** 서비스의 백엔드입니다. 에메랄드 이상의 솔로 랭크 플레이어를 지속적으로 수집하고, 최신 매치 기록을 동기화한 뒤 패치 단위로 ADC/서포터 조합의 승률·픽률·랭킹·카운터 데이터를 집계합니다. 모든 데이터는 Riot league-v4와 match-v5 API에서 직접 가져오며, 순수 통계 제공 목적만을 위해 사용됩니다.
+
+BestDuo_BE는 Riot `league-v4`/`match-v5` API에서 에메랄드 이상 솔로 랭크 매치를 수집해 저장하고, 패치 단위로 ADC/서포터 조합의 승률·픽률·랭킹·카운터 데이터를 집계해 REST로 제공하는 Spring Boot 4 / Java 21 백엔드입니다.
 
 ### 주요 기능
-- Riot 요청 예산을 지키는 **Seed -> Refresh -> Ingest 파이프라인**으로 최신 솔로 랭크 데이터를 꾸준히 확보.
-- **Match payload 저장**: match-v5 JSON을 가공 전에 먼저 저장해 재처리에 활용.
-- **바텀 듀오 추출/집계**: 히스토리 데이터를 바탕으로 시너지 점수, 티어 기반 랭킹, 매치업 카운터를 계산.
-- 프론트엔드에서 호출하는 **공개 REST API**(`/bottom-duo/stats`, `/bottom-duo/detail`, `/bottom-duo/counters` 등).
-- 세션 실행, 매치 적재, 큐 상태 확인을 위한 **관리 도구**(`/admin/run`, `/ingest` 등).
+- Riot 요청 예산을 지키는 **Seed → Collect → Ingest 파이프라인** (`DailyPipelineState` + `MatchQueue.status` 조합으로 실패 재시도 및 증분 수집).
+- **Raw-first 저장**: match-v5 JSON을 가공 전에 먼저 저장해 재집계 및 재처리에 사용.
+- **바텀 듀오 집계**: 티어·패치 단위 시너지 점수, 랭킹, 매치업 카운터를 aggregate 테이블로 구성.
+- **공개 REST API**: `/bottom-duo/stats`, `/bottom-duo/matchups`, `/bottom-duo/counters`.
+- **관리 도구**: `/admin/queue`, `/admin/aggregate`, `/admin/patch`, `/admin/coverage`, `/ingest`, `/seed` 로 수동 운영·검증.
 
 ### 처리 흐름
-1. `SeedBootstrapExecutor`이 티어/디비전별 리그 엔트리를 가져와 신규 시드를 등록합니다.
-2. `MatchIdsFinder`가 최근 match ID를 조회해 `match_queue`에 적재합니다.
-3. `IngestMatchDetail`이 match-v5 payload를 불러와 저장하고, 바텀 듀오를 추출하며 참가자를 확장 큐에 넣습니다.
-4. 집계기에서 티어별 통계를 계산해 프레젠테이션 계층이 조회하는 테이블에 반영합니다.
-5. `GetBottomDuo*` 유스케이스가 패치 버전/챔피언 메타를 resolve하고, 컨트롤러를 통해 인사이트를 제공합니다.
+1. `DailyLeagueEntriesRunner` 가 티어/디비전별 리그 엔트리를 가져와 신규 시드를 등록.
+2. `CollectMatchIdsRunner` 가 최근 match ID를 조회하고 `MatchQueueEnqueuer` 가 `match_queue` 에 적재.
+3. `PipelineRunner` → `MatchIngestRunner` → `MatchQueueDispatcher` 가 match-v5 payload를 불러오면 `MatchSaver` / `BottomDuoRawSaver` 가 저장하고, 새로 발견된 참가자는 확장 큐에 추가.
+4. `BottomDuoStatAggregator` / `BottomDuoMatchupAggregator` 가 티어별 통계를 계산해 집계 테이블에 반영.
+5. `GetBottomDuo*` 유스케이스가 현재 패치·챔피언 메타를 resolve 한 뒤 컨트롤러로 응답.
 
-### 제공 API 예시
-- `GET /bottom-duo/stats`: 티어, 패치, 챔피언 필터에 따른 승률/픽률/랭킹 조회.
-- `GET /bottom-duo/detail`: 특정 듀오 vs 상대 듀오 매치업 상세 데이터.
-- `GET /bottom-duo/counters`: 선택 듀오 기준 최저 승률 카운터 목록.
-- `POST /ingest/match/{matchId}`: 지정 티어 라벨로 Riot 매치를 수동 적재.
-- `POST /admin/run`: 예산을 나눠 시드/리프레시/적재 단계를 순차 실행.
+### 아키텍처
+- **3-Layer (presentation → application → infra)**: 단방향 의존. JPA Repository 는 `infra/persistence` 의 단일 Service 가 직접 호출하며, 외부 HTTP 경계 2개(`RiotApiPort`, `ChampionMetaClient`) 에만 Port 를 둡니다. 결정 근거는 [ADR-002](./docs/adr_3layer_transition.md) 참고.
+- **8 바운디드 컨텍스트**: `pipeline`, `ingest`, `aggregate`, `coverage`, `leagueentry`, `common`, `monitoring`, `config`. 모듈 성격에 맞춰 3-Layer 중 필요한 폴더만 둡니다.
+- **관측**: Actuator + Micrometer + Prometheus (`monitoring/` 디렉터리에 Grafana 대시보드·Docker Compose 포함).
+- **레이트 리밋**: `DualWindowRateLimiter` + `RiotRateLimitInterceptor`.
 
-### 기술 스택 및 모니터링
-- Spring Boot + Gradle 기반 계층형 구조(`application`, `domain`, `infra`, `presentation`).
-- 매치, 큐, 집계 테이블을 다루는 JPA 저장소.
-- `DualWindowRateLimiter`와 `RiotRateLimitInterceptor`로 Riot API 레이트 리밋 준수.
-- `monitoring/` 이하 Prometheus/Grafana 구성으로 JVM, SQL, 세션 타이밍을 관측.
+## 실행
+
+```bash
+./gradlew bootRun        # 애플리케이션 실행
+./gradlew test           # 테스트 실행
+./gradlew build          # 빌드
+```
+
+모니터링 스택(Prometheus + Grafana)은 `monitoring/run.sh` 또는 `monitoring/docker-compose.yml` 로 기동합니다.
+
+## 참고 문서
+
+- [시스템 아키텍처](./docs/architecture.md)
+- [ADR-002 — 3-Layer 전환 (현행)](./docs/adr_3layer_transition.md)
+- [ADR-001 — 경량 헥사고날 (Superseded)](./docs/adr_phase5_lightweight_hexagonal.md)
+- [3-Layer 전환 계획서](./docs/refactoring_to_3layer_plan.md)
+- [Bottom Duo Raw Pipeline 설계](./docs/bottom_duo_raw_pipeline_plan.md)
+- [Daily Pipeline Redesign](./docs/daily_pipeline_redesign_plan.md)
+- [Coverage Bucket Throughput 설계](./docs/coverage_bucket_throughput_plan.md)
