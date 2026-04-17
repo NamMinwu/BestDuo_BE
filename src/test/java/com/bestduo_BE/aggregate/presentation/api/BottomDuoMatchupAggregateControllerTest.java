@@ -32,7 +32,8 @@ class BottomDuoMatchupAggregateControllerTest {
     AggregateBottomDuoMatchup.Result result = new AggregateBottomDuoMatchup.Result(12);
     when(aggregateBottomDuoMatchup.execute()).thenReturn(result);
 
-    mockMvc.perform(post("/admin/aggregate/bottom-duo-matchup"))
+    mockMvc.perform(post("/admin/aggregate/bottom-duo-matchup")
+            .header("X-Admin-Key", "test-admin-key"))
         .andExpect(status().isOk())
         .andExpect(content().json(objectMapper.writeValueAsString(result)));
 

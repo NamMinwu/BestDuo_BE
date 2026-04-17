@@ -18,3 +18,7 @@ external:
 pipeline:
   runner:
     enabled: false
+
+admin:
+  api:
+    key: test-admin-key

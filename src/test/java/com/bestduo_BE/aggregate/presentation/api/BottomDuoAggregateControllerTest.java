@@ -32,7 +32,8 @@ class BottomDuoAggregateControllerTest {
     AggregateBottomDuoStats.Result result = new AggregateBottomDuoStats.Result(10, 7);
     when(aggregateBottomDuoStat.execute()).thenReturn(result);
 
-    mockMvc.perform(post("/admin/aggregate/bottom-duo-stat"))
+    mockMvc.perform(post("/admin/aggregate/bottom-duo-stat")
+            .header("X-Admin-Key", "test-admin-key"))
         .andExpect(status().isOk())
         .andExpect(content().json(objectMapper.writeValueAsString(result)));
 
