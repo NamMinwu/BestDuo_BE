@@ -69,7 +69,7 @@ monitoring:
 sentry:
   dsn: ${SENTRY_DSN:}
   environment: ${SENTRY_ENVIRONMENT:local}
-  release: ${SENTRY_RELEASE:}
+  release: ${SENTRY_RELEASE:bestduo-be@${RAILWAY_GIT_COMMIT_SHA:local}}
   send-default-pii: false
   traces-sample-rate: 0.0
   enable-tracing: false
