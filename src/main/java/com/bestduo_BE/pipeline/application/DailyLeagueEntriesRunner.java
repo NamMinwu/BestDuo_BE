@@ -11,6 +11,7 @@ import com.bestduo_BE.coverage.infra.persistence.entity.CoverageBucket;
 import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketJpaRepository;
 import com.bestduo_BE.leagueentry.application.LeagueEntriesFetcher;
 import com.bestduo_BE.leagueentry.application.LeagueEntriesFetcher.LeagueEntriesFetchResult;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -88,8 +89,10 @@ public class DailyLeagueEntriesRunner {
       log.warn("non-apex seed 스킵: 현재 패치 정보 없음");
       return ChunkResult.noWork();
     }
+    LocalDate today = LocalDate.now();
     for (Tier tier : NON_APEX_TIERS) {
       CoverageBucket bucket = getOrCreateBucket(effectivePatch, tier);
+      bucket.resetDailyPagesIfNeeded(bucket.getDailyPagesResetAt(), today);
       if (bucket.hasRemainingDailyQuota(props.getDiaEmeDailyPageQuota())) {
         return runNonApexPage(bucket, tier);
       }
@@ -116,9 +119,16 @@ public class DailyLeagueEntriesRunner {
     if (effectivePatch == null) {
       return false;
     }
+    LocalDate today = LocalDate.now();
     for (Tier tier : NON_APEX_TIERS) {
       Optional<CoverageBucket> opt = coverageBucketRepository.findByPatchAndTier(effectivePatch, tier);
-      if (opt.isEmpty() || opt.get().hasRemainingDailyQuota(props.getDiaEmeDailyPageQuota())) {
+      if (opt.isEmpty()) {
+        return true;
+      }
+      CoverageBucket bucket = opt.get();
+      // 자정 경계 확인은 in-memory 에서만 수행 (영속화는 runNextChunk → runNonApexPage 의 save 가 담당)
+      bucket.resetDailyPagesIfNeeded(bucket.getDailyPagesResetAt(), today);
+      if (bucket.hasRemainingDailyQuota(props.getDiaEmeDailyPageQuota())) {
         return true;
       }
     }
