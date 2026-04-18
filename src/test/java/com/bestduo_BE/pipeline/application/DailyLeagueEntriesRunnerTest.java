@@ -346,15 +346,73 @@ class DailyLeagueEntriesRunnerTest {
     assertThat(runner.hasWorkToday()).isFalse();
   }
 
+  // ── Phase 2: 자정 경계 reset (회귀 방지) ──────────────────────────────
+
+  @Test
+  @DisplayName("어제 quota 소진된 DIA 버킷은 자정 후 hasWorkToday=true (resetDailyPagesIfNeeded 호출)")
+  void hasWorkToday_whenDiaBucketExhaustedYesterday_returnsTrue() {
+    given(budgetTracker.canSeed()).willReturn(true);
+
+    DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+    state.recordSeedCompletedTier(Tier.GRANDMASTER);
+    state.recordSeedCompletedTier(Tier.MASTER);
+    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
+    given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND))
+        .willReturn(Optional.of(bucketExhaustedOn(Tier.DIAMOND, "15.23", LocalDate.now().minusDays(1))));
+
+    assertThat(runner.hasWorkToday()).isTrue();
+  }
+
+  @Test
+  @DisplayName("어제 quota 소진된 DIA 버킷은 runNextChunk에서 reset 후 새 페이지를 실행한다")
+  void runNextChunk_whenDiaBucketExhaustedYesterday_resetsAndRunsPage() {
+    given(budgetTracker.canSeed()).willReturn(true);
+
+    DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
+    state.recordSeedCompletedTier(Tier.CHALLENGER);
+    state.recordSeedCompletedTier(Tier.GRANDMASTER);
+    state.recordSeedCompletedTier(Tier.MASTER);
+    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
+    CoverageBucket diaBucket = bucketExhaustedOn(Tier.DIAMOND, "15.23", LocalDate.now().minusDays(1));
+    given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.of(diaBucket));
+    given(coverageBucketRepository.save(any(CoverageBucket.class))).willReturn(diaBucket);
+    given(leagueEntriesFetcher.execute(any())).willReturn(new LeagueEntriesFetchResult(1, 10, 5));
+
+    DailyLeagueEntriesRunner.ChunkResult chunk = runner.runNextChunk();
+
+    assertThat(chunk.type()).isEqualTo(DailyLeagueEntriesRunner.ChunkResult.Type.NON_APEX_PAGE);
+    assertThat(chunk.tier()).isEqualTo(Tier.DIAMOND);
+    // reset 후 1페이지 처리됨 → dailyPagesProcessed = 1
+    assertThat(diaBucket.getDailyPagesProcessed()).isEqualTo(1);
+    verify(coverageBucketRepository).save(diaBucket);
+  }
+
   // ── helpers ────────────────────────────────────────────────────────
 
   private CoverageBucket bucketNotCompleted(Tier tier, String patch) {
     return CoverageBucket.create(patch, tier);
   }
 
-  /** dailyPagesProcessed = quota(기본값 10)로 설정한 버킷 */
+  /** 지정한 날짜 기준으로 dailyPagesProcessed = quota 인 버킷. 자정 경계 시뮬레이션용. */
+  private CoverageBucket bucketExhaustedOn(Tier tier, String patch, LocalDate resetDate) {
+    CoverageBucket bucket = CoverageBucket.create(patch, tier);
+    bucket.resetDailyPagesIfNeeded(null, resetDate);
+    for (int i = 0; i < props.getDiaEmeDailyPageQuota(); i++) {
+      bucket.incrementDailyPagesProcessed();
+    }
+    return bucket;
+  }
+
+  /** dailyPagesProcessed = quota(기본값 10)로 설정한 버킷. 오늘 이미 reset 된 상태로 마킹. */
   private CoverageBucket bucketWithQuotaExhausted(Tier tier, String patch) {
     CoverageBucket bucket = CoverageBucket.create(patch, tier);
+    // dailyPagesResetAt = today 로 설정 (그래야 runner의 resetDailyPagesIfNeeded 가 재리셋하지 않음)
+    bucket.resetDailyPagesIfNeeded(null, LocalDate.now());
     for (int i = 0; i < props.getDiaEmeDailyPageQuota(); i++) {
       bucket.incrementDailyPagesProcessed();
     }
