@@ -8,6 +8,9 @@ import com.bestduo_BE.config.PipelineProperties;
 import com.bestduo_BE.ingest.application.MatchIngestRunner;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -123,8 +126,7 @@ public class PipelineRunner {
     log.debug("Stage 3 실행 (effectivePatch={}, priorityTier={})", effectivePatch, priorityTier);
     MatchIngestRunner.Result result;
     try {
-      result = matchIngestRunner.executeWithPriority(
-          props.getIngestBatchSize(), priorityTier, effectivePatch);
+      result = runStage3WithTierRoundRobin(priorityTier, effectivePatch);
       pipelineMetrics.recordStageCompleted(3, "success");
     } catch (RuntimeException e) {
       pipelineMetrics.recordStageCompleted(3, "error");
@@ -135,6 +137,44 @@ public class PipelineRunner {
       log.debug("match_queue 비어있음. {}ms 대기", props.getPollingIntervalMs());
       Thread.sleep(props.getPollingIntervalMs());
     }
+  }
+
+  /**
+   * priorityTier가 지정되지 않으면(null/ALL_TIERS) tier 필터 없이 한 번 호출한다(레거시 동작).
+   * 지정되면 priority → 나머지 티어 순으로 순회하다가 picked > 0 시점에 멈춘다.
+   * 모든 티어가 비면 마지막 Result(picked=0)를 반환해 호출부가 sleep으로 진입하도록 한다.
+   */
+  private MatchIngestRunner.Result runStage3WithTierRoundRobin(
+      Tier priorityTier, String effectivePatch) {
+    int batchSize = props.getIngestBatchSize();
+    if (priorityTier == null || priorityTier == Tier.ALL_TIERS) {
+      return matchIngestRunner.executeWithPriority(batchSize, null, effectivePatch);
+    }
+
+    List<Tier> order = buildTierOrder(priorityTier);
+    MatchIngestRunner.Result result = null;
+    for (Tier t : order) {
+      result = matchIngestRunner.executeWithPriority(batchSize, t, effectivePatch);
+      if (result.picked() > 0) {
+        return result;
+      }
+      log.debug("Stage 3 tier={} 비어있음, 다음 tier로 순회", t);
+    }
+    return result;
+  }
+
+  private static List<Tier> buildTierOrder(Tier priority) {
+    List<Tier> all = Arrays.stream(Tier.values())
+        .filter(t -> t != Tier.ALL_TIERS)
+        .toList();
+    List<Tier> ordered = new ArrayList<>(all.size());
+    ordered.add(priority);
+    for (Tier t : all) {
+      if (t != priority) {
+        ordered.add(t);
+      }
+    }
+    return ordered;
   }
 
   private void sleep(long ms) {
