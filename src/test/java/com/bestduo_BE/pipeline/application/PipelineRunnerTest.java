@@ -211,9 +211,29 @@ class PipelineRunnerTest {
     runner.executeTick();
     long elapsed = System.currentTimeMillis() - start;
 
-    // 실제 티어 10종 모두 시도 후 sleep
-    verify(matchIngestRunner, times(10)).executeWithPriority(anyInt(), any(Tier.class), any());
+    // CHALLENGER ~ EMERALD까지 5개 티어 시도 후 sleep
+    verify(matchIngestRunner, times(5)).executeWithPriority(anyInt(), any(Tier.class), any());
     assertThat(elapsed).isGreaterThanOrEqualTo(80L);
+  }
+
+  @Test
+  @DisplayName("PLATINUM 이하 티어는 round-robin 순회에서 제외된다")
+  void executeTick_whenPriorityTierSetAndAllTiersEmpty_skipsPlatinumAndBelow()
+      throws InterruptedException {
+    props.setStage3PriorityTier(Tier.EMERALD);
+    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
+    given(collectMatchIdsRunner.hasPending()).willReturn(false);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
+    given(matchIngestRunner.executeWithPriority(anyInt(), any(), any()))
+        .willReturn(ingestResult(0));
+
+    runner.executeTick();
+
+    verify(matchIngestRunner, never()).executeWithPriority(anyInt(), eq(Tier.PLATINUM), any());
+    verify(matchIngestRunner, never()).executeWithPriority(anyInt(), eq(Tier.GOLD), any());
+    verify(matchIngestRunner, never()).executeWithPriority(anyInt(), eq(Tier.SILVER), any());
+    verify(matchIngestRunner, never()).executeWithPriority(anyInt(), eq(Tier.BRONZE), any());
+    verify(matchIngestRunner, never()).executeWithPriority(anyInt(), eq(Tier.IRON), any());
   }
 
   @Test

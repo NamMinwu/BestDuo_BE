@@ -36,6 +36,7 @@ import org.springframework.stereotype.Component;
 public class PipelineRunner {
 
   private static final long RATE_LIMIT_SLEEP_MS = 60_000L;
+  private static final Tier ROUND_ROBIN_LOWEST_TIER = Tier.EMERALD;
 
   private final DailyLeagueEntriesRunner dailyLeagueEntriesRunner;
   private final CollectMatchIdsRunner collectMatchIdsRunner;
@@ -142,6 +143,7 @@ public class PipelineRunner {
   /**
    * priorityTier가 지정되지 않으면(null/ALL_TIERS) tier 필터 없이 한 번 호출한다(레거시 동작).
    * 지정되면 priority → 나머지 티어 순으로 순회하다가 picked > 0 시점에 멈춘다.
+   * 순회 범위는 CHALLENGER ~ {@link #ROUND_ROBIN_LOWEST_TIER}까지로 제한된다.
    * 모든 티어가 비면 마지막 Result(picked=0)를 반환해 호출부가 sleep으로 진입하도록 한다.
    */
   private MatchIngestRunner.Result runStage3WithTierRoundRobin(
@@ -164,12 +166,15 @@ public class PipelineRunner {
   }
 
   private static List<Tier> buildTierOrder(Tier priority) {
-    List<Tier> all = Arrays.stream(Tier.values())
+    List<Tier> allowed = Arrays.stream(Tier.values())
         .filter(t -> t != Tier.ALL_TIERS)
+        .filter(t -> t.ordinal() <= ROUND_ROBIN_LOWEST_TIER.ordinal())
         .toList();
-    List<Tier> ordered = new ArrayList<>(all.size());
-    ordered.add(priority);
-    for (Tier t : all) {
+    List<Tier> ordered = new ArrayList<>(allowed.size() + 1);
+    if (allowed.contains(priority)) {
+      ordered.add(priority);
+    }
+    for (Tier t : allowed) {
       if (t != priority) {
         ordered.add(t);
       }
