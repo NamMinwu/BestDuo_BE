@@ -23,7 +23,10 @@ public class PipelineMetrics {
   }
 
   public void registerMatchQueueGauge(Supplier<Number> sizeSupplier) {
+    // strongReference(true): Micrometer 는 기본적으로 supplier 를 weak reference 로 보유한다.
+    // MatchQueueGaugeRegistrar 에서 전달하는 인라인 람다가 GC 되면 gauge 값이 NaN 으로 떨어지는 문제를 방지한다.
     Gauge.builder(MATCH_QUEUE_SIZE, sizeSupplier, s -> s.get().doubleValue())
+        .strongReference(true)
         .register(registry);
   }
 }
