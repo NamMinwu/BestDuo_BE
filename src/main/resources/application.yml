@@ -32,6 +32,7 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: DEBUG
     com.bestduo_BE.SQL: DEBUG
+    com.bestduo_BE: ${LOGGING_LEVEL_COM_BESTDUO_BE:INFO}
     # HTTP wire-level 로거는 절대 DEBUG 이상 금지 — X-Riot-Token 헤더 유출 방지
     org.apache.hc: WARN
     org.apache.http: WARN
