@@ -50,7 +50,7 @@ public interface BottomDuoStatAggregateJpaRepository extends JpaRepository<Botto
              else sum(case when r.win = true then 1 else 0 end)::double precision / count(*) end as win_rate,
         0 as pick_rate,
         case when count(*) = 0 then 0
-             else (sum(case when r.win = true then 1 else 0 end)::double precision + 25.0) / (count(*) + 50) end as adjusted_win_rate,
+             else (sum(case when r.win = true then 1 else 0 end)::double precision + 50.0) / (count(*) + 100) end as adjusted_win_rate,
         0 as rank_score,
         null as ranking,
         null as duo_tier,
