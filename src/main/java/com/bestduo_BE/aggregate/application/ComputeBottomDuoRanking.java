@@ -52,7 +52,12 @@ public class ComputeBottomDuoRanking {
     for (Map.Entry<String, List<BottomDuoStatAggregate>> entry : statsByTier.entrySet()) {
       String tier = entry.getKey();
       int tierTotalGames = totalGamesByTier.getOrDefault(tier, 0);
-      CandidateBuildResult candidates = buildEligibleCandidates(entry.getValue(), tierTotalGames, now);
+      int tierMaxGames = entry.getValue().stream()
+          .mapToInt(BottomDuoStatAggregate::getGames)
+          .max()
+          .orElse(0);
+      CandidateBuildResult candidates = buildEligibleCandidates(
+          entry.getValue(), tierTotalGames, tierMaxGames, now);
       updatedRows += candidates.insufficientRows();
       updatedRows += applyRankingsForTier(candidates.eligible(), previousRankings, now);
     }
@@ -62,6 +67,7 @@ public class ComputeBottomDuoRanking {
 
   private CandidateBuildResult buildEligibleCandidates(List<BottomDuoStatAggregate> tierStats,
       int tierTotalGames,
+      int tierMaxGames,
       OffsetDateTime now) {
     List<Candidate> eligible = new ArrayList<>();
     int insufficientRows = 0;
@@ -75,7 +81,7 @@ public class ComputeBottomDuoRanking {
         continue;
       }
 
-      double rankScore = computeRankScore(agg, pickRate);
+      double rankScore = computeRankScore(agg, pickRate, tierMaxGames);
       eligible.add(new Candidate(agg, pickRate, rankScore));
     }
 
@@ -153,11 +159,13 @@ public class ComputeBottomDuoRanking {
         .collect(Collectors.toMap(BottomDuoStatAggregate::duoKey, BottomDuoStatAggregate::getRanking, (left, right) -> left, HashMap::new));
   }
 
-  private double computeRankScore(BottomDuoStatAggregate agg, double pickRate) {
+  private double computeRankScore(BottomDuoStatAggregate agg, double pickRate, int tierMaxGames) {
     double winScore = agg.getAdjustedWinRate();
     double pickScore = pickRate;
-    double gameScore = Math.min(1.0, (double) agg.getGames() / MIN_GAMES);
-    return 0.60 * winScore + 0.25 * pickScore + 0.15 * gameScore;
+    double gameScore = tierMaxGames <= 0
+        ? 0.0
+        : Math.min(1.0, Math.log1p(agg.getGames()) / Math.log1p(tierMaxGames));
+    return 0.40 * winScore + 0.20 * pickScore + 0.40 * gameScore;
   }
 
   private int toDuoTier(double score) {

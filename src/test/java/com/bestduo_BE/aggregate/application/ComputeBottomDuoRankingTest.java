@@ -175,6 +175,63 @@ class ComputeBottomDuoRankingTest {
   }
 
   @Test
+  @DisplayName("execute — 저샘플 고승률 듀오는 대량 견조 듀오보다 낮은 랭킹을 가진다")
+  void lowSampleHighWinrate_ranksBelow_highSampleSteady() {
+    OffsetDateTime now = OffsetDateTime.now();
+    BottomDuoStatAggregate lowSampleHighWr = builder("LowAdc", "LowSup", 8, 7, 0.875, 0.528, now);
+    BottomDuoStatAggregate highSampleSteady = builder("BigAdc", "BigSup", 2700, 1485, 0.55, 0.546, now);
+
+    when(repository.findByPatchVersion("14.10"))
+        .thenReturn(List.of(lowSampleHighWr, highSampleSteady));
+    when(repository.findPreviousPatchVersion("14.10")).thenReturn(null);
+
+    useCase.execute("14.10", null);
+
+    assertThat(highSampleSteady.getRanking()).isEqualTo(1);
+    assertThat(lowSampleHighWr.getRanking()).isEqualTo(2);
+  }
+
+  @Test
+  @DisplayName("execute — 대량 평균 듀오가 중샘플 강함 듀오보다 높은 랭킹을 가진다")
+  void highSampleAverage_ranksAbove_midSampleStrong() {
+    OffsetDateTime now = OffsetDateTime.now();
+    BottomDuoStatAggregate bigAvg = builder("AvgAdc", "AvgSup", 1000, 500, 0.50, 0.500, now);
+    BottomDuoStatAggregate midStrong = builder("MidAdc", "MidSup", 100, 65, 0.65, 0.575, now);
+
+    when(repository.findByPatchVersion("14.10"))
+        .thenReturn(List.of(bigAvg, midStrong));
+    when(repository.findPreviousPatchVersion("14.10")).thenReturn(null);
+
+    useCase.execute("14.10", null);
+
+    assertThat(bigAvg.getRanking()).isEqualTo(1);
+    assertThat(midStrong.getRanking()).isEqualTo(2);
+  }
+
+  private static BottomDuoStatAggregate builder(String adc, String sup, int games, int wins,
+      double winRate, double adjustedWinRate, OffsetDateTime now) {
+    return BottomDuoStatAggregate.builder()
+        .patchVersion("14.10")
+        .adcChampionId(adc)
+        .supChampionId(sup)
+        .tier("EMERALD")
+        .wins(wins)
+        .games(games)
+        .winRate(winRate)
+        .pickRate(0)
+        .adjustedWinRate(adjustedWinRate)
+        .rankScore(0)
+        .ranking(null)
+        .duoTier(null)
+        .previousRanking(null)
+        .rankDelta(null)
+        .rankingStatus(BottomDuoStatAggregate.RankingStatus.PENDING)
+        .createdAt(now)
+        .updatedAt(now)
+        .build();
+  }
+
+  @Test
   @DisplayName("execute — tier가 지정되면 tier 범위로 필터링한다")
   void executeFiltersByTierWhenTierScopeProvided() {
     OffsetDateTime now = OffsetDateTime.now();
