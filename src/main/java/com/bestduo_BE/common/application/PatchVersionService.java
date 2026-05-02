@@ -40,6 +40,11 @@ public class PatchVersionService {
     return patchVersionRepository.findTopByOrderByReleasedAtDesc();
   }
 
+  /** 최신 2개 패치를 최신 → 이전 순으로 반환. 데이터 적으면 1개, 없으면 빈 리스트. */
+  public List<PatchVersion> recentPatches() {
+    return patchVersionRepository.findTop2ByOrderByReleasedAtDesc();
+  }
+
   /**
    * match ID 수집에 사용할 "유효 패치" 컨텍스트를 반환한다.
    *
