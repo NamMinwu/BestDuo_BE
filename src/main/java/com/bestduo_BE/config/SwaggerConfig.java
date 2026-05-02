@@ -44,7 +44,8 @@ public class SwaggerConfig {
                 .group("client-api")
                 .displayName("Client API")
                 .pathsToMatch(
-                        "/bottom-duo/**"
+                        "/bottom-duo/**",
+                        "/patch/**"
                 )
                 .build();
     }
