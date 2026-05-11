@@ -171,7 +171,10 @@ public interface BottomDuoMatchupAggregateJpaRepository extends JpaRepository<Bo
       @Param("limit") int limit
   );
 
-  // ✅ COUNTER: 최저 승률 N개 (승률 오름차순)
+  // ✅ COUNTER: 최저 승률 N개 (베이지안 스무딩 승률 오름차순)
+  // 정렬 식: (wins + 20) / (games + 40) — prior 0.5, α=β=20.
+  // 표본이 적으면 0.5 근처로 끌려와 카운터 상위 진입 불가. 표본이 커지면 실제 승률에 수렴.
+  // 자세한 결정 근거: docs/adr_counter_bayesian_smoothing.md
   @Query(value = """
       select *
       from bottom_duo_matchup_agg
@@ -179,8 +182,8 @@ public interface BottomDuoMatchupAggregateJpaRepository extends JpaRepository<Bo
         and patch_version = :patchVersion
         and my_adc_champion_id = :myAdc
         and my_sup_champion_id = :mySup
-     order by
-        (case when games = 0 then 0 else (wins::double precision / games) end) asc,
+      order by
+        ((wins::double precision) + 20.0) / (games + 40) asc,
         games desc
       limit :limit
       """, nativeQuery = true)
