@@ -49,6 +49,11 @@ patch-sync:
   enabled: ${PATCH_SYNC_ENABLED:true}
   interval-ms: ${PATCH_SYNC_INTERVAL_MS:21600000}  # 6시간
 
+aggregate:
+  scheduler:
+    enabled: ${AGGREGATE_SCHEDULER_ENABLED:false}
+    cron: ${AGGREGATE_SCHEDULER_CRON:0 0 4 * * *}  # 매일 04:00 Asia/Seoul
+
 pipeline:
   runner:
     enabled: ${PIPELINE_RUNNER_ENABLED:true}
