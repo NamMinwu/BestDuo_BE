@@ -58,7 +58,8 @@ class BottomDuoStatisticsControllerTest {
         "14.10",
         "Ashe",
         "Thresh",
-        BottomDuoStatFinder.SortKey.WINRATE_ASC
+        BottomDuoStatFinder.SortKey.WINRATE_ASC,
+        20
     )).thenReturn(response);
 
     mockMvc.perform(get("/bottom-duo/stats")
@@ -66,7 +67,8 @@ class BottomDuoStatisticsControllerTest {
             .param("patchVersion", "14.10")
             .param("adcChampionId", "Ashe")
             .param("supChampionId", "Thresh")
-            .param("sort", "WINRATE_ASC"))
+            .param("sort", "WINRATE_ASC")
+            .param("size", "20"))
         .andExpect(status().isOk())
         .andExpect(content().json(objectMapper.writeValueAsString(response)));
 
@@ -75,12 +77,13 @@ class BottomDuoStatisticsControllerTest {
         "14.10",
         "Ashe",
         "Thresh",
-        BottomDuoStatFinder.SortKey.WINRATE_ASC
+        BottomDuoStatFinder.SortKey.WINRATE_ASC,
+        20
     );
   }
 
   @Test
-  @DisplayName("GET /bottom-duo/stats — sort 파라미터 미제공 시 기본 정렬을 사용한다")
+  @DisplayName("GET /bottom-duo/stats — sort/size 파라미터 미제공 시 기본값(PICKRATE_DESC, size=100)을 사용한다")
   void getListUsesDefaultSortWhenNotProvided() throws Exception {
     BottomDuoStatisticsResponse response = new BottomDuoStatisticsResponse("SILVER", null, 0, List.of());
     when(viewBottomDuoStatistics.execute(
@@ -88,7 +91,8 @@ class BottomDuoStatisticsControllerTest {
         null,
         null,
         null,
-        BottomDuoStatFinder.SortKey.PICKRATE_DESC
+        BottomDuoStatFinder.SortKey.PICKRATE_DESC,
+        100
     )).thenReturn(response);
 
     mockMvc.perform(get("/bottom-duo/stats")
@@ -101,7 +105,8 @@ class BottomDuoStatisticsControllerTest {
         null,
         null,
         null,
-        BottomDuoStatFinder.SortKey.PICKRATE_DESC
+        BottomDuoStatFinder.SortKey.PICKRATE_DESC,
+        100
     );
   }
 }

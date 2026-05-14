@@ -12,7 +12,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class GetBottomDuoStatistics {
 
-  private static final int MAX_ROWS = 1000;
+  static final int MIN_SIZE = 1;
+  static final int MAX_SIZE = 1000;
 
   private final BottomDuoStatFinder statFinder;
   private final ChampionMetaClient championMetaClient;
@@ -22,11 +23,13 @@ public class GetBottomDuoStatistics {
       String patchVersionOrNull,
       String adcChampionIdOrNull,
       String supChampionIdOrNull,
-      BottomDuoStatFinder.SortKey sortKey
+      BottomDuoStatFinder.SortKey sortKey,
+      int size
   ) {
     String patchVersion = blankToNull(patchVersionOrNull);
     String adcChampionId = blankToNull(adcChampionIdOrNull);
     String supChampionId = blankToNull(supChampionIdOrNull);
+    int clampedSize = Math.min(MAX_SIZE, Math.max(MIN_SIZE, size));
 
     String resolvedPatchVersion = statFinder.resolvePatchVersion(patchVersion);
     int totalGames = statFinder.findTierTotalGames(tier, resolvedPatchVersion);
@@ -39,7 +42,7 @@ public class GetBottomDuoStatistics {
                 supChampionId,
                 sortKey,
                 totalGames,
-                MAX_ROWS
+                clampedSize
             ).stream()
             .map(row -> toItem(row, totalGames))
             .toList();
