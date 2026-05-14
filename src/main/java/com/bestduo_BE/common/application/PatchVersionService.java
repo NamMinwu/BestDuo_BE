@@ -40,9 +40,24 @@ public class PatchVersionService {
     return patchVersionRepository.findTopByOrderByReleasedAtDesc();
   }
 
-  /** 최신 2개 패치를 최신 → 이전 순으로 반환. 데이터 적으면 1개, 없으면 빈 리스트. */
+  /**
+   * 공개용 최근 패치 2개. 최신 패치가 grace period({@code PATCH_GRACE_PERIOD_DAYS}일) 이내면
+   * 데이터 신뢰도가 낮아 latest를 제외하고 그 이전 2개를 반환한다.
+   * 그 외에는 최신 2개를 그대로 반환한다.
+   */
   public List<PatchVersion> recentPatches() {
-    return patchVersionRepository.findTop2ByOrderByReleasedAtDesc();
+    List<PatchVersion> top3 = patchVersionRepository.findTop3ByOrderByReleasedAtDesc();
+    if (top3.isEmpty()) {
+      return List.of();
+    }
+
+    PatchVersion latest = top3.get(0);
+    boolean inGracePeriod = OffsetDateTime.now()
+        .isBefore(latest.getReleasedAt().plusDays(PATCH_GRACE_PERIOD_DAYS));
+
+    int from = inGracePeriod ? 1 : 0;
+    int to = Math.min(from + 2, top3.size());
+    return List.copyOf(top3.subList(from, to));
   }
 
   /**
