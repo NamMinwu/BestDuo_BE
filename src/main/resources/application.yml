@@ -56,6 +56,14 @@ aggregate:
   retention:
     patches: ${AGGREGATE_RETENTION_PATCHES:3}  # 최근 N개 patch만 보존 (cron 끝에 자동 정리)
 
+archive:
+  r2:
+    enabled: ${ARCHIVE_R2_ENABLED:false}
+    endpoint: ${ARCHIVE_R2_ENDPOINT:}
+    access-key-id: ${ARCHIVE_R2_ACCESS_KEY_ID:}
+    secret-access-key: ${ARCHIVE_R2_SECRET_ACCESS_KEY:}
+    bucket: ${ARCHIVE_R2_BUCKET:}
+
 pipeline:
   runner:
     enabled: ${PIPELINE_RUNNER_ENABLED:false}
