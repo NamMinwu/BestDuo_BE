@@ -173,14 +173,16 @@ class PatchVersionServiceTest {
   // ── recentPatches ────────────────────────────────────────────────────────
 
   @Test
-  @DisplayName("recentPatches — 최신 2개 패치를 최신 → 이전 순으로 반환")
-  void recentPatches_whenTwoOrMoreExist_returnsTopTwoOrdered() {
-    OffsetDateTime latestAt = OffsetDateTime.parse("2026-04-20T00:00:00+00:00");
-    OffsetDateTime previousAt = OffsetDateTime.parse("2026-04-01T00:00:00+00:00");
+  @DisplayName("recentPatches — 최신 패치가 3일 이상이면 최신 2개 그대로 반환")
+  void recentPatches_whenLatestMature_returnsTopTwoOrdered() {
+    OffsetDateTime latestAt = OffsetDateTime.now().minusDays(4);
+    OffsetDateTime previousAt = OffsetDateTime.now().minusDays(20);
+    OffsetDateTime olderAt = OffsetDateTime.now().minusDays(40);
     PatchVersion latest = PatchVersion.of("16.8", latestAt);
     PatchVersion previous = PatchVersion.of("16.7", previousAt);
-    given(patchVersionRepository.findTop2ByOrderByReleasedAtDesc())
-        .willReturn(List.of(latest, previous));
+    PatchVersion older = PatchVersion.of("16.6", olderAt);
+    given(patchVersionRepository.findTop3ByOrderByReleasedAtDesc())
+        .willReturn(List.of(latest, previous, older));
 
     List<PatchVersion> result = service.recentPatches();
 
@@ -190,10 +192,58 @@ class PatchVersionServiceTest {
   }
 
   @Test
-  @DisplayName("recentPatches — 패치 1개만 있으면 1개만 반환")
-  void recentPatches_whenOnlyOneExists_returnsSingleton() {
-    PatchVersion only = PatchVersion.of("16.8", OffsetDateTime.parse("2026-04-20T00:00:00+00:00"));
-    given(patchVersionRepository.findTop2ByOrderByReleasedAtDesc()).willReturn(List.of(only));
+  @DisplayName("recentPatches — 최신 패치가 3일 이내(grace)면 최신 제외하고 그 이전 2개 반환")
+  void recentPatches_whenLatestInGracePeriod_excludesLatestAndReturnsPreviousTwo() {
+    OffsetDateTime latestAt = OffsetDateTime.now().minusDays(1);
+    OffsetDateTime previousAt = OffsetDateTime.now().minusDays(20);
+    OffsetDateTime olderAt = OffsetDateTime.now().minusDays(40);
+    PatchVersion latest = PatchVersion.of("16.8", latestAt);
+    PatchVersion previous = PatchVersion.of("16.7", previousAt);
+    PatchVersion older = PatchVersion.of("16.6", olderAt);
+    given(patchVersionRepository.findTop3ByOrderByReleasedAtDesc())
+        .willReturn(List.of(latest, previous, older));
+
+    List<PatchVersion> result = service.recentPatches();
+
+    assertThat(result).hasSize(2);
+    assertThat(result.get(0).getPatch()).isEqualTo("16.7");
+    assertThat(result.get(1).getPatch()).isEqualTo("16.6");
+  }
+
+  @Test
+  @DisplayName("recentPatches — grace 중인데 이전 패치가 1개뿐이면 이전 1개만 반환")
+  void recentPatches_whenLatestInGracePeriodWithOnlyOnePrevious_returnsSinglePrevious() {
+    OffsetDateTime latestAt = OffsetDateTime.now().minusDays(1);
+    OffsetDateTime previousAt = OffsetDateTime.now().minusDays(20);
+    PatchVersion latest = PatchVersion.of("16.8", latestAt);
+    PatchVersion previous = PatchVersion.of("16.7", previousAt);
+    given(patchVersionRepository.findTop3ByOrderByReleasedAtDesc())
+        .willReturn(List.of(latest, previous));
+
+    List<PatchVersion> result = service.recentPatches();
+
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).getPatch()).isEqualTo("16.7");
+  }
+
+  @Test
+  @DisplayName("recentPatches — grace 중이고 이전 패치가 없으면(전체 1개) 빈 리스트 반환")
+  void recentPatches_whenLatestInGracePeriodWithNoPrevious_returnsEmpty() {
+    OffsetDateTime latestAt = OffsetDateTime.now().minusDays(1);
+    PatchVersion latest = PatchVersion.of("16.8", latestAt);
+    given(patchVersionRepository.findTop3ByOrderByReleasedAtDesc()).willReturn(List.of(latest));
+
+    List<PatchVersion> result = service.recentPatches();
+
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  @DisplayName("recentPatches — mature 상태에서 패치 1개만 있으면 1개만 반환")
+  void recentPatches_whenMatureWithOnlyOne_returnsSingleton() {
+    OffsetDateTime latestAt = OffsetDateTime.now().minusDays(10);
+    PatchVersion only = PatchVersion.of("16.8", latestAt);
+    given(patchVersionRepository.findTop3ByOrderByReleasedAtDesc()).willReturn(List.of(only));
 
     List<PatchVersion> result = service.recentPatches();
 
@@ -204,7 +254,7 @@ class PatchVersionServiceTest {
   @Test
   @DisplayName("recentPatches — 패치가 없으면 빈 리스트 반환")
   void recentPatches_whenEmpty_returnsEmptyList() {
-    given(patchVersionRepository.findTop2ByOrderByReleasedAtDesc()).willReturn(List.of());
+    given(patchVersionRepository.findTop3ByOrderByReleasedAtDesc()).willReturn(List.of());
 
     List<PatchVersion> result = service.recentPatches();
 

@@ -27,14 +27,16 @@ public class BottomDuoStatisticsController {
   @Operation(
       summary = "바텀 듀오 전체 통계 조회",
       description = "선택한 조건(티어, 시즌, 패치, 큐 타입 등)에 대해 바텀 듀오의 승률, 픽률, 밴률 등의 종합 통계를 조회합니다."
+          + " size 파라미터로 상위 N개만 받을 수 있으며, 범위(1~1000)를 벗어나면 자동 보정됩니다."
   )
   public BottomDuoStatisticsResponse getList(
       @RequestParam Tier tier,
       @RequestParam(required = false) String patchVersion,
       @RequestParam(required = false) String adcChampionId,
       @RequestParam(required = false) String supChampionId,
-      @RequestParam(defaultValue = "PICKRATE_DESC") BottomDuoStatFinder.SortKey sort
+      @RequestParam(defaultValue = "PICKRATE_DESC") BottomDuoStatFinder.SortKey sort,
+      @RequestParam(defaultValue = "100") int size
   ) {
-    return useCase.execute(tier, patchVersion, adcChampionId, supChampionId, sort);
+    return useCase.execute(tier, patchVersion, adcChampionId, supChampionId, sort, size);
   }
 }
