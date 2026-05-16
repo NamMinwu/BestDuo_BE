@@ -46,14 +46,21 @@ external:
     api-key: ${EXTERNAL_RIOT_API_KEY:}
 
 patch-sync:
-  enabled: ${PATCH_SYNC_ENABLED:true}
+  enabled: ${PATCH_SYNC_ENABLED:false}
   interval-ms: ${PATCH_SYNC_INTERVAL_MS:21600000}  # 6시간
+
+aggregate:
+  scheduler:
+    enabled: ${AGGREGATE_SCHEDULER_ENABLED:false}
+    cron: ${AGGREGATE_SCHEDULER_CRON:0 0 4 * * *}  # 매일 04:00 Asia/Seoul
+  retention:
+    patches: ${AGGREGATE_RETENTION_PATCHES:3}  # 최근 N개 patch만 보존 (cron 끝에 자동 정리)
 
 pipeline:
   runner:
-    enabled: ${PIPELINE_RUNNER_ENABLED:true}
+    enabled: ${PIPELINE_RUNNER_ENABLED:false}
   seed-daily-budget: ${PIPELINE_SEED_DAILY_BUDGET:2000}
-  collect-daily-budget: ${PIPELINE_COLLECT_DAILY_BUDGET:8000}
+  collect-daily-budget: ${PIPELINE_COLLECT_DAILY_BUDGET:12000}
   collect-batch-size: ${PIPELINE_COLLECT_BATCH_SIZE:20}
   ingest-batch-size: ${PIPELINE_INGEST_BATCH_SIZE:10}
   polling-interval-ms: ${PIPELINE_POLLING_INTERVAL_MS:5000}
@@ -75,6 +82,10 @@ management:
   endpoint:
     health:
       show-details: never
+  # 로컬 환경에서 Redis 미실행 시 health check 실패 로그를 막기 위해 임시 비활성화
+  health:
+    redis:
+      enabled: false
 
 admin:
   api:
@@ -83,6 +94,42 @@ admin:
 monitoring:
   datasource:
     enabled: false
+
+nlp:
+  base-url: ${NLP_BASE_URL:http://localhost:8001}
+  timeout-ms: ${NLP_TIMEOUT_MS:8000}
+  query-limit: ${NLP_QUERY_LIMIT:10}
+  internal-api-key: ${NLP_INTERNAL_API_KEY:}
+  chat:
+    enabled: ${EXTERNAL_NLP_CHAT_ENABLED:false}
+    rate-limit:
+      requests-per-minute: ${CHAT_RATE_LIMIT_PER_MIN:10}
+
+chat:
+  session:
+    max-turns: ${CHAT_SESSION_MAX_TURNS:12}
+    ttl-seconds: ${CHAT_SESSION_TTL_SECONDS:1800}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      nlp:
+        register-health-indicator: true
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+  retry:
+    instances:
+      nlp:
+        max-attempts: 2
+        wait-duration: 300ms
+        retry-exceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - org.springframework.web.client.HttpServerErrorException
 
 sentry:
   dsn: ${SENTRY_DSN:}
