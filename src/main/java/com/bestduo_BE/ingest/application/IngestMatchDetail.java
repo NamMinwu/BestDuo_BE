@@ -1,13 +1,12 @@
 package com.bestduo_BE.ingest.application;
 
 import com.bestduo_BE.common.application.port.RiotApiPort;
-import com.bestduo_BE.ingest.infra.persistence.BottomDuoRawSaver;
-import com.bestduo_BE.ingest.infra.persistence.MatchSaver;
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.domain.service.BottomDuoExtractor;
 import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
+import com.bestduo_BE.ingest.infra.persistence.MatchSaver;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +20,6 @@ public class IngestMatchDetail {
 
   private final RiotApiPort riotApiPort;
   private final MatchSaver matchSaver;
-  private final BottomDuoRawSaver bottomDuoRawSaver;
   private final BottomDuoExtractor extractor;
 
   @Transactional
@@ -45,7 +43,6 @@ public class IngestMatchDetail {
     }
 
     matchSaver.save(matchId, match, tier);
-    bottomDuoRawSaver.saveAllIdempotent(raws);
     return new IngestResult(raws.size(), extractMatchStartTimeSec(match));
   }
 

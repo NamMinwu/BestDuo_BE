@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 
 import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggregateJpaRepository;
 import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggregateJpaRepository;
-import com.bestduo_BE.common.infra.persistence.repository.BottomDuoRawJpaRepository;
 import com.bestduo_BE.config.AggregateProperties;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,16 +27,13 @@ class CleanupOldPatchesTest {
   @Mock
   private BottomDuoMatchupAggregateJpaRepository matchupRepo;
 
-  @Mock
-  private BottomDuoRawJpaRepository rawRepo;
-
   private CleanupOldPatches cleanupOldPatches;
 
   @BeforeEach
   void setUp() {
     AggregateProperties props = new AggregateProperties();
     props.getRetention().setPatches(3);
-    cleanupOldPatches = new CleanupOldPatches(statRepo, matchupRepo, rawRepo, props);
+    cleanupOldPatches = new CleanupOldPatches(statRepo, matchupRepo, props);
   }
 
   @Test
@@ -47,11 +43,8 @@ class CleanupOldPatchesTest {
         .thenReturn(List.of("16.9", "16.8", "16.6", "16.5", "16.4"));
     when(matchupRepo.findAllDistinctPatchVersions())
         .thenReturn(List.of("16.9", "16.8", "16.6"));
-    when(rawRepo.findAllDistinctPatches())
-        .thenReturn(List.of("16.9", "16.6", "16.5"));
     when(statRepo.deleteByPatchVersionNotIn(anyList())).thenReturn(10);
     when(matchupRepo.deleteByPatchVersionNotIn(anyList())).thenReturn(20);
-    when(rawRepo.deleteByPatchNotIn(anyList())).thenReturn(30);
 
     CleanupOldPatches.Result result = cleanupOldPatches.execute();
 
@@ -61,12 +54,9 @@ class CleanupOldPatchesTest {
     assertThat(captor.getValue()).containsExactly("16.9", "16.8", "16.6");
     verify(matchupRepo).deleteByPatchVersionNotIn(captor.capture());
     assertThat(captor.getValue()).containsExactly("16.9", "16.8", "16.6");
-    verify(rawRepo).deleteByPatchNotIn(captor.capture());
-    assertThat(captor.getValue()).containsExactly("16.9", "16.8", "16.6");
 
     assertThat(result.statDeleted()).isEqualTo(10);
     assertThat(result.matchupDeleted()).isEqualTo(20);
-    assertThat(result.rawDeleted()).isEqualTo(30);
     assertThat(result.keepPatches()).containsExactly("16.9", "16.8", "16.6");
   }
 
@@ -76,7 +66,6 @@ class CleanupOldPatchesTest {
     when(statRepo.findAllDistinctPatchVersions())
         .thenReturn(List.of("15.9", "15.10", "15.8", "15.7"));
     when(matchupRepo.findAllDistinctPatchVersions()).thenReturn(List.of());
-    when(rawRepo.findAllDistinctPatches()).thenReturn(List.of());
     when(statRepo.deleteByPatchVersionNotIn(anyList())).thenReturn(0);
 
     cleanupOldPatches.execute();
@@ -93,16 +82,13 @@ class CleanupOldPatchesTest {
   void executeSkipsDeleteWhenNoExcess() {
     when(statRepo.findAllDistinctPatchVersions()).thenReturn(List.of("16.9", "16.8"));
     when(matchupRepo.findAllDistinctPatchVersions()).thenReturn(List.of("16.9"));
-    when(rawRepo.findAllDistinctPatches()).thenReturn(List.of("16.9", "16.8"));
 
     CleanupOldPatches.Result result = cleanupOldPatches.execute();
 
     verify(statRepo, never()).deleteByPatchVersionNotIn(anyList());
     verify(matchupRepo, never()).deleteByPatchVersionNotIn(anyList());
-    verify(rawRepo, never()).deleteByPatchNotIn(anyList());
     assertThat(result.statDeleted()).isZero();
     assertThat(result.matchupDeleted()).isZero();
-    assertThat(result.rawDeleted()).isZero();
     assertThat(result.keepPatches()).containsExactly("16.9", "16.8");
   }
 
@@ -111,13 +97,11 @@ class CleanupOldPatchesTest {
   void executeSkipsWhenNoPatches() {
     when(statRepo.findAllDistinctPatchVersions()).thenReturn(List.of());
     when(matchupRepo.findAllDistinctPatchVersions()).thenReturn(List.of());
-    when(rawRepo.findAllDistinctPatches()).thenReturn(List.of());
 
     CleanupOldPatches.Result result = cleanupOldPatches.execute();
 
     verify(statRepo, never()).deleteByPatchVersionNotIn(anyList());
     verify(matchupRepo, never()).deleteByPatchVersionNotIn(anyList());
-    verify(rawRepo, never()).deleteByPatchNotIn(anyList());
     assertThat(result.keepPatches()).isEmpty();
   }
 
@@ -127,7 +111,6 @@ class CleanupOldPatchesTest {
     when(statRepo.findAllDistinctPatchVersions())
         .thenReturn(List.of("16.9", "UNKNOWN", "16.8", "broken", "16.6", "16.5"));
     when(matchupRepo.findAllDistinctPatchVersions()).thenReturn(List.of());
-    when(rawRepo.findAllDistinctPatches()).thenReturn(List.of());
     when(statRepo.deleteByPatchVersionNotIn(anyList())).thenReturn(0);
 
     cleanupOldPatches.execute();
@@ -139,14 +122,12 @@ class CleanupOldPatchesTest {
   }
 
   @Test
-  @DisplayName("execute — 3개 repository의 patch를 합쳐서 keep 리스트 계산한다")
+  @DisplayName("execute — stat/matchup repository의 patch를 합쳐서 keep 리스트 계산한다")
   void executeUnionsPatchesAcrossRepositories() {
-    when(statRepo.findAllDistinctPatchVersions()).thenReturn(List.of("16.9"));
-    when(matchupRepo.findAllDistinctPatchVersions()).thenReturn(List.of("16.8"));
-    when(rawRepo.findAllDistinctPatches()).thenReturn(List.of("16.6", "16.5"));
+    when(statRepo.findAllDistinctPatchVersions()).thenReturn(List.of("16.9", "16.5"));
+    when(matchupRepo.findAllDistinctPatchVersions()).thenReturn(List.of("16.8", "16.6"));
     when(statRepo.deleteByPatchVersionNotIn(anyList())).thenReturn(0);
     when(matchupRepo.deleteByPatchVersionNotIn(anyList())).thenReturn(0);
-    when(rawRepo.deleteByPatchNotIn(anyList())).thenReturn(0);
 
     CleanupOldPatches.Result result = cleanupOldPatches.execute();
 

@@ -2,7 +2,6 @@ package com.bestduo_BE.aggregate.application;
 
 import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoMatchupAggregateJpaRepository;
 import com.bestduo_BE.aggregate.infra.persistence.repository.BottomDuoStatAggregateJpaRepository;
-import com.bestduo_BE.common.infra.persistence.repository.BottomDuoRawJpaRepository;
 import com.bestduo_BE.config.AggregateProperties;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -15,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * 최근 N개 patch만 보존하고 그 외 stat_agg / matchup_agg / raw 행을 정리한다.
+ * 최근 N개 patch만 보존하고 그 외 stat_agg / matchup_agg 행을 정리한다.
  * <p>N은 {@link AggregateProperties.Retention#getPatches()}로 외부화.
  * <p>cron 끝에 호출되어 일일 retention 정책 역할.
  *
@@ -31,7 +30,6 @@ public class CleanupOldPatches {
 
   private final BottomDuoStatAggregateJpaRepository statRepo;
   private final BottomDuoMatchupAggregateJpaRepository matchupRepo;
-  private final BottomDuoRawJpaRepository rawRepo;
   private final AggregateProperties props;
 
   public Result execute() {
@@ -53,7 +51,7 @@ public class CleanupOldPatches {
     if (keepPatches.isEmpty()) {
       log.info("[CleanupOldPatches] no parseable patches, skipping delete (allPatches={})",
           allPatches.size());
-      return new Result(0, 0, 0, keepPatches);
+      return new Result(0, 0, keepPatches);
     }
 
     boolean hasNonParseable = allPatches.size() > parseablePatches.size();
@@ -61,24 +59,22 @@ public class CleanupOldPatches {
     if (!hasNonParseable && !hasExcess) {
       log.info("[CleanupOldPatches] all {} patches within retention={}, skipping delete",
           parseablePatches.size(), retention);
-      return new Result(0, 0, 0, keepPatches);
+      return new Result(0, 0, keepPatches);
     }
 
     int statDeleted = statRepo.deleteByPatchVersionNotIn(keepPatches);
     int matchupDeleted = matchupRepo.deleteByPatchVersionNotIn(keepPatches);
-    int rawDeleted = rawRepo.deleteByPatchNotIn(keepPatches);
 
-    log.info("[CleanupOldPatches] retention={} keep={} stat={} matchup={} raw={}",
-        retention, keepPatches, statDeleted, matchupDeleted, rawDeleted);
+    log.info("[CleanupOldPatches] retention={} keep={} stat={} matchup={}",
+        retention, keepPatches, statDeleted, matchupDeleted);
 
-    return new Result(statDeleted, matchupDeleted, rawDeleted, keepPatches);
+    return new Result(statDeleted, matchupDeleted, keepPatches);
   }
 
   private Set<String> collectAllPatches() {
     Set<String> all = new HashSet<>();
     all.addAll(statRepo.findAllDistinctPatchVersions());
     all.addAll(matchupRepo.findAllDistinctPatchVersions());
-    all.addAll(rawRepo.findAllDistinctPatches());
     return all;
   }
 
@@ -102,5 +98,5 @@ public class CleanupOldPatches {
     return Integer.parseInt(m.group(group));
   }
 
-  public record Result(int statDeleted, int matchupDeleted, int rawDeleted, List<String> keepPatches) {}
+  public record Result(int statDeleted, int matchupDeleted, List<String> keepPatches) {}
 }

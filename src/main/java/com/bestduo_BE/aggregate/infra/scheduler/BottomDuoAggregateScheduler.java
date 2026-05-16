@@ -17,10 +17,6 @@ import org.springframework.stereotype.Component;
  *
  * <p>대상 tier 는 CHALLENGER ~ EMERALD 5개로 한정한다. 한 tier 에서 예외가 발생해도 나머지 tier 와
  * cleanup 단계는 계속 진행한다.
- *
- * <p>이전에는 {@code bottom_duo_raw} 위 SQL GROUP BY/self-join 으로 같은 결과를 만들었으나,
- * 향후 lane 조합 확장을 위해 단일 경로로 통일했다. 검증 절차는 {@code docs/aggregate-from-match-verification.md}
- * 참고.
  */
 @Component
 @Slf4j
@@ -68,9 +64,9 @@ public class BottomDuoAggregateScheduler {
 
     try {
       CleanupOldPatches.Result cleanupResult = cleanupUseCase.execute();
-      log.info("[AggregateScheduler] cleanup stat={} matchup={} raw={} keep={}",
+      log.info("[AggregateScheduler] cleanup stat={} matchup={} keep={}",
           cleanupResult.statDeleted(), cleanupResult.matchupDeleted(),
-          cleanupResult.rawDeleted(), cleanupResult.keepPatches());
+          cleanupResult.keepPatches());
     } catch (Exception ex) {
       log.error("[AggregateScheduler] cleanup failed", ex);
     }

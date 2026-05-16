@@ -72,7 +72,7 @@ class BottomDuoAggregateSchedulerTest {
     when(fromMatchUseCase.execute(eq(PATCH), any(Tier.class), eq(true)))
         .thenReturn(new AggregateBottomDuoFromMatch.Result(10, 5, 5, 5, 5, 10L, 10L));
     when(cleanupUseCase.execute())
-        .thenReturn(new CleanupOldPatches.Result(1, 2, 3, List.of(PATCH)));
+        .thenReturn(new CleanupOldPatches.Result(1, 2, List.of(PATCH)));
 
     scheduler.run();
 
@@ -98,7 +98,7 @@ class BottomDuoAggregateSchedulerTest {
     when(fromMatchUseCase.execute(eq(PATCH), eq(Tier.EMERALD), eq(true)))
         .thenReturn(new AggregateBottomDuoFromMatch.Result(4, 4, 4, 4, 4, 4L, 4L));
     when(cleanupUseCase.execute())
-        .thenReturn(new CleanupOldPatches.Result(0, 0, 0, List.of(PATCH)));
+        .thenReturn(new CleanupOldPatches.Result(0, 0, List.of(PATCH)));
 
     scheduler.run();
 

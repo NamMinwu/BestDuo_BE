@@ -5,9 +5,6 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.common.application.port.RiotApiPort;
-import com.bestduo_BE.ingest.infra.persistence.BottomDuoRawSaver;
-import com.bestduo_BE.ingest.infra.persistence.MatchSaver;
-import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.domain.service.BottomDuoExtractor;
@@ -16,12 +13,12 @@ import com.bestduo_BE.common.infra.riot.dto.MetadataDto;
 import com.bestduo_BE.common.infra.riot.dto.ParticipantDto;
 import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
 import com.bestduo_BE.common.infra.riot.dto.TeamDto;
+import com.bestduo_BE.ingest.infra.persistence.MatchSaver;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -34,31 +31,22 @@ class IngestMatchDetailTest {
   @Mock
   private MatchSaver matchSaver;
 
-  @Mock
-  private BottomDuoRawSaver bottomDuoRawSaver;
-
   private IngestMatchDetail useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new IngestMatchDetail(riotApiPort, matchSaver, bottomDuoRawSaver, new BottomDuoExtractor());
+    useCase = new IngestMatchDetail(riotApiPort, matchSaver, new BottomDuoExtractor());
   }
 
   @Test
-  @DisplayName("match 저장, bottom duo raw 저장, 결과 반환")
-  void saveMatchAndBottomDuoRaws() {
+  @DisplayName("match 저장 후 추출된 bottom duo 개수와 시작시간을 반환한다")
+  void saveMatchAndReturnExtractedCount() {
     RiotMatchDto match = sampleMatch();
     given(riotApiPort.loadMatch("KR_1")).willReturn(match);
 
     IngestResult result = useCase.execute("KR_1", Tier.EMERALD, null);
 
     verify(matchSaver).save("KR_1", match, Tier.EMERALD);
-    ArgumentCaptor<List<BottomDuoRaw>> rawsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(bottomDuoRawSaver).saveAllIdempotent(rawsCaptor.capture());
-    List<BottomDuoRaw> raws = rawsCaptor.getValue();
-    assertThat(raws).hasSize(2);
-    assertThat(raws).allMatch(raw -> raw.tier() == Tier.EMERALD && raw.matchId().equals("KR_1"));
-
     assertThat(result.rawCreated()).isEqualTo(2);
     assertThat(result.matchStartTimeSec()).isEqualTo(12345L);
   }
