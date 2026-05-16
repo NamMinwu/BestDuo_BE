@@ -125,6 +125,26 @@ public interface BottomDuoStatAggregateJpaRepository extends JpaRepository<Botto
 
   List<BottomDuoStatAggregate> findByPatchVersionAndTier(String patchVersion, String tier);
 
+  /**
+   * retention 정책: keepPatches에 포함되지 않은 patch_version 행을 모두 삭제한다.
+   * <p>호출 측은 keepPatches가 비어있지 않음을 보장해야 한다 (빈 리스트로 호출 시 IllegalArgumentException).
+   */
+  @Modifying
+  @Transactional
+  @Query(value = """
+      delete from bottom_duo_stat_agg
+      where patch_version not in (:keepPatches)
+      """, nativeQuery = true)
+  int deleteByPatchVersionNotIn(@Param("keepPatches") List<String> keepPatches);
+
+  /** stat_agg에 존재하는 모든 patch_version (정렬 X). */
+  @Query(value = """
+      select distinct patch_version
+      from bottom_duo_stat_agg
+      where patch_version is not null
+      """, nativeQuery = true)
+  List<String> findAllDistinctPatchVersions();
+
   private static boolean isParseablePatchVersion(String raw) {
     return raw != null && PATCH_VERSION_PATTERN.matcher(raw).matches();
   }

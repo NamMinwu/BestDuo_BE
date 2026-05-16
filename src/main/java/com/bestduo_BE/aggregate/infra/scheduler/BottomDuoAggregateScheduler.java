@@ -2,6 +2,7 @@ package com.bestduo_BE.aggregate.infra.scheduler;
 
 import com.bestduo_BE.aggregate.application.AggregateBottomDuoMatchup;
 import com.bestduo_BE.aggregate.application.AggregateBottomDuoStats;
+import com.bestduo_BE.aggregate.application.CleanupOldPatches;
 import com.bestduo_BE.common.application.PatchVersionService;
 import com.bestduo_BE.common.domain.model.Tier;
 import java.util.List;
@@ -35,6 +36,7 @@ public class BottomDuoAggregateScheduler {
   private final PatchVersionService patchVersionService;
   private final AggregateBottomDuoStats statUseCase;
   private final AggregateBottomDuoMatchup matchupUseCase;
+  private final CleanupOldPatches cleanupUseCase;
 
   @Scheduled(cron = "${aggregate.scheduler.cron:0 0 4 * * *}", zone = "Asia/Seoul")
   public void run() {
@@ -62,6 +64,15 @@ public class BottomDuoAggregateScheduler {
       log.info("[AggregateScheduler] matchup affected={}", matchupResult.affectedRows());
     } catch (Exception ex) {
       log.error("[AggregateScheduler] matchup aggregate failed", ex);
+    }
+
+    try {
+      CleanupOldPatches.Result cleanupResult = cleanupUseCase.execute();
+      log.info("[AggregateScheduler] cleanup stat={} matchup={} raw={} keep={}",
+          cleanupResult.statDeleted(), cleanupResult.matchupDeleted(),
+          cleanupResult.rawDeleted(), cleanupResult.keepPatches());
+    } catch (Exception ex) {
+      log.error("[AggregateScheduler] cleanup failed", ex);
     }
 
     log.info("[AggregateScheduler] done patch={}", patchVersion);
