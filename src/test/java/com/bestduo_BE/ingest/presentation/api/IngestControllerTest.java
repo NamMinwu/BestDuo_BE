@@ -6,11 +6,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.bestduo_BE.common.infra.persistence.entity.BottomDuoRawEntity;
-import com.bestduo_BE.common.infra.riot.FakeRiotApiAdapter;
 import com.bestduo_BE.common.infra.persistence.entity.Match;
-import com.bestduo_BE.common.infra.persistence.repository.BottomDuoRawJpaRepository;
 import com.bestduo_BE.common.infra.persistence.repository.MatchJpaRepository;
+import com.bestduo_BE.common.infra.riot.FakeRiotApiAdapter;
 import com.bestduo_BE.common.infra.riot.dto.InfoDto;
 import com.bestduo_BE.common.infra.riot.dto.ParticipantDto;
 import com.bestduo_BE.common.infra.riot.dto.RiotMatchDto;
@@ -42,18 +40,16 @@ class IngestControllerTest {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private MatchJpaRepository matchRepository;
-  @Autowired private BottomDuoRawJpaRepository bottomDuoRawRepository;
   @Autowired private FakeRiotApiAdapter fakeRiotApiAdapter;
 
   @AfterEach
   void cleanUp() {
-    bottomDuoRawRepository.deleteAll();
     matchRepository.deleteAll();
   }
 
   @Test
-  @DisplayName("POST /ingest/match — 매치와 BottomDuoRaw를 저장하고 멱등성을 보장한다")
-  void collectingMatchPersistsMatchAndBottomDuoRawsIdempotently() throws Exception {
+  @DisplayName("POST /ingest/match — match를 멱등하게 저장하고 추출된 duo 개수를 응답한다")
+  void collectingMatchPersistsMatchIdempotently() throws Exception {
     fakeRiotApiAdapter.stubMatch("KR_ABCDE", sampleMatch());
 
     mockMvc.perform(post("/ingest/match/{matchId}", "KR_ABCDE")
@@ -65,16 +61,11 @@ class IngestControllerTest {
     Match savedMatch = matchRepository.findAll().get(0);
     assertThat(savedMatch.getPayloadJson()).isNotBlank();
 
-    assertThat(bottomDuoRawRepository.count()).isEqualTo(2);
-    List<BottomDuoRawEntity> raws = bottomDuoRawRepository.findAll();
-    assertThat(raws).extracting(BottomDuoRawEntity::getTeamId).containsExactlyInAnyOrder(100, 200);
-
     mockMvc.perform(post("/ingest/match/{matchId}", "KR_ABCDE")
             .param("tier", "EMERALD"))
         .andExpect(status().isOk());
 
     assertThat(matchRepository.count()).isEqualTo(1);
-    assertThat(bottomDuoRawRepository.count()).isEqualTo(2);
   }
 
   private RiotMatchDto sampleMatch() {
