@@ -1,5 +1,6 @@
 package com.bestduo_BE.ingest.infra.persistence;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Match;
 import com.bestduo_BE.common.infra.persistence.repository.MatchJpaRepository;
 import com.bestduo_BE.common.infra.riot.dto.InfoDto;
@@ -15,7 +16,7 @@ public class MatchSaver {
   private final MatchJpaRepository matchRepository;
   private final ObjectMapper objectMapper;
 
-  public void save(String matchId, RiotMatchDto matchDetail) {
+  public void save(String matchId, RiotMatchDto matchDetail, Tier collectionTier) {
     InfoDto info = matchDetail.info();
 
     String payload = objectMapper.writeValueAsString(matchDetail);
@@ -25,6 +26,7 @@ public class MatchSaver {
         info.queueId(),
         info.gameCreation(),
         info.gameVersion(),
+        collectionTier,
         payload
     );
 

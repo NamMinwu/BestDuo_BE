@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.bestduo_BE.common.domain.model.BottomDuoRaw;
 import com.bestduo_BE.common.domain.model.IngestResult;
@@ -68,7 +69,7 @@ class IngestMatchDetailPatchFilterTest {
 
     IngestResult result = useCase.execute("KR_2", Tier.GOLD, "15.23");
 
-    verify(matchSaver, never()).save("KR_2", match);
+    verifyNoInteractions(matchSaver);
     verify(bottomDuoRawSaver, never()).saveAllIdempotent(any());
     assertThat(result.rawCreated()).isEqualTo(0);
   }
