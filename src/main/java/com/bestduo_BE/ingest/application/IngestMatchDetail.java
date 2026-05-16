@@ -44,7 +44,7 @@ public class IngestMatchDetail {
       raws = filtered;
     }
 
-    matchSaver.save(matchId, match);
+    matchSaver.save(matchId, match, tier);
     bottomDuoRawSaver.saveAllIdempotent(raws);
     return new IngestResult(raws.size(), extractMatchStartTimeSec(match));
   }

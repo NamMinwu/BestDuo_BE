@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Match;
 import com.bestduo_BE.common.infra.persistence.repository.MatchJpaRepository;
 import com.bestduo_BE.common.infra.riot.dto.InfoDto;
@@ -34,7 +35,7 @@ class MatchSaverTest {
   }
 
   @Test
-  @DisplayName("save — InfoDto로부터 Match 엔티티를 생성하고 저장한다")
+  @DisplayName("save — InfoDto와 collectionTier로부터 Match 엔티티를 생성하고 저장한다")
   void save_persistsMatchEntityBuiltFromInfoDto() {
     RiotMatchDto dto = new RiotMatchDto(
         null,
@@ -49,7 +50,7 @@ class MatchSaverTest {
     );
     given(objectMapper.writeValueAsString(dto)).willReturn("{payload}");
 
-    saver.save("KR_TEST", dto);
+    saver.save("KR_TEST", dto, Tier.DIAMOND);
 
     ArgumentCaptor<Match> captor = ArgumentCaptor.forClass(Match.class);
     then(matchRepository).should().save(captor.capture());
@@ -58,6 +59,7 @@ class MatchSaverTest {
     assertEquals(420, saved.getQueueId());
     assertEquals(dto.info().gameCreation(), saved.getGameCreation());
     assertEquals("15.1", saved.getGameVersion());
+    assertEquals(Tier.DIAMOND, saved.getCollectionTier());
     assertEquals("{payload}", saved.getPayloadJson());
     then(objectMapper).should().writeValueAsString(dto);
   }

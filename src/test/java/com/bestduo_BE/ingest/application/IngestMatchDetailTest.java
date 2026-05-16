@@ -52,7 +52,7 @@ class IngestMatchDetailTest {
 
     IngestResult result = useCase.execute("KR_1", Tier.EMERALD, null);
 
-    verify(matchSaver).save("KR_1", match);
+    verify(matchSaver).save("KR_1", match, Tier.EMERALD);
     ArgumentCaptor<List<BottomDuoRaw>> rawsCaptor = ArgumentCaptor.forClass(List.class);
     verify(bottomDuoRawSaver).saveAllIdempotent(rawsCaptor.capture());
     List<BottomDuoRaw> raws = rawsCaptor.getValue();
