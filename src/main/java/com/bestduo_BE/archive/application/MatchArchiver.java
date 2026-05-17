@@ -1,12 +1,14 @@
 package com.bestduo_BE.archive.application;
 
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.common.infra.persistence.entity.Match;
+import com.bestduo_BE.common.infra.persistence.projection.MatchPayloadProjection;
 import com.bestduo_BE.common.infra.persistence.repository.MatchJpaRepository;
 import com.bestduo_BE.config.ArchiveProperties;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +23,15 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
  * (patch, tier) 단위로 {@code match.payload_json} 들을 R2 (S3-compatible) 로 archive 한다.
  *
  * <p>keyset pagination 으로 stream 하면서 jsonl 한 줄에 한 payload 를 적고 전체를 단일 객체로
- * gzip 압축해 PUT. 한 (patch, tier) 의 매치 수가 수만 수준이라 메모리 부담은 수십 MB 이하.
+ * gzip 압축해 PUT.
  *
- * <p>archive 만 수행한다 — match 행 삭제는 이후 PR 에서 cron 통합 시점에 따로 처리.
+ * <p>메모리 관리:
+ * <ul>
+ *   <li>{@link MatchPayloadProjection} 으로 fetch 해서 Hibernate L1 캐시 우회 — 페이지가 GC 대상이 됨
+ *   <li>gzip 출력은 temp 파일로 흘려보내고 {@code RequestBody.fromFile} 로 업로드 — 압축본을 메모리에 통째로 안 올림
+ * </ul>
+ *
+ * <p>archive 만 수행한다 — match 행 삭제는 cleanup endpoint 가 따로 처리.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,6 +41,8 @@ public class MatchArchiver {
 
   private static final int PAGE_SIZE = 500;
   private static final String OBJECT_KEY_PATTERN = "match-archive/patch=%s/tier=%s.jsonl.gz";
+  private static final String TEMP_FILE_PREFIX = "match-archive-";
+  private static final String TEMP_FILE_SUFFIX = ".jsonl.gz";
 
   private final MatchJpaRepository matchRepository;
   private final S3Client s3Client;
@@ -41,43 +51,64 @@ public class MatchArchiver {
   public Result execute(String patch, Tier tier) {
     String objectKey = OBJECT_KEY_PATTERN.formatted(patch, tier.name());
 
-    ByteArrayOutputStream buf = new ByteArrayOutputStream();
-    int archivedCount;
-    try (GZIPOutputStream gzip = new GZIPOutputStream(buf)) {
-      archivedCount = streamPayloadsInto(patch, tier, gzip);
+    Path tempFile;
+    try {
+      tempFile = Files.createTempFile(TEMP_FILE_PREFIX, TEMP_FILE_SUFFIX);
     } catch (IOException e) {
-      throw new IllegalStateException("Failed to gzip-encode match archive: " + objectKey, e);
+      throw new IllegalStateException("Failed to create archive temp file: " + objectKey, e);
     }
 
-    if (archivedCount == 0) {
-      log.info("[MatchArchiver] no matches to archive (patch={} tier={})", patch, tier);
-      return new Result(0, 0L, objectKey);
+    try {
+      int archivedCount;
+      try (OutputStream out = Files.newOutputStream(tempFile);
+          GZIPOutputStream gzip = new GZIPOutputStream(out)) {
+        archivedCount = streamPayloadsInto(patch, tier, gzip);
+      } catch (IOException e) {
+        throw new IllegalStateException("Failed to gzip-encode match archive: " + objectKey, e);
+      }
+
+      if (archivedCount == 0) {
+        log.info("[MatchArchiver] no matches to archive (patch={} tier={})", patch, tier);
+        return new Result(0, 0L, objectKey);
+      }
+
+      long bytesUploaded;
+      try {
+        bytesUploaded = Files.size(tempFile);
+      } catch (IOException e) {
+        throw new IllegalStateException("Failed to read archive temp file size: " + objectKey, e);
+      }
+
+      s3Client.putObject(
+          PutObjectRequest.builder()
+              .bucket(props.getR2().getBucket())
+              .key(objectKey)
+              .contentType("application/gzip")
+              .build(),
+          RequestBody.fromFile(tempFile));
+
+      log.info("[MatchArchiver] archived patch={} tier={} count={} bytes={} key={}",
+          patch, tier, archivedCount, bytesUploaded, objectKey);
+      return new Result(archivedCount, bytesUploaded, objectKey);
+    } finally {
+      try {
+        Files.deleteIfExists(tempFile);
+      } catch (IOException e) {
+        log.warn("[MatchArchiver] failed to delete temp file: {}", tempFile, e);
+      }
     }
-
-    byte[] body = buf.toByteArray();
-    s3Client.putObject(
-        PutObjectRequest.builder()
-            .bucket(props.getR2().getBucket())
-            .key(objectKey)
-            .contentType("application/gzip")
-            .build(),
-        RequestBody.fromBytes(body));
-
-    log.info("[MatchArchiver] archived patch={} tier={} count={} bytes={} key={}",
-        patch, tier, archivedCount, body.length, objectKey);
-    return new Result(archivedCount, body.length, objectKey);
   }
 
   private int streamPayloadsInto(String patch, Tier tier, GZIPOutputStream gzip) throws IOException {
     String cursor = "";
     int total = 0;
     while (true) {
-      List<Match> page =
-          matchRepository.findPageByTierAndPatch(tier.name(), patch, cursor, PAGE_SIZE);
+      List<MatchPayloadProjection> page =
+          matchRepository.findPayloadPageByTierAndPatch(tier.name(), patch, cursor, PAGE_SIZE);
       if (page.isEmpty()) {
         break;
       }
-      for (Match m : page) {
+      for (MatchPayloadProjection m : page) {
         gzip.write(m.getPayloadJson().getBytes(StandardCharsets.UTF_8));
         gzip.write('\n');
         cursor = m.getMatchId();

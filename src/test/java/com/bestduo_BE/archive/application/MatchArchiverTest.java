@@ -3,16 +3,14 @@ package com.bestduo_BE.archive.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.bestduo_BE.common.domain.model.Tier;
-import com.bestduo_BE.common.infra.persistence.entity.Match;
+import com.bestduo_BE.common.infra.persistence.projection.MatchPayloadProjection;
 import com.bestduo_BE.common.infra.persistence.repository.MatchJpaRepository;
 import com.bestduo_BE.config.ArchiveProperties;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -56,7 +54,7 @@ class MatchArchiverTest {
   @Test
   @DisplayName("execute — 매치가 0건이면 archivedCount=0 이고 S3 호출은 일어나지 않는다")
   void emptyPagesProduceZeroArchived() {
-    when(matchRepository.findPageByTierAndPatch(eq(TIER.name()), eq(PATCH), any(), eq(500)))
+    when(matchRepository.findPayloadPageByTierAndPatch(eq(TIER.name()), eq(PATCH), any(), eq(500)))
         .thenReturn(List.of());
 
     MatchArchiver.Result result = archiver.execute(PATCH, TIER);
@@ -69,10 +67,10 @@ class MatchArchiverTest {
   @Test
   @DisplayName("execute — 매치 1건이면 putObject 가 정확한 bucket/key 로 1회 호출되고 bytesUploaded > 0")
   void singleMatchProducesOnePutObject() {
-    Match m = match("KR_1", "{\"info\":{\"gameVersion\":\"16.5.1\"}}");
-    when(matchRepository.findPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq(""), eq(500)))
+    MatchPayloadProjection m = projection("KR_1", "{\"info\":{\"gameVersion\":\"16.5.1\"}}");
+    when(matchRepository.findPayloadPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq(""), eq(500)))
         .thenReturn(List.of(m));
-    when(matchRepository.findPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq("KR_1"), eq(500)))
+    when(matchRepository.findPayloadPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq("KR_1"), eq(500)))
         .thenReturn(List.of());
     when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
         .thenReturn(PutObjectResponse.builder().build());
@@ -91,14 +89,14 @@ class MatchArchiverTest {
   @Test
   @DisplayName("execute — 페이지가 여러 번 나뉘어도 모든 row 가 한 객체로 합쳐져 putObject 1회 호출")
   void paginationAcrossMultiplePagesAggregatesIntoSinglePut() {
-    Match m1 = match("KR_1", "{\"info\":{\"gameVersion\":\"16.5.1\"}}");
-    Match m2 = match("KR_2", "{\"info\":{\"gameVersion\":\"16.5.1\"}}");
-    Match m3 = match("KR_3", "{\"info\":{\"gameVersion\":\"16.5.2\"}}");
-    when(matchRepository.findPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq(""), eq(500)))
+    MatchPayloadProjection m1 = projection("KR_1", "{\"info\":{\"gameVersion\":\"16.5.1\"}}");
+    MatchPayloadProjection m2 = projection("KR_2", "{\"info\":{\"gameVersion\":\"16.5.1\"}}");
+    MatchPayloadProjection m3 = projection("KR_3", "{\"info\":{\"gameVersion\":\"16.5.2\"}}");
+    when(matchRepository.findPayloadPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq(""), eq(500)))
         .thenReturn(List.of(m1, m2));
-    when(matchRepository.findPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq("KR_2"), eq(500)))
+    when(matchRepository.findPayloadPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq("KR_2"), eq(500)))
         .thenReturn(List.of(m3));
-    when(matchRepository.findPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq("KR_3"), eq(500)))
+    when(matchRepository.findPayloadPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq("KR_3"), eq(500)))
         .thenReturn(List.of());
     when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
         .thenReturn(PutObjectResponse.builder().build());
@@ -114,36 +112,45 @@ class MatchArchiverTest {
   void uploadedBytesGunzipMatchPayloadsAsJsonl() throws IOException {
     String p1 = "{\"info\":{\"gameVersion\":\"16.5.1\",\"gameId\":1}}";
     String p2 = "{\"info\":{\"gameVersion\":\"16.5.1\",\"gameId\":2}}";
-    Match m1 = match("KR_1", p1);
-    Match m2 = match("KR_2", p2);
-    when(matchRepository.findPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq(""), eq(500)))
+    MatchPayloadProjection m1 = projection("KR_1", p1);
+    MatchPayloadProjection m2 = projection("KR_2", p2);
+    when(matchRepository.findPayloadPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq(""), eq(500)))
         .thenReturn(List.of(m1, m2));
-    when(matchRepository.findPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq("KR_2"), eq(500)))
+    when(matchRepository.findPayloadPageByTierAndPatch(eq(TIER.name()), eq(PATCH), eq("KR_2"), eq(500)))
         .thenReturn(List.of());
+
+    // temp file 은 putObject 후 finally 에서 삭제되므로 호출 시점에 바이트를 캡처해 둔다.
+    byte[][] capturedBody = new byte[1][];
     when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
-        .thenReturn(PutObjectResponse.builder().build());
+        .thenAnswer(invocation -> {
+          RequestBody body = invocation.getArgument(1);
+          capturedBody[0] = body.contentStreamProvider().newStream().readAllBytes();
+          return PutObjectResponse.builder().build();
+        });
 
     archiver.execute(PATCH, TIER);
 
-    ArgumentCaptor<RequestBody> bodyCaptor = ArgumentCaptor.forClass(RequestBody.class);
-    verify(s3Client).putObject(any(PutObjectRequest.class), bodyCaptor.capture());
-
-    byte[] uploaded = bodyCaptor.getValue().contentStreamProvider().newStream().readAllBytes();
-    String decoded = gunzip(uploaded);
+    String decoded = gunzip(capturedBody[0]);
     String[] lines = decoded.split("\n");
     assertThat(lines).containsExactly(p1, p2);
   }
 
-  private static Match match(String matchId, String payloadJson) {
-    return Match.builder()
-        .matchId(matchId)
-        .collectionTier(TIER)
-        .payloadJson(payloadJson)
-        .build();
+  private static MatchPayloadProjection projection(String matchId, String payloadJson) {
+    return new MatchPayloadProjection() {
+      @Override
+      public String getMatchId() {
+        return matchId;
+      }
+
+      @Override
+      public String getPayloadJson() {
+        return payloadJson;
+      }
+    };
   }
 
   private static String gunzip(byte[] gzipped) throws IOException {
-    try (InputStream in = new GZIPInputStream(new ByteArrayInputStream(gzipped))) {
+    try (InputStream in = new GZIPInputStream(new java.io.ByteArrayInputStream(gzipped))) {
       return new String(in.readAllBytes(), StandardCharsets.UTF_8);
     }
   }
