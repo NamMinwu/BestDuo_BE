@@ -39,3 +39,6 @@ out/
 ### Local env (secrets) ###
 .env
 riot.txt
+
+### Heap dumps (large debugging artifact) ###
+*.hprof
