@@ -2,6 +2,7 @@ package com.bestduo_BE.common.infra.persistence.repository;
 
 
 import com.bestduo_BE.common.infra.persistence.entity.Match;
+import com.bestduo_BE.common.infra.persistence.projection.MatchPayloadProjection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -26,6 +27,27 @@ public interface MatchJpaRepository extends JpaRepository<Match, String> {
       limit :pageSize
       """, nativeQuery = true)
   List<Match> findPageByTierAndPatch(
+      @Param("tier") String tier,
+      @Param("patch") String patch,
+      @Param("afterId") String afterId,
+      @Param("pageSize") int pageSize
+  );
+
+  /**
+   * Archive 경로 전용 projection 페이지네이션.
+   * <p>{@link MatchPayloadProjection} 으로 받아 Hibernate L1 캐시에 엔티티가 등록되지 않도록 한다.
+   * 5-tier 순회 HTTP 요청에서 OSIV 가 세션을 잡고 있어도 페이지가 GC 대상이 되어 OOM 을 피한다.
+   */
+  @Query(value = """
+      select match_id as matchId, payload_json as payloadJson
+      from match
+      where collection_tier = :tier
+        and split_part(game_version, '.', 1) || '.' || split_part(game_version, '.', 2) = :patch
+        and match_id > :afterId
+      order by match_id asc
+      limit :pageSize
+      """, nativeQuery = true)
+  List<MatchPayloadProjection> findPayloadPageByTierAndPatch(
       @Param("tier") String tier,
       @Param("patch") String patch,
       @Param("afterId") String afterId,
