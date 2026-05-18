@@ -80,7 +80,7 @@ public class MatchQueueDispatcher {
   private List<Item> toItems(List<MatchQueue> list) {
     List<Item> out = new ArrayList<>();
     for (MatchQueue mq : list) {
-      out.add(new Item(mq.getMatchId(), mq.getCollectionTier(), mq.getPriority(), mq.getPatch()));
+      out.add(new Item(mq.getMatchId(), mq.getCollectionTier(), mq.getPatch()));
     }
     return out;
   }
@@ -92,5 +92,5 @@ public class MatchQueueDispatcher {
     return requestedTier.name();
   }
 
-  public record Item(String matchId, Tier tier, int priority, String patch) {}
+  public record Item(String matchId, Tier tier, String patch) {}
 }

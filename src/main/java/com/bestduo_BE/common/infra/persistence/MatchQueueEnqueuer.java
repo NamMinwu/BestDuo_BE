@@ -14,10 +14,10 @@ public class MatchQueueEnqueuer {
   private final MatchQueueJpaRepository repo;
 
   @Transactional
-  public void enqueueAllIdempotent(List<String> matchIds, Tier tier, int priority, String patch) {
+  public void enqueueAllIdempotent(List<String> matchIds, Tier tier, String patch) {
     for (String matchId : matchIds) {
       if (repo.existsById(matchId)) continue;
-      repo.save(MatchQueue.newReady(matchId, tier, priority, patch));
+      repo.save(MatchQueue.newReady(matchId, tier, patch));
     }
   }
 }

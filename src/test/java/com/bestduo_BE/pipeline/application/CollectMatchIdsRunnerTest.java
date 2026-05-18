@@ -187,7 +187,7 @@ class CollectMatchIdsRunnerTest {
 
     runner.runBatch();
 
-    verify(matchQueueEnqueuer).enqueueAllIdempotent(any(), any(), anyInt(), eq("16.7"));
+    verify(matchQueueEnqueuer).enqueueAllIdempotent(any(), any(), eq("16.7"));
   }
 
   @Test
@@ -294,7 +294,7 @@ class CollectMatchIdsRunnerTest {
 
     runner.runBatch();
 
-    verify(matchQueueEnqueuer, never()).enqueueAllIdempotent(any(), any(), anyInt(), any());
+    verify(matchQueueEnqueuer, never()).enqueueAllIdempotent(any(), any(), any());
     verify(summonerRepository).markMatchIdsCollected(eq("p-empty"), any(OffsetDateTime.class));
   }
 
