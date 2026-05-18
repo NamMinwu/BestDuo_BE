@@ -33,9 +33,6 @@ public class MatchQueue {
   @Column(name = "status", nullable = false)
   private QueueStatus status;
 
-  @Column(name = "priority", nullable = false)
-  private int priority;
-
   @Enumerated(EnumType.STRING)
   @Column(name = "collection_tier", nullable = false)
   private Tier collectionTier;
@@ -58,12 +55,11 @@ public class MatchQueue {
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
 
-  public static MatchQueue newReady(String matchId, Tier collectionTier, int priority, String patch) {
+  public static MatchQueue newReady(String matchId, Tier collectionTier, String patch) {
     OffsetDateTime now = OffsetDateTime.now();
     return MatchQueue.builder()
         .matchId(matchId)
         .status(QueueStatus.READY)
-        .priority(priority)
         .collectionTier(collectionTier)
         .patch(patch)
         .retryCount(0)

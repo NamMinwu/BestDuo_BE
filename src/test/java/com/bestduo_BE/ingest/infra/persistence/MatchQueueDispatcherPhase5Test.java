@@ -48,7 +48,7 @@ class MatchQueueDispatcherPhase5Test {
   @Test
   @DisplayName("pickAndLockWithPriority 결과를 Item으로 변환한다")
   void pickAndLockWithPriority_convertsToItems() {
-    MatchQueue mq = MatchQueue.newReady("match-1", Tier.DIAMOND, 50, "15.23");
+    MatchQueue mq = MatchQueue.newReady("match-1", Tier.DIAMOND, "15.23");
     given(repo.pickReadyWithPriorityAndLock(anyInt(), any(), anyString()))
         .willReturn(List.of(mq));
     given(repo.pickRetryableErrorAndLock(anyInt(), anyInt(), anyInt(), any())).willReturn(List.of());

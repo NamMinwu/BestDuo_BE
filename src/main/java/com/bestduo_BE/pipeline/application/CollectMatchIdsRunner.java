@@ -119,7 +119,7 @@ public class CollectMatchIdsRunner {
 
     String patch = ctx != null ? ctx.patch() : null;
     Tier tier = summoner.getLastKnownTier();
-    matchQueueEnqueuer.enqueueAllIdempotent(matchIds, tier, props.getCollectPriority(), patch);
+    matchQueueEnqueuer.enqueueAllIdempotent(matchIds, tier, patch);
     return matchIds.size();
   }
 

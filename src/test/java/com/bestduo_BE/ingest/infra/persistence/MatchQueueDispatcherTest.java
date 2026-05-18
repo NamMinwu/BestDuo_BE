@@ -48,9 +48,9 @@ class MatchQueueDispatcherTest {
   @Test
   @DisplayName("pickAndLock — READY 아이템을 재시도 오류보다 우선 선택한다")
   void pickAndLockPrefersReadyBeforeRetryableErrors() {
-    MatchQueue ready1 = match("m-1", Tier.GOLD, 1, "15.23");
-    MatchQueue ready2 = match("m-2", Tier.SILVER, 2, "15.23");
-    MatchQueue error = match("m-3", Tier.BRONZE, 3, "15.23");
+    MatchQueue ready1 = match("m-1", Tier.GOLD, "15.23");
+    MatchQueue ready2 = match("m-2", Tier.SILVER, "15.23");
+    MatchQueue error = match("m-3", Tier.BRONZE, "15.23");
     given(repository.pickReadyAndLock(3, null)).willReturn(List.of(ready1, ready2));
     given(repository.pickRetryableErrorAndLock(1, 2, 5, null)).willReturn(List.of(error));
 
@@ -59,17 +59,17 @@ class MatchQueueDispatcherTest {
     verify(repository).pickReadyAndLock(3, null);
     verify(repository).pickRetryableErrorAndLock(1, 2, 5, null);
     assertThat(items).containsExactly(
-        new Item("m-1", Tier.GOLD, 1, "15.23"),
-        new Item("m-2", Tier.SILVER, 2, "15.23"),
-        new Item("m-3", Tier.BRONZE, 3, "15.23")
+        new Item("m-1", Tier.GOLD, "15.23"),
+        new Item("m-2", Tier.SILVER, "15.23"),
+        new Item("m-3", Tier.BRONZE, "15.23")
     );
   }
 
   @Test
   @DisplayName("pickAndLock — READY 아이템이 limit을 채우면 재시도 오류를 건너뛴다")
   void skipsRetryableErrorsWhenReadyFillLimit() {
-    MatchQueue ready1 = match("m-1", Tier.EMERALD, 1, "15.23");
-    MatchQueue ready2 = match("m-2", Tier.EMERALD, 2, "15.23");
+    MatchQueue ready1 = match("m-1", Tier.EMERALD, "15.23");
+    MatchQueue ready2 = match("m-2", Tier.EMERALD, "15.23");
     given(repository.pickReadyAndLock(2, null)).willReturn(List.of(ready1, ready2));
 
     List<Item> items = coordinator.pickAndLock(2, 2, 5);
@@ -77,15 +77,15 @@ class MatchQueueDispatcherTest {
     verify(repository).pickReadyAndLock(2, null);
     verify(repository, never()).pickRetryableErrorAndLock(anyInt(), anyInt(), anyInt(), org.mockito.ArgumentMatchers.<String>any());
     assertThat(items).containsExactly(
-        new Item("m-1", Tier.EMERALD, 1, "15.23"),
-        new Item("m-2", Tier.EMERALD, 2, "15.23")
+        new Item("m-1", Tier.EMERALD, "15.23"),
+        new Item("m-2", Tier.EMERALD, "15.23")
     );
   }
 
   @Test
   @DisplayName("pickAndLock — 요청된 tier로 필터링한다")
   void pickAndLockFiltersByRequestedTier() {
-    MatchQueue ready = match("m-gold", Tier.GOLD, 1, "15.23");
+    MatchQueue ready = match("m-gold", Tier.GOLD, "15.23");
     given(repository.pickReadyAndLock(2, "GOLD")).willReturn(List.of(ready));
     given(repository.pickRetryableErrorAndLock(1, 2, 5, "GOLD")).willReturn(List.of());
 
@@ -93,13 +93,13 @@ class MatchQueueDispatcherTest {
 
     verify(repository).pickReadyAndLock(2, "GOLD");
     verify(repository).pickRetryableErrorAndLock(1, 2, 5, "GOLD");
-    assertThat(items).containsExactly(new Item("m-gold", Tier.GOLD, 1, "15.23"));
+    assertThat(items).containsExactly(new Item("m-gold", Tier.GOLD, "15.23"));
   }
 
   @Test
   @DisplayName("markDone — 엔티티 상태를 DONE으로 업데이트한다")
   void markDoneUpdatesEntityStatus() {
-    MatchQueue mq = match("done", Tier.GOLD, 1, "15.23");
+    MatchQueue mq = match("done", Tier.GOLD, "15.23");
     mq.markRunning();
     given(repository.findById("done")).willReturn(Optional.of(mq));
 
@@ -112,7 +112,7 @@ class MatchQueueDispatcherTest {
   @Test
   @DisplayName("markError — 실패 메시지를 기록하고 상태를 ERROR로 설정한다")
   void markErrorRegistersFailureMessage() {
-    MatchQueue mq = match("err", Tier.GOLD, 1, "15.23");
+    MatchQueue mq = match("err", Tier.GOLD, "15.23");
     mq.markRunning();
     given(repository.findById("err")).willReturn(Optional.of(mq));
 
@@ -131,12 +131,11 @@ class MatchQueueDispatcherTest {
     verify(repository).unlockToReady("match");
   }
 
-  private MatchQueue match(String matchId, Tier tier, int priority, String patch) {
+  private MatchQueue match(String matchId, Tier tier, String patch) {
     OffsetDateTime now = OffsetDateTime.now();
     return MatchQueue.builder()
         .matchId(matchId)
         .status(QueueStatus.READY)
-        .priority(priority)
         .collectionTier(tier)
         .patch(patch)
         .retryCount(0)

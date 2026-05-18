@@ -17,7 +17,6 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
         or (mq.status = 'ERROR' and mq.updated_at <= now() - interval '2 minutes')
       order by
         case when mq.status = 'ERROR' then 0 else 1 end,
-        mq.priority asc,
         mq.updated_at asc
       limit :limit
       """, nativeQuery = true)
@@ -46,7 +45,7 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
       from match_queue mq
       where mq.status = 'READY'
         and (:collectionTier is null or mq.collection_tier = :collectionTier)
-      order by mq.priority asc, mq.updated_at asc
+      order by mq.updated_at asc
       limit :limit
     )
     update match_queue mq
@@ -71,7 +70,7 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
         and mq.retry_count < :maxRetry
         and mq.updated_at <= now() - (:cooldownMinutes * interval '1 minute')
         and (:collectionTier is null or mq.collection_tier = :collectionTier)
-      order by mq.priority asc, mq.updated_at asc
+      order by mq.updated_at asc
       limit :limit
     )
     update match_queue mq
@@ -111,7 +110,6 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
    * <ol>
    *   <li>currentPatch와 일치하는 항목 우선 (불일치 또는 null이면 후순위)</li>
    *   <li>tier 우선순위: CHALLENGER(0) → GRANDMASTER(1) → MASTER(2) → DIAMOND(3) → EMERALD(4) → 기타(5)</li>
-   *   <li>priority ASC</li>
    *   <li>updated_at ASC</li>
    * </ol>
    */
@@ -133,7 +131,6 @@ public interface MatchQueueJpaRepository extends JpaRepository<MatchQueue, Strin
           when 'EMERALD'      then 4
           else 5
         end asc,
-        mq.priority asc,
         mq.updated_at asc
       limit :limit
     )

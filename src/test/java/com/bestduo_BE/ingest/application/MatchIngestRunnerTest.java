@@ -37,7 +37,7 @@ class MatchIngestRunnerTest {
   @Test
   @DisplayName("executeWithPriority — 요청된 tier를 큐 락에 전달하고 처리 결과를 반환한다")
   void executeForwardsRequestedTierToQueueLocking() {
-    MatchQueueDispatcher.Item item = new MatchQueueDispatcher.Item("match-1", Tier.GOLD, 1, "15.23");
+    MatchQueueDispatcher.Item item = new MatchQueueDispatcher.Item("match-1", Tier.GOLD, "15.23");
     given(queue.recoverStaleRunning(10)).willReturn(0);
     given(queue.pickAndLockWithPriority(3, 2, 10, Tier.GOLD, null)).willReturn(List.of(item));
     given(ingestMatchDetail.execute("match-1", Tier.GOLD, "15.23"))
@@ -69,7 +69,7 @@ class MatchIngestRunnerTest {
   @Test
   @DisplayName("item.patch()를 ingestMatchDetail에 전달한다")
   void execute_forwardsPatchFromItemToIngestMatchDetail() {
-    MatchQueueDispatcher.Item item = new MatchQueueDispatcher.Item("match-2", Tier.EMERALD, 2, "15.24");
+    MatchQueueDispatcher.Item item = new MatchQueueDispatcher.Item("match-2", Tier.EMERALD, "15.24");
     given(queue.recoverStaleRunning(10)).willReturn(0);
     given(queue.pickAndLockWithPriority(1, 2, 10, Tier.EMERALD, null)).willReturn(List.of(item));
     given(ingestMatchDetail.execute("match-2", Tier.EMERALD, "15.24"))
@@ -83,7 +83,7 @@ class MatchIngestRunnerTest {
   @Test
   @DisplayName("item.patch() null이면 null 전달")
   void execute_withNullPatch_forwardsNullToIngestMatchDetail() {
-    MatchQueueDispatcher.Item item = new MatchQueueDispatcher.Item("match-3", Tier.GOLD, 1, null);
+    MatchQueueDispatcher.Item item = new MatchQueueDispatcher.Item("match-3", Tier.GOLD, null);
     given(queue.recoverStaleRunning(10)).willReturn(0);
     given(queue.pickAndLockWithPriority(1, 2, 10, Tier.GOLD, null)).willReturn(List.of(item));
     given(ingestMatchDetail.execute("match-3", Tier.GOLD, null))

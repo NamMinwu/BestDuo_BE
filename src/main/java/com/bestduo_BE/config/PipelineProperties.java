@@ -52,11 +52,6 @@ public class PipelineProperties {
   @Max(600_000)
   private long errorBackoffMs = 5000;
 
-  /** Stage 2에서 match_queue에 enqueue할 때 사용하는 기본 우선순위 */
-  @Min(0)
-  @Max(1000)
-  private int collectPriority = 50;
-
   /**
    * DIA/EME CoverageBucket에서 한 division 내 최대 page 수.
    * 이 수에 도달하면 다음 division으로 이동한다.

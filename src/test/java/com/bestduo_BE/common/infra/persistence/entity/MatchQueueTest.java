@@ -14,11 +14,10 @@ class MatchQueueTest {
   @Test
   @DisplayName("newReady — 패치 정보를 포함한 READY 상태 엔트리를 생성한다")
   void newReadyIncludesPatch() {
-    MatchQueue queue = MatchQueue.newReady("match-1", Tier.EMERALD, 20, "15.23");
+    MatchQueue queue = MatchQueue.newReady("match-1", Tier.EMERALD, "15.23");
 
     assertThat(queue.getMatchId()).isEqualTo("match-1");
     assertThat(queue.getCollectionTier()).isEqualTo(Tier.EMERALD);
-    assertThat(queue.getPriority()).isEqualTo(20);
     assertThat(queue.getPatch()).isEqualTo("15.23");
     assertThat(queue.getStatus()).isEqualTo(QueueStatus.READY);
   }
@@ -26,7 +25,7 @@ class MatchQueueTest {
   @Test
   @DisplayName("markRunning — READY 상태가 아니면 IllegalStateTransitionException을 던진다")
   void markRunning_whenNotReady_throws() {
-    MatchQueue queue = MatchQueue.newReady("match-1", Tier.EMERALD, 20, "15.23");
+    MatchQueue queue = MatchQueue.newReady("match-1", Tier.EMERALD, "15.23");
     queue.markRunning(); // READY → RUNNING
 
     assertThatThrownBy(queue::markRunning)
@@ -36,7 +35,7 @@ class MatchQueueTest {
   @Test
   @DisplayName("markDone — RUNNING 상태가 아니면 IllegalStateTransitionException을 던진다")
   void markDone_whenNotRunning_throws() {
-    MatchQueue queue = MatchQueue.newReady("match-1", Tier.EMERALD, 20, "15.23");
+    MatchQueue queue = MatchQueue.newReady("match-1", Tier.EMERALD, "15.23");
 
     assertThatThrownBy(queue::markDone)
         .isInstanceOf(IllegalStateTransitionException.class);
@@ -45,7 +44,7 @@ class MatchQueueTest {
   @Test
   @DisplayName("markError — RUNNING 상태가 아니면 IllegalStateTransitionException을 던진다")
   void markError_whenNotRunning_throws() {
-    MatchQueue queue = MatchQueue.newReady("match-1", Tier.EMERALD, 20, "15.23");
+    MatchQueue queue = MatchQueue.newReady("match-1", Tier.EMERALD, "15.23");
 
     assertThatThrownBy(() -> queue.markError("boom"))
         .isInstanceOf(IllegalStateTransitionException.class);
