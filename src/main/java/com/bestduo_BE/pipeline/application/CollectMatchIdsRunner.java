@@ -38,6 +38,7 @@ public class CollectMatchIdsRunner {
   private final PatchVersionService patchVersionService;
   private final DailyBudgetTracker budgetTracker;
   private final PipelineProperties props;
+  private final PipelineMetrics pipelineMetrics;
 
   // ── public API ──────────────────────────────────────────────────────────
 
@@ -81,6 +82,7 @@ public class CollectMatchIdsRunner {
       try {
         int queued = collectForSummoner(summoner, ctx);
         matchIdsQueued += queued;
+        pipelineMetrics.recordMatchesEnqueued(queued);
         summonerRepository.markMatchIdsCollected(summoner.getPuuid(), OffsetDateTime.now());
         budgetTracker.recordCollectCall(1);
         apiCalls++;

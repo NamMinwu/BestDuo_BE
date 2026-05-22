@@ -10,6 +10,7 @@ public class PipelineMetrics {
 
   private static final String STAGE_COMPLETED = "pipeline.stage.completed";
   private static final String MATCH_QUEUE_SIZE = "pipeline.match_queue.size";
+  private static final String COLLECT_MATCHES_ENQUEUED = "pipeline.collect.matches_enqueued";
 
   private final MeterRegistry registry;
 
@@ -20,6 +21,16 @@ public class PipelineMetrics {
   public void recordStageCompleted(int stage, String outcome) {
     registry.counter(STAGE_COMPLETED, "stage", String.valueOf(stage), "outcome", outcome)
         .increment();
+  }
+
+  /**
+   * Stage 2 가 match_queue 에 enqueue 한 match 수 카운트. Stage 2 호출 수 (stage.completed{stage=2})
+   * 와 비교해 호출당 평균 enqueue 수 추적 → Stage 2/3 분배 정책 결정의 입력.
+   */
+  public void recordMatchesEnqueued(int count) {
+    if (count > 0) {
+      registry.counter(COLLECT_MATCHES_ENQUEUED).increment(count);
+    }
   }
 
   public void registerMatchQueueGauge(Supplier<Number> sizeSupplier) {

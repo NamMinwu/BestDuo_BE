@@ -20,6 +20,7 @@ import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
 import com.bestduo_BE.common.infra.riot.budget.DailyBudgetTracker;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.config.PipelineProperties;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -59,9 +60,10 @@ class CollectMatchIdsRunnerTest {
     tierMatchCount.setApexTiers(30);
     tierMatchCount.setDiamondEmerald(10);
     props.setTierMatchCount(tierMatchCount);
+    PipelineMetrics pipelineMetrics = new PipelineMetrics(new SimpleMeterRegistry());
     runner = new CollectMatchIdsRunner(
         summonerRepository, riotApiPort, matchQueueEnqueuer,
-        patchVersionService, budgetTracker, props);
+        patchVersionService, budgetTracker, props, pipelineMetrics);
   }
 
   // ── hasPending ──────────────────────────────────────────────────────────
