@@ -72,6 +72,7 @@ pipeline:
   ingest-batch-size: ${PIPELINE_INGEST_BATCH_SIZE:10}
   polling-interval-ms: ${PIPELINE_POLLING_INTERVAL_MS:5000}
   max-pages-per-division: ${PIPELINE_MAX_PAGES_PER_DIVISION:100}
+  dia-eme-daily-page-quota: ${PIPELINE_DIA_EME_DAILY_PAGE_QUOTA:1000}
   tier-match-count:
     apex-tiers: ${PIPELINE_TIER_APEX:100}
     diamond-emerald: ${PIPELINE_TIER_DIA_EME:100}
