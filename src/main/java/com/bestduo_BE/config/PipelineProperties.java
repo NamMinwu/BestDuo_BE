@@ -12,7 +12,8 @@ import org.springframework.validation.annotation.Validated;
 
 /**
  * 파이프라인 공통 설정.
- * <p>Stage별 일일 API 예산, 배치 크기, polling 간격, tier별 matchIds 수집 수를 관리한다.
+ * <p>Stage 2 일일 API 예산, 배치 크기, polling 간격, tier별 matchIds 수집 수를 관리한다.
+ * <p>Stage 1은 platform(kr.api) 전용 limiter 의 자연 throttle 에 의존하므로 별도 일일 cap이 없다.
  * <p>범위를 벗어난 env 주입 시 앱 시작이 거부된다 (운영 안전장치).
  */
 @Component
@@ -21,11 +22,6 @@ import org.springframework.validation.annotation.Validated;
 @Getter
 @Setter
 public class PipelineProperties {
-
-  /** Stage 1(SEED) 일일 API 호출 상한 */
-  @Min(1)
-  @Max(50_000)
-  private int seedDailyBudget = 2000;
 
   /** Stage 2(COLLECT_MATCH_IDS) 일일 API 호출 상한 */
   @Min(1)

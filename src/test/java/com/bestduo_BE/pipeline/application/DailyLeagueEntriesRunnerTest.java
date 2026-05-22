@@ -55,17 +55,8 @@ class DailyLeagueEntriesRunnerTest {
   // ── hasWorkToday ────────────────────────────────────────────────────
 
   @Test
-  @DisplayName("seed 예산 소진 시 hasWorkToday는 false")
-  void hasWorkToday_whenBudgetExhausted_returnsFalse() {
-    given(budgetTracker.canSeed()).willReturn(false);
-
-    assertThat(runner.hasWorkToday()).isFalse();
-  }
-
-  @Test
   @DisplayName("apex 티어가 오늘 완료되지 않았으면 hasWorkToday는 true")
   void hasWorkToday_whenApexTierNotCompleted_returnsTrue() {
-    given(budgetTracker.canSeed()).willReturn(true);
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
 
@@ -75,8 +66,6 @@ class DailyLeagueEntriesRunnerTest {
   @Test
   @DisplayName("모든 apex·DIA·EME quota 소진 시 hasWorkToday는 false")
   void hasWorkToday_whenAllQuotaExhausted_returnsFalse() {
-    given(budgetTracker.canSeed()).willReturn(true);
-
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
@@ -95,8 +84,6 @@ class DailyLeagueEntriesRunnerTest {
   @Test
   @DisplayName("DIA 버킷의 quota가 남아있으면 hasWorkToday는 true")
   void hasWorkToday_whenDiaBucketHasRemainingQuota_returnsTrue() {
-    given(budgetTracker.canSeed()).willReturn(true);
-
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
@@ -114,20 +101,8 @@ class DailyLeagueEntriesRunnerTest {
   // ── runNextChunk ────────────────────────────────────────────────────
 
   @Test
-  @DisplayName("seed 예산 소진 시 runNextChunk는 BUDGET_EXHAUSTED 반환")
-  void runNextChunk_whenBudgetExhausted_returnsBudgetExhausted() {
-    given(budgetTracker.canSeed()).willReturn(false);
-
-    DailyLeagueEntriesRunner.ChunkResult result = runner.runNextChunk();
-
-    assertThat(result.type()).isEqualTo(DailyLeagueEntriesRunner.ChunkResult.Type.BUDGET_EXHAUSTED);
-    verify(leagueEntriesFetcher, never()).execute(any());
-  }
-
-  @Test
   @DisplayName("CHALLENGER 티어가 미완료면 LeagueEntriesFetcher를 호출하고 완료 기록")
   void runNextChunk_whenChallengerNotDone_executesSeedAndRecordsCompletion() {
-    given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     given(budgetTracker.getOrCreateTodayState()).willReturn(state);
@@ -147,7 +122,6 @@ class DailyLeagueEntriesRunnerTest {
   @Test
   @DisplayName("apex 티어 모두 완료 후 DIA 버킷 미완료면 DIA 페이지 실행")
   void runNextChunk_whenApexDoneAndDiaPending_executesDiaPage() {
-    given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.recordSeedCompletedTier(Tier.CHALLENGER);
@@ -175,7 +149,6 @@ class DailyLeagueEntriesRunnerTest {
   @Test
   @DisplayName("DIA 페이지가 빈 응답이면 advanceToNextDivision을 호출하고 quota를 카운트한다")
   void runNextChunk_whenDiaPageEmpty_advancesToNextDivisionAndCountsQuota() {
-    given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.recordSeedCompletedTier(Tier.CHALLENGER);
@@ -205,7 +178,6 @@ class DailyLeagueEntriesRunnerTest {
   @Test
   @DisplayName("DIA 페이지가 정상 응답이면 seedPage가 증가하고 quota를 카운트한다")
   void runNextChunk_whenDiaPageNotEmpty_advancesPageAndCountsQuota() {
-    given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.recordSeedCompletedTier(Tier.CHALLENGER);
@@ -233,7 +205,6 @@ class DailyLeagueEntriesRunnerTest {
   @Test
   @DisplayName("모든 티어 quota 소진 시 runNextChunk는 NO_WORK 반환")
   void runNextChunk_whenAllQuotaExhausted_returnsNoWork() {
-    given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.recordSeedCompletedTier(Tier.CHALLENGER);
@@ -257,7 +228,6 @@ class DailyLeagueEntriesRunnerTest {
   @Test
   @DisplayName("DIA 버킷이 DB에 없으면 hasWorkToday는 true를 반환한다")
   void hasWorkToday_whenDiaBucketMissing_returnsTrue() {
-    given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.recordSeedCompletedTier(Tier.CHALLENGER);
@@ -274,7 +244,6 @@ class DailyLeagueEntriesRunnerTest {
   @Test
   @DisplayName("DIA 버킷이 DB에 없으면 runNextChunk는 버킷을 생성하고 DIA 페이지를 실행한다")
   void runNextChunk_whenDiaBucketMissing_createsBucketAndExecutesDiaPage() {
-    given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.recordSeedCompletedTier(Tier.CHALLENGER);
@@ -308,7 +277,6 @@ class DailyLeagueEntriesRunnerTest {
   @Test
   @DisplayName("currentPatch가 null이면 DIA/EME seed를 스킵하고 NO_WORK 반환")
   void runNextChunk_whenCurrentPatchNull_skipsDiaEmeAndReturnsNoWork() {
-    given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.recordSeedCompletedTier(Tier.CHALLENGER);
@@ -329,7 +297,6 @@ class DailyLeagueEntriesRunnerTest {
   @Test
   @DisplayName("DIA quota가 소진됐으면 hasWorkToday는 false를 반환한다")
   void hasWorkToday_whenDiaQuotaExhausted_returnsFalse() {
-    given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.recordSeedCompletedTier(Tier.CHALLENGER);
@@ -351,7 +318,6 @@ class DailyLeagueEntriesRunnerTest {
   @Test
   @DisplayName("어제 quota 소진된 DIA 버킷은 자정 후 hasWorkToday=true (resetDailyPagesIfNeeded 호출)")
   void hasWorkToday_whenDiaBucketExhaustedYesterday_returnsTrue() {
-    given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.recordSeedCompletedTier(Tier.CHALLENGER);
@@ -369,7 +335,6 @@ class DailyLeagueEntriesRunnerTest {
   @Test
   @DisplayName("어제 quota 소진된 DIA 버킷은 runNextChunk에서 reset 후 새 페이지를 실행한다")
   void runNextChunk_whenDiaBucketExhaustedYesterday_resetsAndRunsPage() {
-    given(budgetTracker.canSeed()).willReturn(true);
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.recordSeedCompletedTier(Tier.CHALLENGER);
