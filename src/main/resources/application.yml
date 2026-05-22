@@ -44,6 +44,13 @@ external:
     platform-base-url: https://kr.api.riotgames.com
     regional-base-url: https://asia.api.riotgames.com
     api-key: ${EXTERNAL_RIOT_API_KEY:}
+    # personal/dev key 한도 (20/1s + 100/2min) 의 90% 시작. controlled experiment 로 95% 까지 안전 검증됨.
+    # host 별 (kr.api, asia.api) 독립 적용. 운영 안정 확인 후 95% (19/95) 로 ramp.
+    rate-limit:
+      short-limit: ${EXTERNAL_RIOT_RATE_LIMIT_SHORT:18}
+      short-window: ${EXTERNAL_RIOT_RATE_LIMIT_SHORT_WINDOW:1s}
+      long-limit: ${EXTERNAL_RIOT_RATE_LIMIT_LONG:90}
+      long-window: ${EXTERNAL_RIOT_RATE_LIMIT_LONG_WINDOW:2m}
 
 patch-sync:
   enabled: ${PATCH_SYNC_ENABLED:false}

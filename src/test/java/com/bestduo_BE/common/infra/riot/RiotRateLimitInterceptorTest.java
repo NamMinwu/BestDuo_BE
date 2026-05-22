@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -26,16 +27,19 @@ import org.springframework.mock.http.client.MockClientHttpResponse;
 class RiotRateLimitInterceptorTest {
 
   private MutableClock clock;
+  private RiotApiMetrics metrics;
   private RiotRateLimitInterceptor interceptor;
   private MockClientHttpRequest request;
 
   @BeforeEach
   void setUp() {
     clock = new MutableClock(Instant.parse("2026-03-30T00:00:00Z"));
+    metrics = new RiotApiMetrics(new SimpleMeterRegistry());
     interceptor = new RiotRateLimitInterceptor(
         "test-key",
         new DualWindowRateLimiter(10, Duration.ofSeconds(1), 60, Duration.ofMinutes(2)),
-        clock
+        clock,
+        metrics
     );
     request = new MockClientHttpRequest();
     request.setURI(URI.create("https://riot.api/test"));
@@ -55,22 +59,38 @@ class RiotRateLimitInterceptorTest {
   }
 
   @Test
-  @DisplayName("intercept — 429 응답 시 RiotRateLimitedException을 던진다")
+  @DisplayName("intercept — 429 응답 시 RiotRateLimitedException 던지고 메트릭 카운트 증가")
   void throwsRiotRateLimitedExceptionOnTooManyRequests() throws Exception {
     ClientHttpRequestExecution execution = mock(ClientHttpRequestExecution.class);
     ClientHttpResponse tooMany = mock(ClientHttpResponse.class);
     var headers = new org.springframework.http.HttpHeaders();
     headers.set("Retry-After", "10");
+    headers.set("X-Rate-Limit-Type", "application");
     when(tooMany.getStatusCode()).thenReturn(HttpStatus.TOO_MANY_REQUESTS);
     when(tooMany.getHeaders()).thenReturn(headers);
     when(execution.execute(any(), any())).thenReturn(tooMany);
 
     assertThatThrownBy(() -> interceptor.intercept(request, new byte[0], execution))
         .isInstanceOf(RiotRateLimitedException.class)
+        .hasMessageContaining("type=application")
         .hasMessageContaining("retry-after=10")
         .hasMessageContaining("uri=" + request.getURI());
 
     verify(tooMany).close();
+  }
+
+  @Test
+  @DisplayName("endpointTag — PUUID/matchId 같은 가변 segment 가 {id} 로 정규화된다")
+  void endpointTagNormalizesIdSegments() {
+    assertThat(RiotRateLimitInterceptor.endpointTag(
+        URI.create("https://asia.api.riotgames.com/lol/match/v5/matches/by-puuid/abcdefghij1234567890/ids")))
+        .isEqualTo("match.v5.matches.by-puuid.{id}.ids");
+
+    assertThat(RiotRateLimitInterceptor.endpointTag(
+        URI.create("https://kr.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/DIAMOND/I")))
+        .isEqualTo("league.v4.entries.RANKED_SOLO_5x5.DIAMOND.I");
+
+    assertThat(RiotRateLimitInterceptor.endpointTag(null)).isEqualTo("unknown");
   }
 
   @Test
