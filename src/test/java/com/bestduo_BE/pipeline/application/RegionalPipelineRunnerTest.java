@@ -26,15 +26,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class PipelineRunnerTest {
+class RegionalPipelineRunnerTest {
 
-  @Mock private DailyLeagueEntriesRunner dailyLeagueEntriesRunner;
   @Mock private CollectMatchIdsRunner collectMatchIdsRunner;
   @Mock private MatchIngestRunner matchIngestRunner;
   @Mock private PatchVersionService patchVersionService;
 
   private PipelineProperties props;
-  private PipelineRunner runner;
+  private RegionalPipelineRunner runner;
 
   @BeforeEach
   void setUp() {
@@ -42,26 +41,13 @@ class PipelineRunnerTest {
     props.setIngestBatchSize(10);
     props.setPollingIntervalMs(100);
     PipelineMetrics pipelineMetrics = new PipelineMetrics(new SimpleMeterRegistry());
-    runner = new PipelineRunner(dailyLeagueEntriesRunner, collectMatchIdsRunner, matchIngestRunner,
+    runner = new RegionalPipelineRunner(collectMatchIdsRunner, matchIngestRunner,
         patchVersionService, props, pipelineMetrics);
   }
 
   @Test
-  @DisplayName("Stage 1 작업이 있으면 runNextChunk만 호출된다")
-  void executeTick_whenStage1HasWork_runsOnlyStage1() throws InterruptedException {
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(true);
-
-    runner.executeTick();
-
-    verify(dailyLeagueEntriesRunner).runNextChunk();
-    verify(collectMatchIdsRunner, never()).runBatch();
-    verify(matchIngestRunner, never()).executeWithPriority(anyInt(), any(), any());
-  }
-
-  @Test
-  @DisplayName("Stage 1 없고 Stage 2 대기 중이면 runBatch만 호출된다")
+  @DisplayName("Stage 2 대기 중이면 runBatch만 호출된다")
   void executeTick_whenStage2HasPending_runsOnlyStage2() throws InterruptedException {
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(true);
 
     runner.executeTick();
@@ -73,7 +59,6 @@ class PipelineRunnerTest {
   @Test
   @DisplayName("유예 기간이 아닐 때 Stage 3는 최신 패치(유효 패치 == 최신 패치)로 우선순위를 결정한다")
   void executeTick_whenNotInGracePeriod_runsStage3WithCurrentPatch() throws InterruptedException {
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.resolveEffectivePatchContext())
         .willReturn(Optional.of(new EffectivePatchContext("15.23", 1000L, null)));
@@ -88,7 +73,6 @@ class PipelineRunnerTest {
   @Test
   @DisplayName("유예 기간 중일 때 Stage 3는 직전 패치(유효 패치 == 직전 패치)로 우선순위를 결정한다")
   void executeTick_whenInGracePeriod_runsStage3WithPreviousPatch() throws InterruptedException {
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     // 유예 기간: endTimeEpochSeconds != null → 유효 패치 = "15.22" (직전 패치)
     given(patchVersionService.resolveEffectivePatchContext())
@@ -104,7 +88,6 @@ class PipelineRunnerTest {
   @Test
   @DisplayName("패치 정보가 없으면 null 패치로 Stage 3를 호출한다")
   void executeTick_whenNoPatch_callsStage3WithNullPatch() throws InterruptedException {
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
     given(matchIngestRunner.executeWithPriority(anyInt(), any(), any()))
@@ -120,7 +103,6 @@ class PipelineRunnerTest {
   void executeTick_whenStage3PriorityTierIsEmerald_callsStage3WithEmeraldTier()
       throws InterruptedException {
     props.setStage3PriorityTier(Tier.EMERALD);
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.resolveEffectivePatchContext())
         .willReturn(Optional.of(new EffectivePatchContext("15.23", 1000L, null)));
@@ -135,7 +117,6 @@ class PipelineRunnerTest {
   @Test
   @DisplayName("Stage 3에서 처리된 항목이 없으면 폴링 간격만큼 대기한다")
   void executeTick_whenNothingInQueue_sleepsPollingInterval() throws InterruptedException {
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
     given(matchIngestRunner.executeWithPriority(anyInt(), any(), any()))
@@ -150,19 +131,8 @@ class PipelineRunnerTest {
   }
 
   @Test
-  @DisplayName("Stage 1에서 429 발생 시 속도 제한 예외가 전파된다")
-  void executeTick_whenStage1Throws429_propagates() {
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(true);
-    given(dailyLeagueEntriesRunner.runNextChunk()).willThrow(new RiotRateLimitedException("429"));
-
-    assertThatThrownBy(() -> runner.executeTick())
-        .isInstanceOf(RiotRateLimitedException.class);
-  }
-
-  @Test
   @DisplayName("Stage 3에서 429 발생 시 속도 제한 예외가 전파된다")
   void executeTick_whenStage3Throws429_propagates() {
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
     given(matchIngestRunner.executeWithPriority(anyInt(), any(), any()))
@@ -176,7 +146,6 @@ class PipelineRunnerTest {
   @DisplayName("priority 티어가 비면 다음 티어로 순회하다가 잡힌 시점에 tick 종료")
   void executeTick_whenPriorityTierEmpty_fallsBackToNextTier() throws InterruptedException {
     props.setStage3PriorityTier(Tier.EMERALD);
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.resolveEffectivePatchContext())
         .willReturn(Optional.of(new EffectivePatchContext("15.23", 1000L, null)));
@@ -201,7 +170,6 @@ class PipelineRunnerTest {
   void executeTick_whenPriorityTierSetAndAllTiersEmpty_sleepsPollingInterval()
       throws InterruptedException {
     props.setStage3PriorityTier(Tier.EMERALD);
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
     given(matchIngestRunner.executeWithPriority(anyInt(), any(), any()))
@@ -221,7 +189,6 @@ class PipelineRunnerTest {
   void executeTick_whenPriorityTierSetAndAllTiersEmpty_skipsPlatinumAndBelow()
       throws InterruptedException {
     props.setStage3PriorityTier(Tier.EMERALD);
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
     given(matchIngestRunner.executeWithPriority(anyInt(), any(), any()))
@@ -241,7 +208,6 @@ class PipelineRunnerTest {
   void executeTick_whenStage3PriorityTierIsAllTiers_singleCallWithNull()
       throws InterruptedException {
     props.setStage3PriorityTier(Tier.ALL_TIERS);
-    given(dailyLeagueEntriesRunner.hasWorkToday()).willReturn(false);
     given(collectMatchIdsRunner.hasPending()).willReturn(false);
     given(patchVersionService.resolveEffectivePatchContext())
         .willReturn(Optional.of(new EffectivePatchContext("15.23", 1000L, null)));

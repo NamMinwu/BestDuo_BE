@@ -17,94 +17,80 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
- * 단일 가상 스레드 파이프라인 루프.
+ * Regional host(asia.api) 전담 파이프라인 루프.
  *
  * <p>Stage 우선순위:
  * <ol>
- *   <li>Stage 1 — {@link DailyLeagueEntriesRunner}: summoner 등록/갱신 (일일 예산 소진 전)</li>
- *   <li>Stage 2 — {@link CollectMatchIdsRunner}: matchIds 수집 (일일 예산 소진 전)</li>
- *   <li>Stage 3 — {@link MatchIngestRunner}: match 상세 수집 (상시)</li>
+ *   <li>Stage 2 — {@link CollectMatchIdsRunner}: matchIds 수집 (일일 예산 내)</li>
+ *   <li>Stage 3 — {@link MatchIngestRunner}: match 상세 수집 (상시, patch+tier 우선순위)</li>
  * </ol>
  *
- * <p>429 발생 시 {@code rateLimitSleepMs}(기본 60초) sleep 후 재시도.
- * match_queue가 비어있으면 {@code pollingIntervalMs} sleep.
+ * <p>{@link PlatformPipelineRunner}와 독립된 가상 스레드에서 실행되며, ASIA limiter 의
+ * 429 가 발생해도 platform 루프는 영향받지 않는다 (host 별 격리).
+ *
+ * <p>match_queue 가 비어있으면 {@code pollingIntervalMs} sleep.
+ * 429 발생 시 {@link #RATE_LIMIT_SLEEP_MS} sleep 후 재시도.
  */
 @Component
 @ConditionalOnProperty(prefix = "pipeline.runner", name = "enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
-public class PipelineRunner {
+public class RegionalPipelineRunner {
 
   private static final long RATE_LIMIT_SLEEP_MS = 60_000L;
   private static final Tier ROUND_ROBIN_LOWEST_TIER = Tier.EMERALD;
 
-  private final DailyLeagueEntriesRunner dailyLeagueEntriesRunner;
   private final CollectMatchIdsRunner collectMatchIdsRunner;
   private final MatchIngestRunner matchIngestRunner;
   private final PatchVersionService patchVersionService;
   private final PipelineProperties props;
   private final PipelineMetrics pipelineMetrics;
 
-  private Thread pipelineThread;
+  private Thread thread;
 
   @PostConstruct
   public void start() {
-    pipelineThread = Thread.ofVirtual().name("pipeline-runner").start(this::loop);
+    thread = Thread.ofVirtual().name("regional-pipeline-runner").start(this::loop);
   }
 
   @PreDestroy
   public void stop() {
-    if (pipelineThread != null) {
-      pipelineThread.interrupt();
-      log.info("PipelineRunner 종료 요청 (interrupt)");
+    if (thread != null) {
+      thread.interrupt();
+      log.info("RegionalPipelineRunner 종료 요청 (interrupt)");
       try {
-        pipelineThread.join(30_000L);
+        thread.join(30_000L);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
-      if (pipelineThread.isAlive()) {
-        log.warn("PipelineRunner 30초 내 종료되지 않음");
+      if (thread.isAlive()) {
+        log.warn("RegionalPipelineRunner 30초 내 종료되지 않음");
       }
     }
   }
 
   private void loop() {
-    log.info("PipelineRunner 시작 (가상 스레드)");
+    log.info("RegionalPipelineRunner 시작 (가상 스레드)");
     while (!Thread.currentThread().isInterrupted()) {
       try {
         executeTick();
       } catch (RiotRateLimitedException e) {
-        log.warn("429 Rate limited. {}ms 대기 후 재시도", RATE_LIMIT_SLEEP_MS);
+        log.warn("[regional] 429 Rate limited. {}ms 대기 후 재시도", RATE_LIMIT_SLEEP_MS);
         sleep(RATE_LIMIT_SLEEP_MS);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        log.info("PipelineRunner 종료 (interrupted)");
+        log.info("RegionalPipelineRunner 종료 (interrupted)");
         break;
       } catch (Exception e) {
-        log.error("PipelineRunner 예기치 않은 오류. {}ms 후 재시도", props.getErrorBackoffMs(), e);
+        log.error("RegionalPipelineRunner 예기치 않은 오류. {}ms 후 재시도",
+            props.getErrorBackoffMs(), e);
         sleep(props.getErrorBackoffMs());
       }
     }
   }
 
-  /**
-   * Stage 1 → 2 → 3 우선순위 판단 후 한 단위를 실행한다.
-   * 테스트에서 직접 호출 가능하도록 package-private.
-   */
+  /** Stage 2 → 3 우선순위 판단 후 한 단위를 실행한다. 테스트에서 직접 호출 가능하도록 package-private. */
   void executeTick() throws InterruptedException {
-    // Stage 1: Seed (일일 예산 내)
-    if (dailyLeagueEntriesRunner.hasWorkToday()) {
-      log.debug("Stage 1 실행");
-      try {
-        dailyLeagueEntriesRunner.runNextChunk();
-        pipelineMetrics.recordStageCompleted(1, "success");
-      } catch (RuntimeException e) {
-        pipelineMetrics.recordStageCompleted(1, "error");
-        throw e;
-      }
-      return;
-    }
-
     // Stage 2: CollectMatchIds (일일 예산 내)
     if (collectMatchIdsRunner.hasPending()) {
       log.debug("Stage 2 실행");
