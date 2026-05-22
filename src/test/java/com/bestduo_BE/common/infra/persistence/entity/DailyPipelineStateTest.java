@@ -25,17 +25,6 @@ class DailyPipelineStateTest {
   }
 
   @Test
-  @DisplayName("incrementSeedCalls() — seedApiCallsUsed가 delta만큼 증가한다")
-  void incrementSeedCallsAddsToCount() {
-    DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-
-    state.incrementSeedCalls(3);
-    state.incrementSeedCalls(2);
-
-    assertThat(state.getSeedApiCallsUsed()).isEqualTo(5);
-  }
-
-  @Test
   @DisplayName("incrementCollectCalls() — collectApiCallsUsed가 delta만큼 증가한다")
   void incrementCollectCallsAddsToCount() {
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());

@@ -5,12 +5,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
-import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.DailyPipelineState;
 import com.bestduo_BE.common.infra.persistence.repository.DailyPipelineStateJpaRepository;
 import com.bestduo_BE.config.PipelineProperties;
 import java.time.LocalDate;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,7 +37,7 @@ class DailyBudgetTrackerTest {
   void canCollect_whenBudgetExhausted_returnsFalse() {
     DailyPipelineState exhausted = DailyPipelineState.create(LocalDate.now());
     exhausted.incrementCollectCalls(200);
-    given(stateRepository.findByPipelineDate(any(LocalDate.class))).willReturn(Optional.of(exhausted));
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(exhausted);
 
     assertThat(tracker.canCollect()).isFalse();
   }
@@ -49,61 +47,21 @@ class DailyBudgetTrackerTest {
   void canCollect_whenBudgetRemains_returnsTrue() {
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
     state.incrementCollectCalls(50);
-    given(stateRepository.findByPipelineDate(any(LocalDate.class))).willReturn(Optional.of(state));
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     assertThat(tracker.canCollect()).isTrue();
-  }
-
-  @Test
-  @DisplayName("recordSeedCall은 DailyPipelineState를 저장한다")
-  void recordSeedCall_persistsUpdatedState() {
-    DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    given(stateRepository.findByPipelineDate(any(LocalDate.class))).willReturn(Optional.of(state));
-    given(stateRepository.save(any(DailyPipelineState.class))).willReturn(state);
-
-    tracker.recordSeedCall(1);
-
-    verify(stateRepository).save(state);
-    assertThat(state.getSeedApiCallsUsed()).isEqualTo(1);
   }
 
   @Test
   @DisplayName("recordCollectCall은 DailyPipelineState를 저장한다")
   void recordCollectCall_persistsUpdatedState() {
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    given(stateRepository.findByPipelineDate(any(LocalDate.class))).willReturn(Optional.of(state));
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
     given(stateRepository.save(any(DailyPipelineState.class))).willReturn(state);
 
     tracker.recordCollectCall(3);
 
     verify(stateRepository).save(state);
     assertThat(state.getCollectApiCallsUsed()).isEqualTo(3);
-  }
-
-  @Test
-  @DisplayName("recordSeedCall(count, tier)는 호출 수와 완료 티어를 함께 저장한다")
-  void recordSeedCall_withTier_persistsCallCountAndCompletedTier() {
-    DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    given(stateRepository.findByPipelineDate(any(LocalDate.class))).willReturn(Optional.of(state));
-    given(stateRepository.save(any(DailyPipelineState.class))).willReturn(state);
-
-    tracker.recordSeedCall(1, Tier.CHALLENGER);
-
-    verify(stateRepository).save(state);
-    assertThat(state.getSeedApiCallsUsed()).isEqualTo(1);
-    assertThat(state.getSeedCompletedTiers()).contains(Tier.CHALLENGER);
-  }
-
-  @Test
-  @DisplayName("getOrCreateTodayState는 없으면 새 상태를 저장하고 반환한다")
-  void getOrCreateTodayState_whenAbsent_savesAndReturnsNew() {
-    DailyPipelineState newState = DailyPipelineState.create(LocalDate.now());
-    given(stateRepository.findByPipelineDate(any(LocalDate.class))).willReturn(Optional.empty());
-    given(stateRepository.save(any(DailyPipelineState.class))).willReturn(newState);
-
-    DailyPipelineState result = tracker.getOrCreateTodayState();
-
-    verify(stateRepository).save(any(DailyPipelineState.class));
-    assertThat(result).isNotNull();
   }
 }

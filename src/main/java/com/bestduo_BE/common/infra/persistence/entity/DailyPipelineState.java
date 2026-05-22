@@ -83,11 +83,6 @@ public class DailyPipelineState {
         .build();
   }
 
-  public void incrementSeedCalls(int delta) {
-    this.seedApiCallsUsed += delta;
-    this.updatedAt = OffsetDateTime.now();
-  }
-
   public void incrementCollectCalls(int delta) {
     this.collectApiCallsUsed += delta;
     this.updatedAt = OffsetDateTime.now();
