@@ -13,14 +13,13 @@ class RiotApiConfigTest {
   private final RiotApiConfig config = new RiotApiConfig();
 
   @Test
-  @DisplayName("riotRateLimitInterceptor — 설정된 API 키를 요청 헤더에 주입한다")
-  void riotRateLimitInterceptorUsesConfiguredApiKey() throws Exception {
+  @DisplayName("riotPlatformRateLimitInterceptor — 설정된 API 키를 요청 헤더에 주입한다")
+  void platformInterceptorUsesConfiguredApiKey() throws Exception {
     RiotApiProperties properties = new RiotApiProperties();
     properties.setApiKey("my-key");
 
-    RiotRateLimitInterceptor interceptor = config.riotRateLimitInterceptor(properties);
+    RiotRateLimitInterceptor interceptor = config.riotPlatformRateLimitInterceptor(properties);
 
-    // 헤더 주입 확인: mock execution으로 인터셉트 실행
     var request = new org.springframework.mock.http.client.MockClientHttpRequest();
     request.setURI(java.net.URI.create("https://kr.api.riotgames.com/test"));
     var execution = org.mockito.Mockito.mock(
@@ -36,16 +35,35 @@ class RiotApiConfigTest {
   }
 
   @Test
+  @DisplayName("platform / regional 인터셉터 — 호스트별 독립 인스턴스로 생성된다")
+  void platformAndRegionalInterceptorsAreSeparateInstances() {
+    RiotApiProperties properties = new RiotApiProperties();
+    properties.setApiKey("my-key");
+
+    RiotRateLimitInterceptor platform = config.riotPlatformRateLimitInterceptor(properties);
+    RiotRateLimitInterceptor regional = config.riotRegionalRateLimitInterceptor(properties);
+
+    // 호스트별 rate limit 버킷 독립을 위해 인스턴스가 분리되어야 함
+    assertThat(platform).isNotSameAs(regional);
+  }
+
+  @Test
   @DisplayName("riotPlatformRestTemplate / riotRegionalRestTemplate — 빈이 정상 생성된다")
   void restTemplateBeansAreCreatedWithCorrectNames() {
     RiotApiProperties properties = new RiotApiProperties();
     properties.setPlatformBaseUrl("https://kr.api.riotgames.com");
     properties.setRegionalBaseUrl("https://asia.api.riotgames.com");
     properties.setApiKey("my-key");
-    RiotRateLimitInterceptor interceptor = config.riotRateLimitInterceptor(properties);
 
-    RestTemplate platform = config.riotPlatformRestTemplate(new RestTemplateBuilder(), interceptor, properties);
-    RestTemplate regional = config.riotRegionalRestTemplate(new RestTemplateBuilder(), interceptor, properties);
+    RiotRateLimitInterceptor platformInterceptor =
+        config.riotPlatformRateLimitInterceptor(properties);
+    RiotRateLimitInterceptor regionalInterceptor =
+        config.riotRegionalRateLimitInterceptor(properties);
+
+    RestTemplate platform =
+        config.riotPlatformRestTemplate(new RestTemplateBuilder(), platformInterceptor, properties);
+    RestTemplate regional =
+        config.riotRegionalRestTemplate(new RestTemplateBuilder(), regionalInterceptor, properties);
 
     assertThat(platform).isNotNull();
     assertThat(regional).isNotNull();

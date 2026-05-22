@@ -3,16 +3,32 @@ package com.bestduo_BE.common.infra.riot;
 import com.bestduo_BE.config.RiotApiProperties;
 import java.time.Clock;
 import java.time.Duration;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * Riot API 클라이언트 빈 구성.
+ *
+ * <p>kr.api(platform) 와 asia.api(regional) 는 Riot 측에서 별도 rate limit 버킷으로 카운팅되므로
+ * (RiotRegionRateLimitProbeTest 로 검증), 인터셉터/limiter 도 호스트별로 분리한다.
+ */
 @Configuration
 public class RiotApiConfig {
 
   @Bean
-  public RiotRateLimitInterceptor riotRateLimitInterceptor(RiotApiProperties properties) {
+  public RiotRateLimitInterceptor riotPlatformRateLimitInterceptor(RiotApiProperties properties) {
+    return new RiotRateLimitInterceptor(
+        properties.getApiKey(),
+        new DualWindowRateLimiter(10, Duration.ofSeconds(1), 60, Duration.ofMinutes(2)),
+        Clock.systemUTC()
+    );
+  }
+
+  @Bean
+  public RiotRateLimitInterceptor riotRegionalRateLimitInterceptor(RiotApiProperties properties) {
     return new RiotRateLimitInterceptor(
         properties.getApiKey(),
         new DualWindowRateLimiter(10, Duration.ofSeconds(1), 60, Duration.ofMinutes(2)),
@@ -23,7 +39,8 @@ public class RiotApiConfig {
   @Bean(name = "riotPlatformRestTemplate")
   public RestTemplate riotPlatformRestTemplate(
       RestTemplateBuilder restTemplateBuilder,
-      RiotRateLimitInterceptor rateLimitInterceptor,
+      @Qualifier("riotPlatformRateLimitInterceptor")
+          RiotRateLimitInterceptor rateLimitInterceptor,
       RiotApiProperties properties) {
     return buildRiotRestTemplate(restTemplateBuilder, properties.getPlatformBaseUrl(), rateLimitInterceptor);
   }
@@ -31,7 +48,8 @@ public class RiotApiConfig {
   @Bean(name = "riotRegionalRestTemplate")
   public RestTemplate riotRegionalRestTemplate(
       RestTemplateBuilder restTemplateBuilder,
-      RiotRateLimitInterceptor rateLimitInterceptor,
+      @Qualifier("riotRegionalRateLimitInterceptor")
+          RiotRateLimitInterceptor rateLimitInterceptor,
       RiotApiProperties properties) {
     return buildRiotRestTemplate(restTemplateBuilder, properties.getRegionalBaseUrl(), rateLimitInterceptor);
   }
