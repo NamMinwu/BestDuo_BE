@@ -67,7 +67,6 @@ archive:
 pipeline:
   runner:
     enabled: ${PIPELINE_RUNNER_ENABLED:false}
-  seed-daily-budget: ${PIPELINE_SEED_DAILY_BUDGET:2000}
   collect-daily-budget: ${PIPELINE_COLLECT_DAILY_BUDGET:12000}
   collect-batch-size: ${PIPELINE_COLLECT_BATCH_SIZE:20}
   ingest-batch-size: ${PIPELINE_INGEST_BATCH_SIZE:10}

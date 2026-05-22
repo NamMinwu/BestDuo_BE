@@ -39,10 +39,10 @@ class PipelinePropertiesTest {
   }
 
   @Test
-  @DisplayName("seedDailyBudget이 0이면 검증 위반이 발생한다")
-  void validate_zeroSeedBudget_violates() {
+  @DisplayName("collectDailyBudget이 0이면 검증 위반이 발생한다")
+  void validate_zeroCollectBudget_violates() {
     PipelineProperties properties = new PipelineProperties();
-    properties.setSeedDailyBudget(0);
+    properties.setCollectDailyBudget(0);
 
     Set<ConstraintViolation<PipelineProperties>> violations = validator.validate(properties);
 
@@ -50,10 +50,10 @@ class PipelinePropertiesTest {
   }
 
   @Test
-  @DisplayName("seedDailyBudget이 상한을 초과하면 검증 위반이 발생한다")
-  void validate_tooLargeSeedBudget_violates() {
+  @DisplayName("collectDailyBudget이 상한을 초과하면 검증 위반이 발생한다")
+  void validate_tooLargeCollectBudget_violates() {
     PipelineProperties properties = new PipelineProperties();
-    properties.setSeedDailyBudget(50_001);
+    properties.setCollectDailyBudget(50_001);
 
     Set<ConstraintViolation<PipelineProperties>> violations = validator.validate(properties);
 

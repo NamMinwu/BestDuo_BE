@@ -48,12 +48,8 @@ public class DailyLeagueEntriesRunner {
 
   /**
    * 오늘 처리할 seed 작업이 남아있으면 true.
-   * 예산 소진 시 항상 false.
    */
   public boolean hasWorkToday() {
-    if (!budgetTracker.canSeed()) {
-      return false;
-    }
     DailyPipelineState state = budgetTracker.getOrCreateTodayState();
     if (hasUncompletedApexTier(state)) {
       return true;
@@ -67,10 +63,6 @@ public class DailyLeagueEntriesRunner {
    * @return 청크 실행 결과
    */
   public ChunkResult runNextChunk() {
-    if (!budgetTracker.canSeed()) {
-      return ChunkResult.budgetExhausted();
-    }
-
     DailyPipelineState state = budgetTracker.getOrCreateTodayState();
 
     // Phase A: apex 티어 (CHALLENGER → GRANDMASTER → MASTER)
@@ -196,7 +188,6 @@ public class DailyLeagueEntriesRunner {
     public enum Type {
       APEX_TIER_CHUNK,
       NON_APEX_PAGE,
-      BUDGET_EXHAUSTED,
       NO_WORK
     }
 
@@ -206,10 +197,6 @@ public class DailyLeagueEntriesRunner {
 
     public static ChunkResult nonApexPage(Tier tier, int seeded) {
       return new ChunkResult(Type.NON_APEX_PAGE, tier, seeded);
-    }
-
-    public static ChunkResult budgetExhausted() {
-      return new ChunkResult(Type.BUDGET_EXHAUSTED, null, 0);
     }
 
     public static ChunkResult noWork() {

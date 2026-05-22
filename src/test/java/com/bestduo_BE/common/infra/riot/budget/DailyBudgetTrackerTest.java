@@ -30,29 +30,8 @@ class DailyBudgetTrackerTest {
   @BeforeEach
   void setUp() {
     props = new PipelineProperties();
-    props.setSeedDailyBudget(100);
     props.setCollectDailyBudget(200);
     tracker = new DailyBudgetTracker(stateRepository, props);
-  }
-
-  @Test
-  @DisplayName("오늘 상태가 없으면 새로 생성하고 seed 예산이 남아있다")
-  void canSeed_whenNoStateExists_createsStateAndAllowsSeed() {
-    DailyPipelineState newState = DailyPipelineState.create(LocalDate.now());
-    given(stateRepository.findByPipelineDate(any(LocalDate.class))).willReturn(Optional.empty());
-    given(stateRepository.save(any(DailyPipelineState.class))).willReturn(newState);
-
-    assertThat(tracker.canSeed()).isTrue();
-  }
-
-  @Test
-  @DisplayName("seed 예산을 모두 소진하면 canSeed가 false")
-  void canSeed_whenBudgetExhausted_returnsFalse() {
-    DailyPipelineState exhausted = DailyPipelineState.create(LocalDate.now());
-    exhausted.incrementSeedCalls(100); // 예산 상한 100과 동일
-    given(stateRepository.findByPipelineDate(any(LocalDate.class))).willReturn(Optional.of(exhausted));
-
-    assertThat(tracker.canSeed()).isFalse();
   }
 
   @Test
