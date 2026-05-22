@@ -3,6 +3,7 @@ package com.bestduo_BE.common.infra.riot;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bestduo_BE.config.RiotApiProperties;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.restclient.RestTemplateBuilder;
@@ -11,6 +12,7 @@ import org.springframework.web.client.RestTemplate;
 class RiotApiConfigTest {
 
   private final RiotApiConfig config = new RiotApiConfig();
+  private final RiotApiMetrics metrics = new RiotApiMetrics(new SimpleMeterRegistry());
 
   @Test
   @DisplayName("riotPlatformRateLimitInterceptor — 설정된 API 키를 요청 헤더에 주입한다")
@@ -18,7 +20,7 @@ class RiotApiConfigTest {
     RiotApiProperties properties = new RiotApiProperties();
     properties.setApiKey("my-key");
 
-    RiotRateLimitInterceptor interceptor = config.riotPlatformRateLimitInterceptor(properties);
+    RiotRateLimitInterceptor interceptor = config.riotPlatformRateLimitInterceptor(properties, metrics);
 
     var request = new org.springframework.mock.http.client.MockClientHttpRequest();
     request.setURI(java.net.URI.create("https://kr.api.riotgames.com/test"));
@@ -40,8 +42,8 @@ class RiotApiConfigTest {
     RiotApiProperties properties = new RiotApiProperties();
     properties.setApiKey("my-key");
 
-    RiotRateLimitInterceptor platform = config.riotPlatformRateLimitInterceptor(properties);
-    RiotRateLimitInterceptor regional = config.riotRegionalRateLimitInterceptor(properties);
+    RiotRateLimitInterceptor platform = config.riotPlatformRateLimitInterceptor(properties, metrics);
+    RiotRateLimitInterceptor regional = config.riotRegionalRateLimitInterceptor(properties, metrics);
 
     // 호스트별 rate limit 버킷 독립을 위해 인스턴스가 분리되어야 함
     assertThat(platform).isNotSameAs(regional);
@@ -56,9 +58,9 @@ class RiotApiConfigTest {
     properties.setApiKey("my-key");
 
     RiotRateLimitInterceptor platformInterceptor =
-        config.riotPlatformRateLimitInterceptor(properties);
+        config.riotPlatformRateLimitInterceptor(properties, metrics);
     RiotRateLimitInterceptor regionalInterceptor =
-        config.riotRegionalRateLimitInterceptor(properties);
+        config.riotRegionalRateLimitInterceptor(properties, metrics);
 
     RestTemplate platform =
         config.riotPlatformRestTemplate(new RestTemplateBuilder(), platformInterceptor, properties);

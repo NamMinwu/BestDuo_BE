@@ -50,16 +50,18 @@ class RiotApiSecretRedactionTest {
     logAppender.start();
     rootLogger.addAppender(logAppender);
 
+    RiotApiMetrics metrics = new RiotApiMetrics(new SimpleMeterRegistry());
     interceptor = new RiotRateLimitInterceptor(
         SECRET_KEY,
         new DualWindowRateLimiter(10, Duration.ofSeconds(1), 60, Duration.ofMinutes(2)),
-        Clock.systemUTC()
+        Clock.systemUTC(),
+        metrics
     );
     restTemplate = new RestTemplate();
     restTemplate.setInterceptors(List.of(interceptor));
     mockServer = MockRestServiceServer.bindTo(restTemplate).build();
 
-    adapter = new RiotApiHttpAdapter(restTemplate, restTemplate, new RiotApiMetrics(new SimpleMeterRegistry()));
+    adapter = new RiotApiHttpAdapter(restTemplate, restTemplate, metrics);
   }
 
   @AfterEach
