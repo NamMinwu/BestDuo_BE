@@ -12,7 +12,7 @@ import com.bestduo_BE.common.application.PatchVersionService;
 import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.DailyPipelineState;
-import com.bestduo_BE.common.infra.riot.budget.DailyBudgetTracker;
+import com.bestduo_BE.common.infra.persistence.repository.DailyPipelineStateJpaRepository;
 import com.bestduo_BE.config.PipelineProperties;
 import com.bestduo_BE.coverage.infra.persistence.entity.CoverageBucket;
 import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketJpaRepository;
@@ -37,7 +37,7 @@ class DailyLeagueEntriesRunnerTest {
   private CoverageBucketJpaRepository coverageBucketRepository;
 
   @Mock
-  private DailyBudgetTracker budgetTracker;
+  private DailyPipelineStateJpaRepository stateRepository;
 
   @Mock
   private PatchVersionService patchVersionService;
@@ -49,7 +49,7 @@ class DailyLeagueEntriesRunnerTest {
   void setUp() {
     props = new PipelineProperties();
     runner = new DailyLeagueEntriesRunner(
-        leagueEntriesFetcher, coverageBucketRepository, budgetTracker, patchVersionService, props);
+        leagueEntriesFetcher, coverageBucketRepository, stateRepository, patchVersionService, props);
   }
 
   // ── hasWorkToday ────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ class DailyLeagueEntriesRunnerTest {
   @DisplayName("apex 티어가 오늘 완료되지 않았으면 hasWorkToday는 true")
   void hasWorkToday_whenApexTierNotCompleted_returnsTrue() {
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     assertThat(runner.hasWorkToday()).isTrue();
   }
@@ -70,7 +70,7 @@ class DailyLeagueEntriesRunnerTest {
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
     state.recordSeedCompletedTier(Tier.MASTER);
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     CoverageBucket diaBucket = bucketWithQuotaExhausted(Tier.DIAMOND, "15.23");
     CoverageBucket emeBucket = bucketWithQuotaExhausted(Tier.EMERALD, "15.23");
@@ -88,7 +88,7 @@ class DailyLeagueEntriesRunnerTest {
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
     state.recordSeedCompletedTier(Tier.MASTER);
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     // fresh bucket: dailyPagesProcessed=0 < quota=10
@@ -105,7 +105,7 @@ class DailyLeagueEntriesRunnerTest {
   void runNextChunk_whenChallengerNotDone_executesSeedAndRecordsCompletion() {
 
     DailyPipelineState state = DailyPipelineState.create(LocalDate.now());
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     LeagueEntriesFetchResult result = new LeagueEntriesFetchResult(1, 5, 5);
     given(leagueEntriesFetcher.execute(argThat(cmd ->
@@ -116,7 +116,8 @@ class DailyLeagueEntriesRunnerTest {
 
     assertThat(chunk.type()).isEqualTo(DailyLeagueEntriesRunner.ChunkResult.Type.APEX_TIER_CHUNK);
     assertThat(chunk.tier()).isEqualTo(Tier.CHALLENGER);
-    verify(budgetTracker).recordSeedCall(1, Tier.CHALLENGER);
+    assertThat(state.getSeedCompletedTiers()).contains(Tier.CHALLENGER);
+    verify(stateRepository).save(state);
   }
 
   @Test
@@ -127,7 +128,7 @@ class DailyLeagueEntriesRunnerTest {
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
     state.recordSeedCompletedTier(Tier.MASTER);
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
 
@@ -143,7 +144,6 @@ class DailyLeagueEntriesRunnerTest {
 
     assertThat(chunk.type()).isEqualTo(DailyLeagueEntriesRunner.ChunkResult.Type.NON_APEX_PAGE);
     assertThat(chunk.tier()).isEqualTo(Tier.DIAMOND);
-    verify(budgetTracker).recordSeedCall(1);
   }
 
   @Test
@@ -154,7 +154,7 @@ class DailyLeagueEntriesRunnerTest {
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
     state.recordSeedCompletedTier(Tier.MASTER);
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
 
@@ -183,7 +183,7 @@ class DailyLeagueEntriesRunnerTest {
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
     state.recordSeedCompletedTier(Tier.MASTER);
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
 
@@ -210,7 +210,7 @@ class DailyLeagueEntriesRunnerTest {
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
     state.recordSeedCompletedTier(Tier.MASTER);
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND))
@@ -233,7 +233,7 @@ class DailyLeagueEntriesRunnerTest {
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
     state.recordSeedCompletedTier(Tier.MASTER);
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.empty());
@@ -249,7 +249,7 @@ class DailyLeagueEntriesRunnerTest {
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
     state.recordSeedCompletedTier(Tier.MASTER);
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND)).willReturn(Optional.empty());
@@ -282,7 +282,7 @@ class DailyLeagueEntriesRunnerTest {
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
     state.recordSeedCompletedTier(Tier.MASTER);
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
 
     DailyLeagueEntriesRunner.ChunkResult result = runner.runNextChunk();
@@ -302,7 +302,7 @@ class DailyLeagueEntriesRunnerTest {
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
     state.recordSeedCompletedTier(Tier.MASTER);
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND))
@@ -323,7 +323,7 @@ class DailyLeagueEntriesRunnerTest {
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
     state.recordSeedCompletedTier(Tier.MASTER);
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     given(coverageBucketRepository.findByPatchAndTier("15.23", Tier.DIAMOND))
@@ -340,7 +340,7 @@ class DailyLeagueEntriesRunnerTest {
     state.recordSeedCompletedTier(Tier.CHALLENGER);
     state.recordSeedCompletedTier(Tier.GRANDMASTER);
     state.recordSeedCompletedTier(Tier.MASTER);
-    given(budgetTracker.getOrCreateTodayState()).willReturn(state);
+    given(stateRepository.getOrCreateForDate(any(LocalDate.class))).willReturn(state);
 
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(new EffectivePatchContext("15.23", 0L, null)));
     CoverageBucket diaBucket = bucketExhaustedOn(Tier.DIAMOND, "15.23", LocalDate.now().minusDays(1));

@@ -5,7 +5,7 @@ import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.LeagueEntriesFetchCommand;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.DailyPipelineState;
-import com.bestduo_BE.common.infra.riot.budget.DailyBudgetTracker;
+import com.bestduo_BE.common.infra.persistence.repository.DailyPipelineStateJpaRepository;
 import com.bestduo_BE.config.PipelineProperties;
 import com.bestduo_BE.coverage.infra.persistence.entity.CoverageBucket;
 import com.bestduo_BE.coverage.infra.persistence.repository.CoverageBucketJpaRepository;
@@ -40,7 +40,7 @@ public class DailyLeagueEntriesRunner {
 
   private final LeagueEntriesFetcher leagueEntriesFetcher;
   private final CoverageBucketJpaRepository coverageBucketRepository;
-  private final DailyBudgetTracker budgetTracker;
+  private final DailyPipelineStateJpaRepository stateRepository;
   private final PatchVersionService patchVersionService;
   private final PipelineProperties props;
 
@@ -50,7 +50,7 @@ public class DailyLeagueEntriesRunner {
    * 오늘 처리할 seed 작업이 남아있으면 true.
    */
   public boolean hasWorkToday() {
-    DailyPipelineState state = budgetTracker.getOrCreateTodayState();
+    DailyPipelineState state = stateRepository.getOrCreateForDate(LocalDate.now());
     if (hasUncompletedApexTier(state)) {
       return true;
     }
@@ -63,7 +63,7 @@ public class DailyLeagueEntriesRunner {
    * @return 청크 실행 결과
    */
   public ChunkResult runNextChunk() {
-    DailyPipelineState state = budgetTracker.getOrCreateTodayState();
+    DailyPipelineState state = stateRepository.getOrCreateForDate(LocalDate.now());
 
     // Phase A: apex 티어 (CHALLENGER → GRANDMASTER → MASTER)
     for (Tier tier : Tier.APEX_TIERS) {
@@ -143,9 +143,10 @@ public class DailyLeagueEntriesRunner {
         QUEUE, tier.name(), "I", tier, 1, 0);
     LeagueEntriesFetchResult result = leagueEntriesFetcher.execute(cmd);
 
-    // tier 완료 기록과 seed 호출 수를 단일 DB fetch로 원자적으로 저장
-    int pages = result.pagesProcessed() > 0 ? result.pagesProcessed() : 1;
-    budgetTracker.recordSeedCall(pages, tier);
+    // tier 완료 기록 (호출량 카운트는 PipelineMetrics 가 stage 카운터로 추적)
+    DailyPipelineState state = stateRepository.getOrCreateForDate(LocalDate.now());
+    state.recordSeedCompletedTier(tier);
+    stateRepository.save(state);
     log.info("Stage1 apex 완료: tier={} seeded={}", tier, result.summonersSeeded());
     return ChunkResult.apexTier(tier, result.summonersSeeded());
   }
@@ -163,8 +164,6 @@ public class DailyLeagueEntriesRunner {
         0
     );
     LeagueEntriesFetchResult result = leagueEntriesFetcher.execute(cmd);
-
-    budgetTracker.recordSeedCall(1);
 
     if (result.entriesFetched() == 0) {
       // 빈 응답 = 해당 division 소진 → 다음 division으로 이동

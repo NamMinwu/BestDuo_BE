@@ -66,7 +66,7 @@ public class PipelineProperties {
   /** DIA/EME 버킷당 하루에 처리할 최대 페이지 수 (per-bucket). */
   @Min(1)
   @Max(10_000)
-  private int diaEmeDailyPageQuota = 10;
+  private int diaEmeDailyPageQuota = 1000;
 
   /** Stage 3(INGEST)에서 그날 먼저 처리할 tier. null이면 기존 우선순위(CHALLENGER→…→기타) 유지. */
   private Tier stage3PriorityTier = null;
