@@ -47,6 +47,8 @@ dependencies {
 	runtimeOnly 'org.postgresql:postgresql'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	// Bucket4j: DualWindowRateLimiter vs Bucket4j composite Bandwidth 비교 측정용 (Bucket4jHeadroomProbeTest)
+	testImplementation 'com.bucket4j:bucket4j-core:8.10.1'
 	testImplementation 'com.h2database:h2'
 	testImplementation 'com.fasterxml.jackson.core:jackson-databind'
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
