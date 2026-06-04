@@ -164,9 +164,9 @@ SELECT pg_reload_conf();
 
 - [ ] **`match` 패치별 파티셔닝** — 오래된 패치 정리를 `DROP PARTITION`으로 (즉시·무WAL·무VACUUM). 제약된 디스크에서 retention의 정답. `DELETE` 기반 정리의 catch-22를 원천 차단.
 - [ ] **자동 정리 활성화** — `archive.r2.enabled=true` + `aggregate.scheduler.enabled=true` + `retention.patches`를 2~3개로. 패치가 쌓이기 전에 R2로 아카이브 후 정리.
-- [ ] **디스크 사용률 알림** — Railway Metrics 80% 임계 알림. "기동 불가"가 되기 전에 경고받기.
 - [ ] **`cleanupArchived` 개선** — 대량 단일 `DELETE` 금지. 작은 배치 + 빈번한 커밋, 또는 본 인시던트의 `COPY`+`TRUNCATE` 패턴으로 대체.
-- [ ] **용량 모니터링 지표** — `pg_database_size`, 패치별 행 수/바이트를 주기 수집.
+- [x] **용량 모니터링 메트릭** — `DatabaseSizeMetrics`가 `pg_database_size`를 30분 주기로 게이지(`bestduo_db_size_bytes`)로 노출. Grafana 임계 알림의 데이터 소스.
+- [ ] **디스크 사용량 알림** — Railway 네이티브 볼륨 알림은 **현재 Hobby plan에서 미제공**이므로 사용할 수 없다. 따라서 디스크 알림은 앱이 노출하는 `bestduo_db_size_bytes` 게이지를 **Grafana 임계 룰**(예: `bestduo_db_size_bytes / 5e9 > 0.9`)로 거는 방식으로 대체한다. `max_wal_size`를 48MB로 묶어 WAL 변동 폭을 제한했기 때문에, DB 논리 크기가 볼륨 사용량의 **신뢰할 만한 근사치**가 된다. **한계**: WAL/비테이블 영역은 직접 보지 못하므로 임계를 보수적으로(예: 80%) 잡아 여유를 둔다.
 
 ## 8. 핵심 교훈 (Lessons Learned)
 
