@@ -110,4 +110,60 @@ class PipelineMetricsTest {
       attempts++;
     }
   }
+
+  @Test
+  @DisplayName("recordIngestOutcome는 success/failure 매치 수만큼 각 counter를 증가시킨다")
+  void recordIngestOutcome_incrementsSuccessAndFailureCounters() {
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    PipelineMetrics metrics = new PipelineMetrics(registry);
+
+    metrics.recordIngestOutcome(7, 2);
+
+    assertThat(registry.counter("pipeline.ingest.success").count()).isEqualTo(7.0);
+    assertThat(registry.counter("pipeline.ingest.failure").count()).isEqualTo(2.0);
+  }
+
+  @Test
+  @DisplayName("recordIngestOutcome에 0을 전달하면 해당 counter를 생성/증가시키지 않는다")
+  void recordIngestOutcome_zeroDoesNotIncrement() {
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    PipelineMetrics metrics = new PipelineMetrics(registry);
+
+    metrics.recordIngestOutcome(0, 0);
+
+    assertThat(registry.find("pipeline.ingest.success").counter()).isNull();
+    assertThat(registry.find("pipeline.ingest.failure").counter()).isNull();
+  }
+
+  @Test
+  @DisplayName("recordHeartbeat 호출 시 pipeline.heartbeat 게이지가 현재 epoch second로 갱신된다")
+  void recordHeartbeat_updatesHeartbeatGauge() {
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    PipelineMetrics metrics = new PipelineMetrics(registry);
+
+    Gauge gauge = registry.find("pipeline.heartbeat").gauge();
+    assertThat(gauge).isNotNull();
+    assertThat(gauge.value()).isEqualTo(0.0);
+
+    metrics.recordHeartbeat();
+
+    assertThat(gauge.value()).isGreaterThan(0.0);
+  }
+
+  @Test
+  @DisplayName("registerPendingSummonersGauge는 pipeline.collect.pending_summoners 게이지를 supplier 값으로 노출한다")
+  void registerPendingSummonersGauge_reflectsSupplierValue() {
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    PipelineMetrics metrics = new PipelineMetrics(registry);
+    AtomicLong pending = new AtomicLong(5L);
+
+    metrics.registerPendingSummonersGauge(pending::get);
+
+    Gauge gauge = registry.find("pipeline.collect.pending_summoners").gauge();
+    assertThat(gauge).isNotNull();
+    assertThat(gauge.value()).isEqualTo(5.0);
+
+    pending.set(12L);
+    assertThat(gauge.value()).isEqualTo(12.0);
+  }
 }

@@ -73,6 +73,7 @@ public class RegionalPipelineRunner {
     log.info("RegionalPipelineRunner 시작 (가상 스레드)");
     while (!Thread.currentThread().isInterrupted()) {
       try {
+        pipelineMetrics.recordHeartbeat();
         executeTick();
       } catch (RiotRateLimitedException e) {
         log.warn("[regional] 429 Rate limited. {}ms 대기 후 재시도", RATE_LIMIT_SLEEP_MS);
@@ -115,6 +116,7 @@ public class RegionalPipelineRunner {
     try {
       result = runStage3WithTierRoundRobin(priorityTier, effectivePatch);
       pipelineMetrics.recordStageCompleted(3, "success");
+      pipelineMetrics.recordIngestOutcome(result.done(), result.error());
     } catch (RuntimeException e) {
       pipelineMetrics.recordStageCompleted(3, "error");
       throw e;

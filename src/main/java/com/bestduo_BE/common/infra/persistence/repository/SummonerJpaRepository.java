@@ -88,6 +88,15 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
       """, nativeQuery = true)
   List<Summoner> findMatchIdsPendingSummoners(@Param("limit") int limit);
 
+  /** matchIds 수집 대기 중인 summoner 수 (collect_pending_summoners gauge 용). */
+  @Query(value = """
+      SELECT count(*)
+      FROM summoner s
+      WHERE s.seeded_at IS NOT NULL
+        AND (s.match_ids_collected_at IS NULL OR s.match_ids_collected_at < s.seeded_at)
+      """, nativeQuery = true)
+  long countMatchIdsPendingSummoners();
+
   @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(value = """
