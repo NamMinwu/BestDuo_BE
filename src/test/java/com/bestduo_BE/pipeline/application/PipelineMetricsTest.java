@@ -112,27 +112,31 @@ class PipelineMetricsTest {
   }
 
   @Test
-  @DisplayName("recordIngestOutcome는 success/failure 매치 수만큼 각 counter를 증가시킨다")
-  void recordIngestOutcome_incrementsSuccessAndFailureCounters() {
+  @DisplayName("recordIngestSuccess 호출 시 pipeline.ingest.success counter가 증가한다")
+  void recordIngestSuccess_incrementsCounter() {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
     PipelineMetrics metrics = new PipelineMetrics(registry);
 
-    metrics.recordIngestOutcome(7, 2);
+    metrics.recordIngestSuccess();
+    metrics.recordIngestSuccess();
 
-    assertThat(registry.counter("pipeline.ingest.success").count()).isEqualTo(7.0);
-    assertThat(registry.counter("pipeline.ingest.failure").count()).isEqualTo(2.0);
+    assertThat(registry.counter("pipeline.ingest.success").count()).isEqualTo(2.0);
   }
 
   @Test
-  @DisplayName("recordIngestOutcome에 0을 전달하면 해당 counter를 생성/증가시키지 않는다")
-  void recordIngestOutcome_zeroDoesNotIncrement() {
+  @DisplayName("recordIngestFailure는 reason 태그와 함께 pipeline.ingest.failure counter를 증가시킨다")
+  void recordIngestFailure_incrementsCounterWithReasonTag() {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
     PipelineMetrics metrics = new PipelineMetrics(registry);
 
-    metrics.recordIngestOutcome(0, 0);
+    metrics.recordIngestFailure("timeout");
+    metrics.recordIngestFailure("timeout");
+    metrics.recordIngestFailure("auth");
 
-    assertThat(registry.find("pipeline.ingest.success").counter()).isNull();
-    assertThat(registry.find("pipeline.ingest.failure").counter()).isNull();
+    assertThat(registry.counter("pipeline.ingest.failure", "reason", "timeout").count())
+        .isEqualTo(2.0);
+    assertThat(registry.counter("pipeline.ingest.failure", "reason", "auth").count())
+        .isEqualTo(1.0);
   }
 
   @Test

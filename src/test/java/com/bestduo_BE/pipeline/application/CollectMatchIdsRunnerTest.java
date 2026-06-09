@@ -12,14 +12,15 @@ import static org.mockito.Mockito.verify;
 
 import com.bestduo_BE.common.application.PatchVersionService;
 import com.bestduo_BE.common.application.port.RiotApiPort;
-import com.bestduo_BE.common.infra.persistence.MatchQueueEnqueuer;
 import com.bestduo_BE.common.domain.model.EffectivePatchContext;
 import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.entity.Summoner;
+import com.bestduo_BE.common.infra.persistence.repository.MatchJpaRepository;
 import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
 import com.bestduo_BE.common.infra.riot.budget.DailyBudgetTracker;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.config.PipelineProperties;
+import com.bestduo_BE.ingest.application.IngestMatchDetail;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -34,22 +35,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class CollectMatchIdsRunnerTest {
 
-  @Mock
-  private SummonerJpaRepository summonerRepository;
-
-  @Mock
-  private RiotApiPort riotApiPort;
-
-  @Mock
-  private MatchQueueEnqueuer matchQueueEnqueuer;
-
-  @Mock
-  private PatchVersionService patchVersionService;
-
-  @Mock
-  private DailyBudgetTracker budgetTracker;
+  @Mock private SummonerJpaRepository summonerRepository;
+  @Mock private RiotApiPort riotApiPort;
+  @Mock private MatchJpaRepository matchRepository;
+  @Mock private IngestMatchDetail ingestMatchDetail;
+  @Mock private PatchVersionService patchVersionService;
+  @Mock private DailyBudgetTracker budgetTracker;
 
   private PipelineProperties props;
+  private SimpleMeterRegistry registry;
   private CollectMatchIdsRunner runner;
 
   @BeforeEach
@@ -60,10 +54,14 @@ class CollectMatchIdsRunnerTest {
     tierMatchCount.setApexTiers(30);
     tierMatchCount.setDiamondEmerald(10);
     props.setTierMatchCount(tierMatchCount);
-    PipelineMetrics pipelineMetrics = new PipelineMetrics(new SimpleMeterRegistry());
+    registry = new SimpleMeterRegistry();
     runner = new CollectMatchIdsRunner(
-        summonerRepository, riotApiPort, matchQueueEnqueuer,
-        patchVersionService, budgetTracker, props, pipelineMetrics);
+        summonerRepository, riotApiPort, matchRepository, ingestMatchDetail,
+        patchVersionService, budgetTracker, props, new PipelineMetrics(registry));
+  }
+
+  private EffectivePatchContext normalCtx() {
+    return new EffectivePatchContext("15.23", 1700000000L, null);
   }
 
   // ── hasPending ──────────────────────────────────────────────────────────
@@ -77,18 +75,29 @@ class CollectMatchIdsRunnerTest {
   }
 
   @Test
+  @DisplayName("patch context가 없으면 hasPending는 false (조건①)")
+  void hasPending_whenNoPatchContext_returnsFalse() {
+    given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
+
+    assertThat(runner.hasPending()).isFalse();
+  }
+
+  @Test
   @DisplayName("대기 중인 summoner가 없으면 hasPending는 false")
   void hasPending_whenNoSummoners_returnsFalse() {
     given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
     given(summonerRepository.findMatchIdsPendingSummoners(1)).willReturn(List.of());
 
     assertThat(runner.hasPending()).isFalse();
   }
 
   @Test
-  @DisplayName("대기 중인 summoner가 있으면 hasPending는 true")
-  void hasPending_whenSummonersExist_returnsTrue() {
+  @DisplayName("예산·patch·대기 summoner 모두 있으면 hasPending는 true")
+  void hasPending_whenAllConditionsMet_returnsTrue() {
     given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
     given(summonerRepository.findMatchIdsPendingSummoners(1))
         .willReturn(List.of(summonerWithTier("p1", Tier.DIAMOND)));
 
@@ -109,9 +118,23 @@ class CollectMatchIdsRunnerTest {
   }
 
   @Test
+  @DisplayName("patch context가 없으면 runBatch는 수집하지 않고 NO_PENDING 반환 (조건①)")
+  void runBatch_whenNoPatchContext_returnsNoPending() {
+    given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
+
+    CollectMatchIdsRunner.BatchResult result = runner.runBatch();
+
+    assertThat(result.type()).isEqualTo(CollectMatchIdsRunner.BatchResult.Type.NO_PENDING);
+    verify(summonerRepository, never()).findMatchIdsPendingSummoners(anyInt());
+    verify(riotApiPort, never()).findRecentMatchIds(any(), anyInt());
+  }
+
+  @Test
   @DisplayName("대기 summoner 없으면 NO_PENDING 반환")
   void runBatch_whenNoPending_returnsNoPending() {
     given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of());
 
@@ -121,35 +144,35 @@ class CollectMatchIdsRunnerTest {
   }
 
   @Test
-  @DisplayName("정상 패치(grace period 아님): DIAMOND tier summoner에게 findMatchIdsSince 호출")
-  void runBatch_normalPatch_usesCorrectMatchCountForDiamond() {
+  @DisplayName("정상 패치: 각 matchId를 inline ingest하고 collectedAt·예산을 갱신한다")
+  void runBatch_normalPatch_ingestsEachMatchAndMarksCollected() {
     Summoner summoner = summonerWithTier("p-dia", Tier.DIAMOND);
-    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
     given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
     given(riotApiPort.findMatchIdsSince("p-dia", 1700000000L, 10))
         .willReturn(List.of("m1", "m2"));
 
     CollectMatchIdsRunner.BatchResult result = runner.runBatch();
 
-    verify(riotApiPort).findMatchIdsSince("p-dia", 1700000000L, 10);
-    verify(riotApiPort, never()).findMatchIdsBetween(any(), anyLong(), anyLong(), anyInt());
+    verify(ingestMatchDetail).execute("m1", Tier.DIAMOND, "15.23");
+    verify(ingestMatchDetail).execute("m2", Tier.DIAMOND, "15.23");
+    verify(summonerRepository).markMatchIdsCollected(eq("p-dia"), any(OffsetDateTime.class));
+    verify(budgetTracker).recordCollectCall(1);
     assertThat(result.matchIdsQueued()).isEqualTo(2);
+    assertThat(registry.counter("pipeline.ingest.success").count()).isEqualTo(2.0);
   }
 
   @Test
-  @DisplayName("정상 패치(grace period 아님): CHALLENGER tier summoner에게 apexTiers matchCount 적용")
-  void runBatch_normalPatch_usesApexMatchCountForChallenger() {
+  @DisplayName("CHALLENGER tier는 apexTiers matchCount(30)를 사용한다")
+  void runBatch_apexTier_usesApexMatchCount() {
     Summoner summoner = summonerWithTier("p-chall", Tier.CHALLENGER);
-    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
     given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(riotApiPort.findMatchIdsSince("p-chall", 1700000000L, 30))
-        .willReturn(List.of("m1", "m2", "m3"));
+    given(riotApiPort.findMatchIdsSince("p-chall", 1700000000L, 30)).willReturn(List.of("m1"));
 
     runner.runBatch();
 
@@ -157,125 +180,89 @@ class CollectMatchIdsRunnerTest {
   }
 
   @Test
-  @DisplayName("grace period 중: findMatchIdsBetween이 endTime과 함께 호출된다")
-  void runBatch_inGracePeriod_callsFindMatchIdsBetweenWithEndTime() {
+  @DisplayName("grace period 중: findMatchIdsBetween으로 수집하고 이전 패치로 ingest한다")
+  void runBatch_inGracePeriod_usesFindMatchIdsBetween() {
     Summoner summoner = summonerWithTier("p-dia", Tier.DIAMOND);
     EffectivePatchContext ctx = new EffectivePatchContext("16.7", 1699000000L, 1700000000L);
     given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
     given(riotApiPort.findMatchIdsBetween("p-dia", 1699000000L, 1700000000L, 10))
-        .willReturn(List.of("m1", "m2"));
+        .willReturn(List.of("m1"));
 
-    CollectMatchIdsRunner.BatchResult result = runner.runBatch();
+    runner.runBatch();
 
     verify(riotApiPort).findMatchIdsBetween("p-dia", 1699000000L, 1700000000L, 10);
     verify(riotApiPort, never()).findMatchIdsSince(any(), anyLong(), anyInt());
-    assertThat(result.matchIdsQueued()).isEqualTo(2);
+    verify(ingestMatchDetail).execute("m1", Tier.DIAMOND, "16.7");
   }
 
   @Test
-  @DisplayName("grace period 중: MatchQueue는 이전 패치(16.7)로 태깅된다")
-  void runBatch_inGracePeriod_enqueuedWithPreviousPatchTag() {
+  @DisplayName("이미 수집된 매치(existsById=true)는 ingest를 건너뛴다 (dedup)")
+  void runBatch_dedup_skipsAlreadyIngestedMatch() {
     Summoner summoner = summonerWithTier("p-dia", Tier.DIAMOND);
-    EffectivePatchContext ctx = new EffectivePatchContext("16.7", 1699000000L, 1700000000L);
     given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(riotApiPort.findMatchIdsBetween(any(), anyLong(), anyLong(), anyInt()))
-        .willReturn(List.of("m1"));
+    given(riotApiPort.findMatchIdsSince("p-dia", 1700000000L, 10))
+        .willReturn(List.of("m1", "m2"));
+    given(matchRepository.existsById("m1")).willReturn(true);
 
     runner.runBatch();
 
-    verify(matchQueueEnqueuer).enqueueAllIdempotent(any(), any(), eq("16.7"));
+    verify(ingestMatchDetail, never()).execute(eq("m1"), any(), any());
+    verify(ingestMatchDetail).execute("m2", Tier.DIAMOND, "15.23");
+    assertThat(registry.counter("pipeline.ingest.success").count()).isEqualTo(1.0);
   }
 
   @Test
-  @DisplayName("matchIds를 수집한 후 matchIdsCollectedAt을 갱신한다")
-  void runBatch_marksMatchIdsCollectedAfterCollection() {
-    Summoner summoner = summonerWithTier("p-1", Tier.EMERALD);
-    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
+  @DisplayName("개별 ingest 실패(옵션 A): metric 기록 후 skip하고 summoner는 collected 처리한다")
+  void runBatch_ingestFailure_skipsAndStillMarksCollected() {
+    Summoner summoner = summonerWithTier("p-dia", Tier.DIAMOND);
     given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(riotApiPort.findMatchIdsSince(eq("p-1"), anyLong(), anyInt()))
-        .willReturn(List.of("m1"));
+    given(riotApiPort.findMatchIdsSince("p-dia", 1700000000L, 10)).willReturn(List.of("m1"));
+    given(ingestMatchDetail.execute("m1", Tier.DIAMOND, "15.23"))
+        .willThrow(new RuntimeException("ingest boom"));
 
     runner.runBatch();
 
-    verify(summonerRepository).markMatchIdsCollected(eq("p-1"), any(OffsetDateTime.class));
-    verify(budgetTracker).recordCollectCall(1);
+    // 옵션 A: 실패해도 summoner는 collected 처리(재수집 시 dedup), failure metric 기록
+    verify(summonerRepository).markMatchIdsCollected(eq("p-dia"), any(OffsetDateTime.class));
+    assertThat(registry.counter("pipeline.ingest.failure", "reason", "other").count())
+        .isEqualTo(1.0);
+    assertThat(registry.counter("pipeline.ingest.success").count()).isEqualTo(0.0);
   }
 
   @Test
-  @DisplayName("패치 정보가 없으면 findRecentMatchIds를 사용")
-  void runBatch_whenNoPatchContext_usesRecentMatchIds() {
-    Summoner summoner = summonerWithTier("p-gold", Tier.GOLD);
+  @DisplayName("수집(matchIds 조회) 실패 시 summoner는 미수집·예산 미차감으로 남는다")
+  void runBatch_collectionError_doesNotMarkCollectedNorChargeBudget() {
+    Summoner summoner = summonerWithTier("p-bad", Tier.DIAMOND);
     given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.empty());
-    given(riotApiPort.findRecentMatchIds("p-gold", 10)).willReturn(List.of("m1"));
-
-    runner.runBatch();
-
-    verify(riotApiPort).findRecentMatchIds("p-gold", 10);
-    verify(riotApiPort, never()).findMatchIdsSince(any(), anyLong(), anyInt());
-    verify(riotApiPort, never()).findMatchIdsBetween(any(), anyLong(), anyLong(), anyInt());
-  }
-
-  @Test
-  @DisplayName("matchIds 수집 중 개별 summoner 오류는 건너뛰고 계속 진행")
-  void runBatch_skipsSummonerOnIndividualError() {
-    Summoner bad = summonerWithTier("p-bad", Tier.GOLD);
-    Summoner good = summonerWithTier("p-good", Tier.GOLD);
-    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
-    given(budgetTracker.canCollect()).willReturn(true);
-    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
-        .willReturn(List.of(bad, good));
-    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
     given(riotApiPort.findMatchIdsSince(eq("p-bad"), anyLong(), anyInt()))
-        .willThrow(new RuntimeException("API error"));
-    given(riotApiPort.findMatchIdsSince(eq("p-good"), anyLong(), anyInt()))
-        .willReturn(List.of("m1"));
+        .willThrow(new RuntimeException("collect error"));
 
-    CollectMatchIdsRunner.BatchResult result = runner.runBatch();
+    runner.runBatch();
 
-    verify(summonerRepository).markMatchIdsCollected(eq("p-good"), any());
     verify(summonerRepository, never()).markMatchIdsCollected(eq("p-bad"), any());
-    // 실패한 summoner는 apiCalls·예산 모두 미차감
-    assertThat(result.apiCalls()).isEqualTo(1);
-  }
-
-  @Test
-  @DisplayName("개별 summoner 수집 실패 시 예산을 차감하지 않는다")
-  void runBatch_onIndividualError_doesNotChargeBudget() {
-    Summoner bad = summonerWithTier("p-bad", Tier.GOLD);
-    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
-    given(budgetTracker.canCollect()).willReturn(true);
-    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
-        .willReturn(List.of(bad));
-    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(riotApiPort.findMatchIdsSince(eq("p-bad"), anyLong(), anyInt()))
-        .willThrow(new RuntimeException("network error"));
-
-    runner.runBatch();
-
     verify(budgetTracker, never()).recordCollectCall(anyInt());
   }
 
   @Test
   @DisplayName("429 예외는 전파된다")
   void runBatch_propagatesRateLimitedException() {
-    Summoner summoner = summonerWithTier("p-1", Tier.GOLD);
-    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
+    Summoner summoner = summonerWithTier("p-1", Tier.DIAMOND);
     given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
     given(riotApiPort.findMatchIdsSince(any(), anyLong(), anyInt()))
         .willThrow(new RiotRateLimitedException("429"));
 
@@ -284,19 +271,18 @@ class CollectMatchIdsRunnerTest {
   }
 
   @Test
-  @DisplayName("matchIds가 비어있으면 enqueue 하지 않지만 collectedAt은 갱신")
-  void runBatch_whenNoMatchIds_doesNotEnqueueButMarksCollected() {
-    Summoner summoner = summonerWithTier("p-empty", Tier.GOLD);
-    EffectivePatchContext ctx = new EffectivePatchContext("15.23", 1700000000L, null);
+  @DisplayName("matchIds가 비어있으면 ingest하지 않지만 collectedAt은 갱신한다")
+  void runBatch_whenNoMatchIds_doesNotIngestButMarksCollected() {
+    Summoner summoner = summonerWithTier("p-empty", Tier.DIAMOND);
     given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
     given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
         .willReturn(List.of(summoner));
-    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
     given(riotApiPort.findMatchIdsSince(any(), anyLong(), anyInt())).willReturn(List.of());
 
     runner.runBatch();
 
-    verify(matchQueueEnqueuer, never()).enqueueAllIdempotent(any(), any(), any());
+    verify(ingestMatchDetail, never()).execute(any(), any(), any());
     verify(summonerRepository).markMatchIdsCollected(eq("p-empty"), any(OffsetDateTime.class));
   }
 

@@ -83,7 +83,16 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
       FROM summoner s
       WHERE s.seeded_at IS NOT NULL
         AND (s.match_ids_collected_at IS NULL OR s.match_ids_collected_at < s.seeded_at)
-      ORDER BY s.seeded_at DESC
+      ORDER BY
+        CASE s.last_known_tier
+          WHEN 'CHALLENGER'  THEN 0
+          WHEN 'GRANDMASTER' THEN 1
+          WHEN 'MASTER'      THEN 2
+          WHEN 'DIAMOND'     THEN 3
+          WHEN 'EMERALD'     THEN 4
+          ELSE 5
+        END,
+        s.seeded_at DESC
       LIMIT :limit
       """, nativeQuery = true)
   List<Summoner> findMatchIdsPendingSummoners(@Param("limit") int limit);
