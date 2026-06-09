@@ -18,6 +18,7 @@ import com.bestduo_BE.common.infra.persistence.entity.Summoner;
 import com.bestduo_BE.common.infra.persistence.repository.MatchJpaRepository;
 import com.bestduo_BE.common.infra.persistence.repository.SummonerJpaRepository;
 import com.bestduo_BE.common.infra.riot.budget.DailyBudgetTracker;
+import com.bestduo_BE.common.infra.riot.exception.RiotApiException;
 import com.bestduo_BE.common.infra.riot.exception.RiotRateLimitedException;
 import com.bestduo_BE.config.PipelineProperties;
 import com.bestduo_BE.ingest.application.IngestMatchDetail;
@@ -29,8 +30,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 
 @ExtendWith(MockitoExtension.class)
 class CollectMatchIdsRunnerTest {
@@ -284,6 +291,59 @@ class CollectMatchIdsRunnerTest {
 
     verify(ingestMatchDetail, never()).execute(any(), any(), any());
     verify(summonerRepository).markMatchIdsCollected(eq("p-empty"), any(OffsetDateTime.class));
+  }
+
+  // ── ingest 실패 분류 (classifyIngestFailure) ──────────────────────────────
+
+  @ParameterizedTest
+  @CsvSource({"401,auth", "403,auth", "404,not_found", "400,client_4xx"})
+  @DisplayName("HttpClientErrorException은 상태코드에 따라 auth/not_found/client_4xx로 분류된다")
+  void runBatch_ingestFailure_classifiesHttpClientError(int status, String expectedReason) {
+    runBatchWithIngestThrowing(new HttpClientErrorException(HttpStatus.valueOf(status)));
+
+    assertThat(registry.counter("pipeline.ingest.failure", "reason", expectedReason).count())
+        .isEqualTo(1.0);
+  }
+
+  @Test
+  @DisplayName("HttpServerErrorException(5xx)은 server_5xx로 분류된다")
+  void runBatch_ingestFailure_classifiesServerErrorAs5xx() {
+    runBatchWithIngestThrowing(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+
+    assertThat(registry.counter("pipeline.ingest.failure", "reason", "server_5xx").count())
+        .isEqualTo(1.0);
+  }
+
+  @Test
+  @DisplayName("ResourceAccessException(timeout/IO)은 timeout으로 분류된다")
+  void runBatch_ingestFailure_classifiesResourceAccessAsTimeout() {
+    runBatchWithIngestThrowing(new ResourceAccessException("connection timed out"));
+
+    assertThat(registry.counter("pipeline.ingest.failure", "reason", "timeout").count())
+        .isEqualTo(1.0);
+  }
+
+  @Test
+  @DisplayName("RiotApiException은 원인(cause)을 풀어 분류한다 (401 wrap → auth)")
+  void runBatch_ingestFailure_unwrapsRiotApiExceptionCause() {
+    runBatchWithIngestThrowing(
+        new RiotApiException("load failed", new HttpClientErrorException(HttpStatus.UNAUTHORIZED)));
+
+    assertThat(registry.counter("pipeline.ingest.failure", "reason", "auth").count())
+        .isEqualTo(1.0);
+  }
+
+  /** 단일 summoner·단일 매치에서 ingest 가 주어진 예외를 던지도록 세팅 후 runBatch 실행. */
+  private void runBatchWithIngestThrowing(Throwable ingestException) {
+    Summoner summoner = summonerWithTier("p-dia", Tier.DIAMOND);
+    given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
+    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+        .willReturn(List.of(summoner));
+    given(riotApiPort.findMatchIdsSince("p-dia", 1700000000L, 10)).willReturn(List.of("m1"));
+    given(ingestMatchDetail.execute("m1", Tier.DIAMOND, "15.23")).willThrow(ingestException);
+
+    runner.runBatch();
   }
 
   // ── helpers ─────────────────────────────────────────────────────────────
