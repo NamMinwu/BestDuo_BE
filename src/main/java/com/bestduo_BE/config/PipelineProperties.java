@@ -38,7 +38,7 @@ public class PipelineProperties {
   @Max(500)
   private int ingestBatchSize = 10;
 
-  /** match_queue가 빌 때 대기 시간 (ms) */
+  /** 수집 대기 summoner 가 없을 때 대기 시간 (ms) */
   @Min(100)
   @Max(600_000)
   private long pollingIntervalMs = 5000;
@@ -68,8 +68,12 @@ public class PipelineProperties {
   @Max(10_000)
   private int diaEmeDailyPageQuota = 1000;
 
-  /** Stage 3(INGEST)에서 그날 먼저 처리할 tier. null이면 기존 우선순위(CHALLENGER→…→기타) 유지. */
-  private Tier stage3PriorityTier = null;
+  /**
+   * 수집 시 우선 처리할 tier. 지정하면 해당 tier 의 summoner 를 먼저 수집·ingest 한다
+   * (나머지는 CHALLENGER→…→EMERALD 고정 순서). null(기본)이면 고정 순서만 적용한다.
+   * env: {@code PIPELINE_COLLECT_PRIORITY_TIER} (예: EMERALD).
+   */
+  private Tier collectPriorityTier = null;
 
   @Valid private Ingest ingest = new Ingest();
 

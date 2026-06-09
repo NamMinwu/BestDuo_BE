@@ -83,7 +83,8 @@ pipeline:
   tier-match-count:
     apex-tiers: ${PIPELINE_TIER_APEX:100}
     diamond-emerald: ${PIPELINE_TIER_DIA_EME:100}
-  stage3-priority-tier: ${PIPELINE_STAGE3_PRIORITY_TIER:DIAMOND}
+  # 우선 수집할 tier (예: EMERALD). 미설정(빈 값)이면 고정 순서(CHALLENGER→…→EMERALD).
+  collect-priority-tier: ${PIPELINE_COLLECT_PRIORITY_TIER:}
   ingest:
     stale-minutes: ${PIPELINE_INGEST_STALE_MINUTES:10}
     error-cooldown-minutes: ${PIPELINE_INGEST_ERROR_COOLDOWN_MINUTES:10}
