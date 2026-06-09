@@ -43,7 +43,15 @@
 
 ---
 
-## 3. Phase B — inline 경로 + 조건 ①② (핵심 변경)
+## 3. Phase B — inline 경로 + 조건 ①② (핵심 변경) — ✅ 코드 구현 완료
+
+> 구현 요약: `CollectMatchIdsRunner`가 `MatchQueueEnqueuer` 대신 `match.existsById` dedup 후 `IngestMatchDetail`로 inline ingest. 조건①(`hasPending`/`runBatch`에서 patch context 없으면 수집 안 함), 조건②(ingest 후 `markMatchIdsCollected`). 실패=옵션 A(`recordIngestFailure(reason)` + skip). `RegionalPipelineRunner`는 Stage 3/round-robin 제거 후 collect+ingest 단일 단계. tier 우선순위는 `findMatchIdsPendingSummoners` ORDER BY tier로 이전.
+> 메트릭: `recordIngestOutcome`(batch) → `recordIngestSuccess()`/`recordIngestFailure(reason)`(매치 단위). `pipeline.ingest.success` 시리즈 연속.
+> 테스트: CollectMatchIdsRunnerTest 15 · RegionalPipelineRunnerTest 3 · PipelineMetricsTest 9 green, 전체 `./gradlew build` green.
+> **남은 정리(Phase C)**: `MatchQueueEnqueuer`/큐 기반 `MatchIngestRunner`/dispatcher가 이제 dead(호출처 없음, IngestController만 MatchIngestRunner 잔존) → Phase C에서 제거. `stage3PriorityTier` config도 미사용.
+> **연기**: auth-halt 동작은 미구현 — `ingest_failure{reason=auth}` 메트릭으로 *탐지/알람*은 가능, 자동 halt는 실제 auth 에러 발생 시 별도 설계.
+
+**변경 (surgical)**
 
 **변경 (surgical)**
 - `CollectMatchIdsRunner`:

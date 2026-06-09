@@ -51,17 +51,17 @@ public class PipelineMetrics {
         .register(registry);
   }
 
+  /** 매치 1건 ingest 성공. (Phase A 의 batch counter 와 동일 {@code pipeline.ingest.success} 시리즈 — 연속성 유지.) */
+  public void recordIngestSuccess() {
+    registry.counter(INGEST_SUCCESS).increment();
+  }
+
   /**
-   * Stage 3 한 배치의 ingest 결과(성공/실패 매치 수)를 기록한다.
-   * 큐 제거(ADR-008) 후 inline 경로에서도 동일 메트릭을 재사용해 parity 를 유지한다.
+   * 매치 1건 ingest 실패. reason 은 저-cardinality 분류(auth/server_5xx/timeout/not_found/client_4xx/other).
+   * NFR-4: reason=auth/server_5xx 급증을 시스템 실패 알람으로 사용.
    */
-  public void recordIngestOutcome(int success, int failure) {
-    if (success > 0) {
-      registry.counter(INGEST_SUCCESS).increment(success);
-    }
-    if (failure > 0) {
-      registry.counter(INGEST_FAILURE).increment(failure);
-    }
+  public void recordIngestFailure(String reason) {
+    registry.counter(INGEST_FAILURE, "reason", reason).increment();
   }
 
   public void registerPendingSummonersGauge(Supplier<Number> countSupplier) {
