@@ -63,7 +63,7 @@ public class CollectMatchIdsRunner {
     if (patchVersionService.resolveEffectivePatchContext().isEmpty()) {
       return false;
     }
-    return !summonerRepository.findMatchIdsPendingSummoners(1).isEmpty();
+    return !summonerRepository.findMatchIdsPendingSummoners(priorityTierName(), 1).isEmpty();
   }
 
   /**
@@ -84,7 +84,7 @@ public class CollectMatchIdsRunner {
     }
 
     List<Summoner> summoners =
-        summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize());
+        summonerRepository.findMatchIdsPendingSummoners(priorityTierName(), props.getCollectBatchSize());
     if (summoners.isEmpty()) {
       return BatchResult.noPending();
     }
@@ -150,6 +150,12 @@ public class CollectMatchIdsRunner {
       }
     }
     return matchIds.size();
+  }
+
+  /** 우선 수집 tier 이름(null=우선순위 없음). 고정 tier 순서 위에 이 tier 를 최우선으로 끌어올린다. */
+  private String priorityTierName() {
+    Tier t = props.getCollectPriorityTier();
+    return t == null ? null : t.name();
   }
 
   private int matchCountFor(Tier tier) {

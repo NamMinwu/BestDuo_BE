@@ -1,5 +1,6 @@
 package com.bestduo_BE.config;
 
+import com.bestduo_BE.common.domain.model.Tier;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -66,6 +67,13 @@ public class PipelineProperties {
   @Min(1)
   @Max(10_000)
   private int diaEmeDailyPageQuota = 1000;
+
+  /**
+   * 수집 시 우선 처리할 tier. 지정하면 해당 tier 의 summoner 를 먼저 수집·ingest 한다
+   * (나머지는 CHALLENGER→…→EMERALD 고정 순서). null(기본)이면 고정 순서만 적용한다.
+   * env: {@code PIPELINE_COLLECT_PRIORITY_TIER} (예: EMERALD).
+   */
+  private Tier collectPriorityTier = null;
 
   @Valid private Ingest ingest = new Ingest();
 

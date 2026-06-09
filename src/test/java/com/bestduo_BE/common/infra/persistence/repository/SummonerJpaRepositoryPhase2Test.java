@@ -38,7 +38,7 @@ class SummonerJpaRepositoryPhase2Test {
     // leagueEntryFetchedAt 없음 → 제외
     savedSummoner("no-seed", null, null);
 
-    List<Summoner> targets = repository.findMatchIdsPendingSummoners(10);
+    List<Summoner> targets = repository.findMatchIdsPendingSummoners(null, 10);
 
     assertThat(targets).extracting(Summoner::getPuuid)
         .containsExactly("newer", "older")
@@ -53,7 +53,7 @@ class SummonerJpaRepositoryPhase2Test {
 
     Summoner stale = savedSummoner("stale", fetchedAt, collectedAt);
 
-    List<Summoner> targets = repository.findMatchIdsPendingSummoners(10);
+    List<Summoner> targets = repository.findMatchIdsPendingSummoners(null, 10);
 
     assertThat(targets).extracting(Summoner::getPuuid).contains("stale");
   }
@@ -66,7 +66,7 @@ class SummonerJpaRepositoryPhase2Test {
       savedSummoner("p-" + i, base.plusMinutes(i), null);
     }
 
-    List<Summoner> targets = repository.findMatchIdsPendingSummoners(3);
+    List<Summoner> targets = repository.findMatchIdsPendingSummoners(null, 3);
 
     assertThat(targets).hasSize(3);
   }

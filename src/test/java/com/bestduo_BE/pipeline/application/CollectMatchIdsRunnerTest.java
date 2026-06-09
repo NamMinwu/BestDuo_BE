@@ -95,7 +95,7 @@ class CollectMatchIdsRunnerTest {
   void hasPending_whenNoSummoners_returnsFalse() {
     given(budgetTracker.canCollect()).willReturn(true);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
-    given(summonerRepository.findMatchIdsPendingSummoners(1)).willReturn(List.of());
+    given(summonerRepository.findMatchIdsPendingSummoners(any(), eq(1))).willReturn(List.of());
 
     assertThat(runner.hasPending()).isFalse();
   }
@@ -105,7 +105,7 @@ class CollectMatchIdsRunnerTest {
   void hasPending_whenAllConditionsMet_returnsTrue() {
     given(budgetTracker.canCollect()).willReturn(true);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
-    given(summonerRepository.findMatchIdsPendingSummoners(1))
+    given(summonerRepository.findMatchIdsPendingSummoners(any(), eq(1)))
         .willReturn(List.of(summonerWithTier("p1", Tier.DIAMOND)));
 
     assertThat(runner.hasPending()).isTrue();
@@ -121,7 +121,7 @@ class CollectMatchIdsRunnerTest {
     CollectMatchIdsRunner.BatchResult result = runner.runBatch();
 
     assertThat(result.type()).isEqualTo(CollectMatchIdsRunner.BatchResult.Type.BUDGET_EXHAUSTED);
-    verify(summonerRepository, never()).findMatchIdsPendingSummoners(anyInt());
+    verify(summonerRepository, never()).findMatchIdsPendingSummoners(any(), anyInt());
   }
 
   @Test
@@ -133,7 +133,7 @@ class CollectMatchIdsRunnerTest {
     CollectMatchIdsRunner.BatchResult result = runner.runBatch();
 
     assertThat(result.type()).isEqualTo(CollectMatchIdsRunner.BatchResult.Type.NO_PENDING);
-    verify(summonerRepository, never()).findMatchIdsPendingSummoners(anyInt());
+    verify(summonerRepository, never()).findMatchIdsPendingSummoners(any(), anyInt());
     verify(riotApiPort, never()).findRecentMatchIds(any(), anyInt());
   }
 
@@ -142,7 +142,7 @@ class CollectMatchIdsRunnerTest {
   void runBatch_whenNoPending_returnsNoPending() {
     given(budgetTracker.canCollect()).willReturn(true);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
-    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+    given(summonerRepository.findMatchIdsPendingSummoners(any(), eq(props.getCollectBatchSize())))
         .willReturn(List.of());
 
     CollectMatchIdsRunner.BatchResult result = runner.runBatch();
@@ -156,7 +156,7 @@ class CollectMatchIdsRunnerTest {
     Summoner summoner = summonerWithTier("p-dia", Tier.DIAMOND);
     given(budgetTracker.canCollect()).willReturn(true);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
-    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+    given(summonerRepository.findMatchIdsPendingSummoners(any(), eq(props.getCollectBatchSize())))
         .willReturn(List.of(summoner));
     given(riotApiPort.findMatchIdsSince("p-dia", 1700000000L, 10))
         .willReturn(List.of("m1", "m2"));
@@ -177,7 +177,7 @@ class CollectMatchIdsRunnerTest {
     Summoner summoner = summonerWithTier("p-chall", Tier.CHALLENGER);
     given(budgetTracker.canCollect()).willReturn(true);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
-    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+    given(summonerRepository.findMatchIdsPendingSummoners(any(), eq(props.getCollectBatchSize())))
         .willReturn(List.of(summoner));
     given(riotApiPort.findMatchIdsSince("p-chall", 1700000000L, 30)).willReturn(List.of("m1"));
 
@@ -193,7 +193,7 @@ class CollectMatchIdsRunnerTest {
     EffectivePatchContext ctx = new EffectivePatchContext("16.7", 1699000000L, 1700000000L);
     given(budgetTracker.canCollect()).willReturn(true);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(ctx));
-    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+    given(summonerRepository.findMatchIdsPendingSummoners(any(), eq(props.getCollectBatchSize())))
         .willReturn(List.of(summoner));
     given(riotApiPort.findMatchIdsBetween("p-dia", 1699000000L, 1700000000L, 10))
         .willReturn(List.of("m1"));
@@ -211,7 +211,7 @@ class CollectMatchIdsRunnerTest {
     Summoner summoner = summonerWithTier("p-dia", Tier.DIAMOND);
     given(budgetTracker.canCollect()).willReturn(true);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
-    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+    given(summonerRepository.findMatchIdsPendingSummoners(any(), eq(props.getCollectBatchSize())))
         .willReturn(List.of(summoner));
     given(riotApiPort.findMatchIdsSince("p-dia", 1700000000L, 10))
         .willReturn(List.of("m1", "m2"));
@@ -230,7 +230,7 @@ class CollectMatchIdsRunnerTest {
     Summoner summoner = summonerWithTier("p-dia", Tier.DIAMOND);
     given(budgetTracker.canCollect()).willReturn(true);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
-    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+    given(summonerRepository.findMatchIdsPendingSummoners(any(), eq(props.getCollectBatchSize())))
         .willReturn(List.of(summoner));
     given(riotApiPort.findMatchIdsSince("p-dia", 1700000000L, 10)).willReturn(List.of("m1"));
     given(ingestMatchDetail.execute("m1", Tier.DIAMOND, "15.23"))
@@ -251,7 +251,7 @@ class CollectMatchIdsRunnerTest {
     Summoner summoner = summonerWithTier("p-bad", Tier.DIAMOND);
     given(budgetTracker.canCollect()).willReturn(true);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
-    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+    given(summonerRepository.findMatchIdsPendingSummoners(any(), eq(props.getCollectBatchSize())))
         .willReturn(List.of(summoner));
     given(riotApiPort.findMatchIdsSince(eq("p-bad"), anyLong(), anyInt()))
         .willThrow(new RuntimeException("collect error"));
@@ -268,7 +268,7 @@ class CollectMatchIdsRunnerTest {
     Summoner summoner = summonerWithTier("p-1", Tier.DIAMOND);
     given(budgetTracker.canCollect()).willReturn(true);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
-    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+    given(summonerRepository.findMatchIdsPendingSummoners(any(), eq(props.getCollectBatchSize())))
         .willReturn(List.of(summoner));
     given(riotApiPort.findMatchIdsSince(any(), anyLong(), anyInt()))
         .willThrow(new RiotRateLimitedException("429"));
@@ -283,7 +283,7 @@ class CollectMatchIdsRunnerTest {
     Summoner summoner = summonerWithTier("p-empty", Tier.DIAMOND);
     given(budgetTracker.canCollect()).willReturn(true);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
-    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+    given(summonerRepository.findMatchIdsPendingSummoners(any(), eq(props.getCollectBatchSize())))
         .willReturn(List.of(summoner));
     given(riotApiPort.findMatchIdsSince(any(), anyLong(), anyInt())).willReturn(List.of());
 
@@ -291,6 +291,20 @@ class CollectMatchIdsRunnerTest {
 
     verify(ingestMatchDetail, never()).execute(any(), any(), any());
     verify(summonerRepository).markMatchIdsCollected(eq("p-empty"), any(OffsetDateTime.class));
+  }
+
+  @Test
+  @DisplayName("collectPriorityTier 설정 시 findMatchIdsPendingSummoners에 해당 tier 이름이 전달된다")
+  void runBatch_withCollectPriorityTier_passesTierNameToQuery() {
+    props.setCollectPriorityTier(Tier.EMERALD);
+    given(budgetTracker.canCollect()).willReturn(true);
+    given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
+    given(summonerRepository.findMatchIdsPendingSummoners(eq("EMERALD"), anyInt()))
+        .willReturn(List.of());
+
+    runner.runBatch();
+
+    verify(summonerRepository).findMatchIdsPendingSummoners("EMERALD", props.getCollectBatchSize());
   }
 
   // ── ingest 실패 분류 (classifyIngestFailure) ──────────────────────────────
@@ -338,7 +352,7 @@ class CollectMatchIdsRunnerTest {
     Summoner summoner = summonerWithTier("p-dia", Tier.DIAMOND);
     given(budgetTracker.canCollect()).willReturn(true);
     given(patchVersionService.resolveEffectivePatchContext()).willReturn(Optional.of(normalCtx()));
-    given(summonerRepository.findMatchIdsPendingSummoners(props.getCollectBatchSize()))
+    given(summonerRepository.findMatchIdsPendingSummoners(any(), eq(props.getCollectBatchSize())))
         .willReturn(List.of(summoner));
     given(riotApiPort.findMatchIdsSince("p-dia", 1700000000L, 10)).willReturn(List.of("m1"));
     given(ingestMatchDetail.execute("m1", Tier.DIAMOND, "15.23")).willThrow(ingestException);

@@ -84,6 +84,7 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
       WHERE s.seeded_at IS NOT NULL
         AND (s.match_ids_collected_at IS NULL OR s.match_ids_collected_at < s.seeded_at)
       ORDER BY
+        CASE WHEN :priorityTier IS NOT NULL AND s.last_known_tier = :priorityTier THEN 0 ELSE 1 END,
         CASE s.last_known_tier
           WHEN 'CHALLENGER'  THEN 0
           WHEN 'GRANDMASTER' THEN 1
@@ -95,7 +96,8 @@ public interface SummonerJpaRepository extends JpaRepository<Summoner, String> {
         s.seeded_at DESC
       LIMIT :limit
       """, nativeQuery = true)
-  List<Summoner> findMatchIdsPendingSummoners(@Param("limit") int limit);
+  List<Summoner> findMatchIdsPendingSummoners(
+      @Param("priorityTier") String priorityTier, @Param("limit") int limit);
 
   /** matchIds 수집 대기 중인 summoner 수 (collect_pending_summoners gauge 용). */
   @Query(value = """
