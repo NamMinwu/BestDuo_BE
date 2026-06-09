@@ -1,6 +1,5 @@
 package com.bestduo_BE.config;
 
-import com.bestduo_BE.common.domain.model.Tier;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -38,7 +37,7 @@ public class PipelineProperties {
   @Max(500)
   private int ingestBatchSize = 10;
 
-  /** match_queue가 빌 때 대기 시간 (ms) */
+  /** 수집 대기 summoner 가 없을 때 대기 시간 (ms) */
   @Min(100)
   @Max(600_000)
   private long pollingIntervalMs = 5000;
@@ -67,9 +66,6 @@ public class PipelineProperties {
   @Min(1)
   @Max(10_000)
   private int diaEmeDailyPageQuota = 1000;
-
-  /** Stage 3(INGEST)에서 그날 먼저 처리할 tier. null이면 기존 우선순위(CHALLENGER→…→기타) 유지. */
-  private Tier stage3PriorityTier = null;
 
   @Valid private Ingest ingest = new Ingest();
 

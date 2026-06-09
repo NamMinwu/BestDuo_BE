@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 public class PipelineMetrics {
 
   private static final String STAGE_COMPLETED = "pipeline.stage.completed";
-  private static final String MATCH_QUEUE_SIZE = "pipeline.match_queue.size";
   private static final String COLLECT_MATCHES_ENQUEUED = "pipeline.collect.matches_enqueued";
   private static final String INGEST_SUCCESS = "pipeline.ingest.success";
   private static final String INGEST_FAILURE = "pipeline.ingest.failure";
@@ -34,21 +33,13 @@ public class PipelineMetrics {
   }
 
   /**
-   * Stage 2 가 match_queue 에 enqueue 한 match 수 카운트. Stage 2 호출 수 (stage.completed{stage=2})
-   * 와 비교해 호출당 평균 enqueue 수 추적 → Stage 2/3 분배 정책 결정의 입력.
+   * Stage 2 가 한 summoner 에서 찾은 matchId 수 카운트(inline 수집).
+   * 메트릭 이름은 레거시({@code pipeline.collect.matches_enqueued})를 유지해 대시보드 연속성을 지킨다.
    */
   public void recordMatchesEnqueued(int count) {
     if (count > 0) {
       registry.counter(COLLECT_MATCHES_ENQUEUED).increment(count);
     }
-  }
-
-  public void registerMatchQueueGauge(Supplier<Number> sizeSupplier) {
-    // strongReference(true): Micrometer 는 기본적으로 supplier 를 weak reference 로 보유한다.
-    // MatchQueueGaugeRegistrar 에서 전달하는 인라인 람다가 GC 되면 gauge 값이 NaN 으로 떨어지는 문제를 방지한다.
-    Gauge.builder(MATCH_QUEUE_SIZE, sizeSupplier, s -> s.get().doubleValue())
-        .strongReference(true)
-        .register(registry);
   }
 
   /** 매치 1건 ingest 성공. (Phase A 의 batch counter 와 동일 {@code pipeline.ingest.success} 시리즈 — 연속성 유지.) */

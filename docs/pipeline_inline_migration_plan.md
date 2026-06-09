@@ -83,9 +83,11 @@
 
 ---
 
-## 4. Phase C — 큐 코드 제거 + 스키마 drop
+## 4. Phase C — 큐 코드 제거 + 스키마 drop — ✅ 코드 구현 완료
 
-> Phase B가 프로드에서 안정 확인된 *후*.
+> Phase B가 프로드에서 안정 확인됨(ingest_success 연속 증가 / match_queue 정체) → Phase C 진행.
+> 제거: 큐 main 13파일(엔티티/repo/projection/dispatcher/enqueuer/MatchIngestRunner/AdminQueueController/IngestQueueStats/MatchQueueGaugeRegistrar) + 큐 테스트 6파일 + PipelineMetrics 큐 게이지 + `stage3PriorityTier` config(+yml). `V7__drop_match_queue.sql` 추가. `./gradlew build` green.
+> (잔여 follow-up: `pipeline.ingest.*` nested config(maxRetry/cooldown/staleMinutes)는 이제 미사용 — 별도 정리.)
 
 **제거 (main)**
 - `MatchQueue`, `QueueStatus`, `MatchQueueJpaRepository`, `MatchQueueDispatcher`, `MatchQueueEnqueuer`

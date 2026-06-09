@@ -83,7 +83,6 @@ pipeline:
   tier-match-count:
     apex-tiers: ${PIPELINE_TIER_APEX:100}
     diamond-emerald: ${PIPELINE_TIER_DIA_EME:100}
-  stage3-priority-tier: ${PIPELINE_STAGE3_PRIORITY_TIER:DIAMOND}
   ingest:
     stale-minutes: ${PIPELINE_INGEST_STALE_MINUTES:10}
     error-cooldown-minutes: ${PIPELINE_INGEST_ERROR_COOLDOWN_MINUTES:10}
