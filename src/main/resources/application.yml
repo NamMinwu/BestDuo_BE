@@ -1,7 +1,5 @@
 server:
   shutdown: graceful
-  # 기본 8080 (prod/Railway 라우팅 기준). 로컬 8080 충돌 시 SERVER_PORT 로 오버라이드
-  port: ${SERVER_PORT:8080}
 
 spring:
   lifecycle:

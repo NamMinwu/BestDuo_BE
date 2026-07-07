@@ -4,9 +4,11 @@ import com.bestduo_BE.common.domain.model.Tier;
 import com.bestduo_BE.common.infra.persistence.projection.MatchPayloadProjection;
 import com.bestduo_BE.common.infra.persistence.repository.MatchJpaRepository;
 import com.bestduo_BE.config.ArchiveProperties;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +28,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
  * <p>메모리 관리:
  * <ul>
  *   <li>{@link MatchPayloadProjection} 으로 fetch 해서 Hibernate L1 캐시 우회 — 페이지가 GC 대상이 됨
- *   <li>[EXPERIMENT — OOM 재현용 롤백] gzip 출력을 temp 파일 대신 메모리 버퍼
- *       ({@code ByteArrayOutputStream})에 누적 후 {@code toByteArray()} 복사 — 4e6ec16^ 의
- *       ADR-007 이전 sink 재현. 압축본 크기에 비례해 힙을 점유하므로 배포 금지
+ *   <li>gzip 출력은 temp 파일로 흘려보내고 {@code RequestBody.fromFile} 로 업로드 — 압축본을 메모리에 통째로 안 올림
  * </ul>
  *
  * <p>archive 만 수행한다 — match 행 삭제는 cleanup endpoint 가 따로 처리.
@@ -41,6 +41,8 @@ public class MatchArchiver {
 
   private static final int PAGE_SIZE = 500;
   private static final String OBJECT_KEY_PATTERN = "match-archive/patch=%s/tier=%s.jsonl.gz";
+  private static final String TEMP_FILE_PREFIX = "match-archive-";
+  private static final String TEMP_FILE_SUFFIX = ".jsonl.gz";
 
   private final MatchJpaRepository matchRepository;
   private final S3Client s3Client;
@@ -49,45 +51,64 @@ public class MatchArchiver {
   public Result execute(String patch, Tier tier) {
     String objectKey = OBJECT_KEY_PATTERN.formatted(patch, tier.name());
 
-    ByteArrayOutputStream buf = new ByteArrayOutputStream();
-    int archivedCount;
-    try (GZIPOutputStream gzip = new GZIPOutputStream(buf)) {
-      archivedCount = streamPayloadsInto(patch, tier, gzip);
+    Path tempFile;
+    try {
+      tempFile = Files.createTempFile(TEMP_FILE_PREFIX, TEMP_FILE_SUFFIX);
     } catch (IOException e) {
-      throw new IllegalStateException("Failed to gzip-encode match archive: " + objectKey, e);
+      throw new IllegalStateException("Failed to create archive temp file: " + objectKey, e);
     }
 
-    if (archivedCount == 0) {
-      log.info("[MatchArchiver] no matches to archive (patch={} tier={})", patch, tier);
-      return new Result(0, 0L, objectKey);
+    try {
+      int archivedCount;
+      try (OutputStream out = Files.newOutputStream(tempFile);
+          GZIPOutputStream gzip = new GZIPOutputStream(out)) {
+        archivedCount = streamPayloadsInto(patch, tier, gzip);
+      } catch (IOException e) {
+        throw new IllegalStateException("Failed to gzip-encode match archive: " + objectKey, e);
+      }
+
+      if (archivedCount == 0) {
+        log.info("[MatchArchiver] no matches to archive (patch={} tier={})", patch, tier);
+        return new Result(0, 0L, objectKey);
+      }
+
+      long bytesUploaded;
+      try {
+        bytesUploaded = Files.size(tempFile);
+      } catch (IOException e) {
+        throw new IllegalStateException("Failed to read archive temp file size: " + objectKey, e);
+      }
+
+      s3Client.putObject(
+          PutObjectRequest.builder()
+              .bucket(props.getR2().getBucket())
+              .key(objectKey)
+              .contentType("application/gzip")
+              .build(),
+          RequestBody.fromFile(tempFile));
+
+      log.info("[MatchArchiver] archived patch={} tier={} count={} bytes={} key={}",
+          patch, tier, archivedCount, bytesUploaded, objectKey);
+      return new Result(archivedCount, bytesUploaded, objectKey);
+    } finally {
+      try {
+        Files.deleteIfExists(tempFile);
+      } catch (IOException e) {
+        log.warn("[MatchArchiver] failed to delete temp file: {}", tempFile, e);
+      }
     }
-
-    byte[] body = buf.toByteArray();
-    s3Client.putObject(
-        PutObjectRequest.builder()
-            .bucket(props.getR2().getBucket())
-            .key(objectKey)
-            .contentType("application/gzip")
-            .build(),
-        RequestBody.fromBytes(body));
-
-    log.info("[MatchArchiver] archived patch={} tier={} count={} bytes={} key={}",
-        patch, tier, archivedCount, body.length, objectKey);
-    return new Result(archivedCount, body.length, objectKey);
   }
 
   private int streamPayloadsInto(String patch, Tier tier, GZIPOutputStream gzip) throws IOException {
-    // [EXPERIMENT — OOM 재현용 롤백] projection 대신 엔티티 fetch (ADR-007 이전 상태 재현).
-    // 페이지마다 Match 엔티티가 L1 캐시에 등록·누적되어 요청 스코프 동안 GC 불가.
     String cursor = "";
     int total = 0;
     while (true) {
-      List<com.bestduo_BE.common.infra.persistence.entity.Match> page =
-          matchRepository.findPageByTierAndPatch(tier.name(), patch, cursor, PAGE_SIZE);
+      List<MatchPayloadProjection> page =
+          matchRepository.findPayloadPageByTierAndPatch(tier.name(), patch, cursor, PAGE_SIZE);
       if (page.isEmpty()) {
         break;
       }
-      for (com.bestduo_BE.common.infra.persistence.entity.Match m : page) {
+      for (MatchPayloadProjection m : page) {
         gzip.write(m.getPayloadJson().getBytes(StandardCharsets.UTF_8));
         gzip.write('\n');
         cursor = m.getMatchId();
